@@ -8,6 +8,7 @@ import (
 	p "github.com/MoeClub-Open/PxBoard/pkg/plugin"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -125,6 +126,21 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 		p.JSON(w, report)
 		return
 	}
+	users, e := tx.Prepare("INSERT INTO users VALUES(?,?,?,?,?,?,?)")
+	if bad(w, e) {
+		return
+	}
+	defer users.Close()
+	credentials, e := tx.Prepare("INSERT INTO user_credentials VALUES(?,?,?,?)")
+	if bad(w, e) {
+		return
+	}
+	defer credentials.Close()
+	documents, e := tx.Prepare("INSERT INTO documents VALUES(?,?,?,?,?)")
+	if bad(w, e) {
+		return
+	}
+	defer documents.Close()
 	rows, e := tx.Query("SELECT kind,namespace,collection,id,data FROM import_rows WHERE run_id=? ORDER BY CASE kind WHEN 'user' THEN 0 ELSE 1 END", id)
 	if bad(w, e) {
 		return
@@ -139,9 +155,9 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 		if kind == "user" {
 			var user p.ImportUser
 			_ = json.Unmarshal([]byte(raw), &user)
-			_, e = tx.Exec("INSERT INTO users VALUES(?,?,?,?,?,?,?)", user.ID, strings.ToLower(user.Email), user.Name, user.Password, user.Role, user.Status, user.CreatedAt)
+			_, e = users.Exec(user.ID, strings.ToLower(user.Email), user.Name, user.Password, user.Role, user.Status, user.CreatedAt)
 			if e == nil {
-				_, e = tx.Exec("INSERT INTO user_credentials VALUES(?,?,?,?)", user.ID, user.PasswordAlgorithm, user.PasswordSalt, user.MFASecret)
+				_, e = credentials.Exec(user.ID, user.PasswordAlgorithm, user.PasswordSalt, user.MFASecret)
 			}
 		} else {
 			var record p.Record
@@ -152,7 +168,7 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 			}
 			record["id"] = recordID
 			payload, _ := json.Marshal(record)
-			_, e = tx.Exec("INSERT INTO documents VALUES(?,?,?,?,?)", namespace, collection, recordID, string(payload), store.Now())
+			_, e = documents.Exec(namespace, collection, recordID, string(payload), store.Now())
 		}
 		if bad(w, e) {
 			return
@@ -183,6 +199,10 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 		Rows int `json:"expectedRows"`
 	}
 	if e := json.Unmarshal([]byte(metadata), &expected); e != nil {
+		return report, e
+	}
+	conflicts, e := loadImportConflicts(tx, id)
+	if e != nil {
 		return report, e
 	}
 	rows, e := tx.Query("SELECT kind,namespace,collection,id,data FROM import_rows WHERE run_id=?", id)
@@ -216,11 +236,7 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 				report.Errors = append(report.Errors, "源邮箱重复："+email)
 			}
 			emails[email] = true
-			var n int
-			if e = tx.QueryRow("SELECT COUNT(*) FROM users WHERE id=? OR lower(email)=?", u.ID, email).Scan(&n); e != nil {
-				return report, e
-			}
-			if n > 0 {
+			if conflicts.userIDs[u.ID] || conflicts.emails[email] {
 				report.Errors = append(report.Errors, "目标已有相同用户标识或邮箱："+email)
 			}
 		} else {
@@ -228,11 +244,7 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 			if !has(namespace) || !enabled[namespace] {
 				report.Errors = append(report.Errors, "目标插件未启用或没有导入权限："+namespace)
 			}
-			var n int
-			if e = tx.QueryRow("SELECT COUNT(*) FROM documents WHERE namespace=? AND collection=? AND id=?", namespace, collection, key).Scan(&n); e != nil {
-				return report, e
-			}
-			if n > 0 {
+			if conflicts.documents[importDocumentKey{namespace, collection, key}] {
 				report.Errors = append(report.Errors, "目标记录已存在："+namespace+"/"+collection+"/"+key)
 			}
 			if namespace == "access" && collection == "accounts" || namespace == "subscriptions" && collection == "links" {
@@ -241,10 +253,7 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 					return report, e
 				}
 				user := p.Text(record, "userId")
-				if e = tx.QueryRow("SELECT (SELECT COUNT(*) FROM users WHERE id=?)+(SELECT COUNT(*) FROM import_rows WHERE run_id=? AND kind='user' AND id=?)", user, id, user).Scan(&n); e != nil {
-					return report, e
-				}
-				if n != 1 {
+				if conflicts.userCounts[user] != 1 {
 					report.Errors = append(report.Errors, "账户所属用户缺失："+key)
 				}
 				fields := []string{"userId", "credential"}
@@ -258,10 +267,7 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 						report.Errors = append(report.Errors, "连接凭据、订阅令牌或所属用户重复/缺失："+key+"/"+field)
 					}
 					uniqueValues[uniqueKey] = true
-					if e = tx.QueryRow("SELECT COUNT(*) FROM documents WHERE namespace=? AND collection=? AND json_extract(data,?)=?", namespace, collection, "$."+field, value).Scan(&n); e != nil {
-						return report, e
-					}
-					if n > 0 {
+					if conflicts.fields[importFieldKey{namespace, collection, field, "s:" + value}] {
 						report.Errors = append(report.Errors, "目标已有相同连接凭据、订阅令牌或访问账户："+key+"/"+field)
 					}
 				}
@@ -281,10 +287,11 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 					report.Errors = append(report.Errors, "数字标识缺失或重复："+wireKey)
 				}
 				numericIDs[wireKey] = true
-				if e = tx.QueryRow("SELECT COUNT(*) FROM documents WHERE namespace=? AND collection=? AND json_extract(data,?)=?", namespace, collection, "$."+field, value).Scan(&n); e != nil {
+				numericKey, e := importValueKey(value)
+				if e != nil {
 					return report, e
 				}
-				if n > 0 {
+				if conflicts.fields[importFieldKey{namespace, collection, field, numericKey}] {
 					report.Errors = append(report.Errors, "目标数字标识冲突："+wireKey)
 				}
 			}
@@ -300,4 +307,109 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 		report.Status = "blocked"
 	}
 	return report, rows.Err()
+}
+
+type importDocumentKey struct{ namespace, collection, id string }
+type importFieldKey struct{ namespace, collection, field, value string }
+type importConflicts struct {
+	userIDs, emails map[string]bool
+	userCounts      map[string]int
+	documents       map[importDocumentKey]bool
+	fields          map[importFieldKey]bool
+}
+
+func importValueKey(value any) (string, error) {
+	switch v := value.(type) {
+	case nil:
+		return "", nil
+	case string:
+		return "s:" + v, nil
+	case int64:
+		return "n:" + strconv.FormatInt(v, 10), nil
+	case float64:
+		if v == 0 {
+			v = 0
+		}
+		return "n:" + strconv.FormatFloat(v, 'f', -1, 64), nil
+	case bool:
+		if v {
+			return "n:1", nil
+		}
+		return "n:0", nil
+	default:
+		return "", fmt.Errorf("数字标识格式无效：%T", value)
+	}
+}
+
+func loadImportConflicts(tx *sql.Tx, id string) (importConflicts, error) {
+	index := importConflicts{map[string]bool{}, map[string]bool{}, map[string]int{}, map[importDocumentKey]bool{}, map[importFieldKey]bool{}}
+	read := func(query string, visit func(*sql.Rows) error, args ...any) error {
+		rows, e := tx.Query(query, args...)
+		if e != nil {
+			return e
+		}
+		defer rows.Close()
+		for rows.Next() {
+			if e = visit(rows); e != nil {
+				return e
+			}
+		}
+		return rows.Err()
+	}
+	if e := read("SELECT id,lower(email) FROM users", func(rows *sql.Rows) error {
+		var user, email string
+		if e := rows.Scan(&user, &email); e != nil {
+			return e
+		}
+		index.userIDs[user], index.emails[email] = true, true
+		index.userCounts[user]++
+		return nil
+	}); e != nil {
+		return index, e
+	}
+	if e := read("SELECT id,COUNT(*) FROM import_rows WHERE run_id=? AND kind='user' GROUP BY id", func(rows *sql.Rows) error {
+		var user string
+		var count int
+		if e := rows.Scan(&user, &count); e != nil {
+			return e
+		}
+		index.userCounts[user] += count
+		return nil
+	}, id); e != nil {
+		return index, e
+	}
+	if e := read("SELECT namespace,collection,id FROM documents", func(rows *sql.Rows) error {
+		var key importDocumentKey
+		if e := rows.Scan(&key.namespace, &key.collection, &key.id); e != nil {
+			return e
+		}
+		index.documents[key] = true
+		return nil
+	}); e != nil {
+		return index, e
+	}
+	fields := []string{"userId", "credential", "token", "numericId", "wireId", "number"}
+	e := read(`SELECT namespace,collection,json_extract(data,'$.userId'),json_extract(data,'$.credential'),json_extract(data,'$.token'),json_extract(data,'$.numericId'),json_extract(data,'$.wireId'),json_extract(data,'$.number') FROM documents WHERE (namespace='access' AND collection='accounts') OR (namespace='subscriptions' AND collection='links') OR (namespace='nodes' AND collection IN ('nodes','machines'))`, func(rows *sql.Rows) error {
+		var namespace, collection string
+		values := make([]any, len(fields))
+		dest := []any{&namespace, &collection}
+		for i := range values {
+			dest = append(dest, &values[i])
+		}
+		if e := rows.Scan(dest...); e != nil {
+			return e
+		}
+		for i, value := range values {
+			if value == nil {
+				continue
+			}
+			key, e := importValueKey(value)
+			if e != nil {
+				return e
+			}
+			index.fields[importFieldKey{namespace, collection, fields[i], key}] = true
+		}
+		return nil
+	})
+	return index, e
 }

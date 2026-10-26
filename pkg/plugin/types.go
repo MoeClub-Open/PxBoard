@@ -1,7 +1,7 @@
 package plugin
 
 const APIVersion = "1.0"
-const CoreVersion = "0.3.0"
+const CoreVersion = "0.3.1"
 
 type Manifest struct {
 	ID             string            `json:"id"`
