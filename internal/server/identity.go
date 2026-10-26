@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"github.com/MoeClub-Open/PxBoard/internal/store"
 	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
@@ -59,6 +60,10 @@ func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, e = tx.Exec("UPDATE users SET password=? WHERE id=?", string(hash), record["userId"])
+	if bad(w, e) {
+		return
+	}
+	_, e = tx.Exec("UPDATE user_credentials SET algorithm='bcrypt',salt='' WHERE user_id=?", record["userId"])
 	if bad(w, e) {
 		return
 	}
@@ -277,7 +282,7 @@ func (s *Server) userList() ([]plugin.Record, error) {
 	}
 	return out, rows.Err()
 }
-func (s *Server) createUser(b plugin.Record) (string, error) {
+func (s *Server) createUser(b plugin.Record, initialize ...func(*sql.Tx, string) error) (string, error) {
 	email := strings.ToLower(strings.TrimSpace(plugin.Text(b, "email")))
 	password := plugin.Text(b, "password")
 	if !strings.Contains(email, "@") || len(password) < 10 {
@@ -296,8 +301,20 @@ func (s *Server) createUser(b plugin.Record) (string, error) {
 	if role != "admin" {
 		role = "member"
 	}
-	_, e = s.Store.DB.Exec("INSERT INTO users VALUES(?,?,?,?,?,'active',?)", id, email, name, string(hash), role, store.Now())
-	return id, e
+	tx, e := s.Store.DB.Begin()
+	if e != nil {
+		return "", e
+	}
+	defer tx.Rollback()
+	if _, e = tx.Exec("INSERT INTO users VALUES(?,?,?,?,?,'active',?)", id, email, name, string(hash), role, store.Now()); e != nil {
+		return "", e
+	}
+	for _, fn := range initialize {
+		if e = fn(tx, id); e != nil {
+			return "", e
+		}
+	}
+	return id, tx.Commit()
 }
 func (s *Server) users(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {

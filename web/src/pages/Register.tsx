@@ -6,6 +6,7 @@ import { api, errorText, useData } from '../api'
 import type { Field, Row } from '../api'
 import { Fields, formValues, serialize } from '../components/Fields'
 import { Brand } from '../components/Brand'
+import { OAuthButtons } from '../components/OAuthButtons'
 
 export interface AuthProvider {
   key: string
@@ -102,6 +103,10 @@ export default function Register() {
             </Form>
           </>
         )}
+        <OAuthButtons
+          registration
+          redirectPath={/^\/user(?:\/|\?|$)/.test(redirect) ? redirect : '/user'}
+        />
         <div className="auth-links">
           <Link to={loginPath}>
             <ArrowLeftOutlined /> 返回登录

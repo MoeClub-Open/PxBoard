@@ -10,8 +10,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -61,6 +59,18 @@ func version(v string) ([3]int, bool) {
 	return out, true
 }
 func validVersion(v string) bool { _, ok := version(v); return ok }
+func checkCoreVersion(manifest plugin.Manifest) error {
+	if manifest.MinCoreVersion == "" {
+		return nil
+	}
+	if !validVersion(manifest.MinCoreVersion) {
+		return fmt.Errorf("插件 %s 的最低核心版本声明无效：%s", manifest.ID, manifest.MinCoreVersion)
+	}
+	if !compatible(plugin.CoreVersion, manifest.MinCoreVersion) {
+		return fmt.Errorf("插件 %s 需要 PxBoard 核心 %s 或更新版本，当前为 %s，请先升级核心", manifest.ID, manifest.MinCoreVersion, plugin.CoreVersion)
+	}
+	return nil
+}
 func compatible(installed, minimum string) bool {
 	a, ok := version(installed)
 	if !ok {
@@ -232,18 +242,21 @@ func (m *Manager) install(id, source string, catalog []Entry, sources []Source, 
 		return fmt.Errorf("插件源中未找到适用版本")
 	}
 	p := *entry
+	if err := checkCoreVersion(p.Manifest); err != nil {
+		return err
+	}
 	old, _ := m.Get(id)
 	if old.ID != "" && old.Version == p.Version && old.SourceID == source {
 		if old.Enabled && old.Error == "" {
 			return nil
 		}
-		return m.Enable(id)
+		return m.enable(id)
 	}
 	for dep, min := range p.Dependencies {
 		installed, e := m.Get(dep)
 		if e == nil && compatible(installed.Version, min) {
-			if !installed.Enabled {
-				if e = m.Enable(dep); e != nil {
+			if !installed.Enabled || installed.Error != "" {
+				if e = m.enable(dep); e != nil {
 					return e
 				}
 			}
@@ -285,39 +298,5 @@ func (m *Manager) install(id, source string, catalog []Entry, sources []Source, 
 			return fmt.Errorf("插件发布签名无效")
 		}
 	}
-	if old.Enabled {
-		m.mu.Lock()
-		proc := m.running[id]
-		delete(m.running, id)
-		m.mu.Unlock()
-		if proc != nil {
-			proc.Stop()
-		}
-	}
-	dest := m.binary(id, p.Version)
-	if e = os.MkdirAll(filepath.Dir(dest), 0700); e != nil {
-		return e
-	}
-	if e = os.WriteFile(dest+".download", b, 0700); e != nil {
-		return e
-	}
-	if e = os.Rename(dest+".download", dest); e != nil {
-		if old.Enabled {
-			_ = m.Enable(id)
-		}
-		return e
-	}
-	if e = m.persist(p.Manifest, source); e != nil {
-		return e
-	}
-	if e = m.Enable(id); e != nil {
-		if old.ID != "" {
-			_ = m.persist(old.Manifest, old.SourceID)
-			if old.Enabled {
-				_ = m.Enable(id)
-			}
-		}
-		return e
-	}
-	return nil
+	return m.installBinary(p.Manifest, source, b, true)
 }

@@ -86,6 +86,12 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 	}
 	path := r.PathValue("path")
 	switch {
+	case path == "auth/grants" && r.Method == "POST":
+		s.createLoginGrant(w, r, a)
+	case path == "auth/verify" && r.Method == "POST":
+		s.verifyExternalCredential(w, r, a)
+	case path == "batch" && r.Method == "POST":
+		s.batchRuntime(w, r, a)
 	case strings.HasPrefix(path, "import/"):
 		s.importRuntime(w, r, a, strings.TrimPrefix(path, "import/"))
 	case path == "query" && r.Method == "POST":
@@ -122,7 +128,7 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		b["role"] = "member"
-		id, e := s.createUser(b)
+		id, e := s.createRuntimeUser(a.Plugin, b)
 		if e == nil {
 			_ = s.Plugins.Emit("core", "user.created", plugin.Record{"userId": id})
 		}

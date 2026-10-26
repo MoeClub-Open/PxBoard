@@ -1,25 +1,27 @@
 package plugin
 
 const APIVersion = "1.0"
+const CoreVersion = "0.3.0"
 
 type Manifest struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Version      string            `json:"version"`
-	APIVersion   string            `json:"apiVersion"`
-	Description  string            `json:"description"`
-	Category     string            `json:"category"`
-	Author       string            `json:"author"`
-	Homepage     string            `json:"homepage,omitempty"`
-	Dependencies map[string]string `json:"dependencies"`
-	Permissions  []string          `json:"permissions"`
-	Events       []string          `json:"events,omitempty"`
-	Pages        []Page            `json:"pages"`
-	PublicPaths  []string          `json:"publicPaths,omitempty"`
-	Summary      bool              `json:"summary,omitempty"`
-	Auth         []AuthForm        `json:"auth,omitempty"`
-	Capabilities []string          `json:"capabilities,omitempty"`
-	Artifacts    map[string]string `json:"artifacts,omitempty"`
+	ID             string            `json:"id"`
+	Name           string            `json:"name"`
+	Version        string            `json:"version"`
+	APIVersion     string            `json:"apiVersion"`
+	MinCoreVersion string            `json:"minCoreVersion,omitempty"`
+	Description    string            `json:"description"`
+	Category       string            `json:"category"`
+	Author         string            `json:"author"`
+	Homepage       string            `json:"homepage,omitempty"`
+	Dependencies   map[string]string `json:"dependencies"`
+	Permissions    []string          `json:"permissions"`
+	Events         []string          `json:"events,omitempty"`
+	Pages          []Page            `json:"pages"`
+	PublicPaths    []string          `json:"publicPaths,omitempty"`
+	Summary        bool              `json:"summary,omitempty"`
+	Auth           []AuthForm        `json:"auth,omitempty"`
+	Capabilities   []string          `json:"capabilities,omitempty"`
+	Artifacts      map[string]string `json:"artifacts,omitempty"`
 }
 type AuthForm struct {
 	Modes      []string          `json:"modes,omitempty"`
@@ -60,14 +62,15 @@ type Response struct {
 }
 type Record map[string]any
 type Field struct {
-	Key      string   `json:"key"`
-	Label    string   `json:"label"`
-	Type     string   `json:"type,omitempty"`
-	Required bool     `json:"required,omitempty"`
-	Options  []Option `json:"options,omitempty"`
-	Default  any      `json:"default,omitempty"`
-	Hint     string   `json:"hint,omitempty"`
-	ReadOnly bool     `json:"readOnly,omitempty"`
+	Key             string   `json:"key"`
+	Label           string   `json:"label"`
+	Type            string   `json:"type,omitempty"`
+	Required        bool     `json:"required,omitempty"`
+	Options         []Option `json:"options,omitempty"`
+	OptionsEndpoint string   `json:"optionsEndpoint,omitempty"`
+	Default         any      `json:"default,omitempty"`
+	Hint            string   `json:"hint,omitempty"`
+	ReadOnly        bool     `json:"readOnly,omitempty"`
 }
 type Option struct {
 	Label string `json:"label"`

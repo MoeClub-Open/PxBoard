@@ -17,6 +17,7 @@ import { DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
+import { OAuthBindings } from '../components/OAuthButtons'
 function Tokens() {
   const { data, error, loading, reload } = useData<Row[]>('/tokens')
   const { message, modal } = App.useApp()
@@ -148,7 +149,7 @@ function Tokens() {
   )
 }
 export default function Account() {
-  const { me } = useSession()
+  const { me, plugins } = useSession()
   const { message } = App.useApp()
   const [busy, setBusy] = useState(false)
   return (
@@ -187,10 +188,7 @@ export default function Account() {
                   >
                     <Input.Password autoComplete="current-password" />
                   </Form.Item>
-                  <Form.Item
-                    name="code"
-                    label="动态验证码（已启用时填写）"
-                  >
+                  <Form.Item name="code" label="动态验证码（已启用时填写）">
                     <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
                   </Form.Item>
                   <Form.Item
@@ -207,6 +205,9 @@ export default function Account() {
               </div>
             ),
           },
+          ...(plugins.some((plugin) => plugin.id === 'oauth' && plugin.enabled)
+            ? [{ key: 'oauth', label: '第三方登录', children: <OAuthBindings /> }]
+            : []),
         ]}
       />
     </>

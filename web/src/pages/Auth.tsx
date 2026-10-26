@@ -6,6 +6,7 @@ import { api, ApiError, errorText, useData } from '../api'
 import type { AuthInfo } from './Register'
 
 import { Brand } from '../components/Brand'
+import { OAuthButtons } from '../components/OAuthButtons'
 export default function Auth({
   setup = false,
   onLogin,
@@ -157,6 +158,7 @@ export default function Auth({
             )}
           </Form>
         )}
+        {!setup && <OAuthButtons redirectPath={/^\/user(?:\/|\?|$)/.test(next) ? next : '/user'} />}
       </div>
       <footer className="auth-footer">
         PxBoard <span>© {new Date().getFullYear()}</span>

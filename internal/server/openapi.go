@@ -70,5 +70,30 @@ func apiPaths() map[string]any {
 		"get":  map[string]any{"operationId": "getWorkspaceMode", "responses": map[string]any{"200": map[string]any{"description": "当前模式与安装进度"}}},
 		"post": map[string]any{"operationId": "applyWorkspaceMode", "requestBody": map[string]any{"required": true, "content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"type": "object", "required": []string{"mode"}, "properties": map[string]any{"mode": map[string]any{"type": "string", "enum": []string{"personal", "sharing", "business"}}, "sourceId": map[string]string{"type": "string"}, "sourceUrl": map[string]string{"type": "string", "format": "uri"}}}}}}, "responses": map[string]any{"202": map[string]any{"description": "后台安装已开始，通过 GET /mode 查询进度"}, "409": map[string]any{"description": "已有安装任务在运行"}}},
 	}
+	out["/auth/external/complete"] = map[string]any{
+		"post": map[string]any{
+			"operationId": "completeExternalLogin",
+			"summary":     "使用外部认证的一次性凭证登录",
+			"description": "核对浏览器证明、插件授权及账户状态；启用动态验证码的账户还需提交 code。只有成功登录才会消费凭证并设置会话 Cookie。",
+			"security":    []any{},
+			"requestBody": map[string]any{
+				"required": true,
+				"content": map[string]any{"application/json": map[string]any{"schema": map[string]any{
+					"type": "object", "required": []string{"ticket", "proof"},
+					"properties": map[string]any{
+						"ticket": map[string]string{"type": "string", "description": "认证插件通过核心签发的登录凭证，三分钟内有效且只能成功使用一次"},
+						"proof":  map[string]string{"type": "string", "description": "发起认证时保存在当前浏览器中的随机证明原文"},
+						"code":   map[string]string{"type": "string", "description": "已启用动态验证时所需的六位验证码"},
+					},
+				}}},
+			},
+			"responses": map[string]any{
+				"200": map[string]any{"description": "登录成功，data 包含 user 身份与 redirectPath，并设置 HttpOnly 会话 Cookie"},
+				"400": map[string]any{"description": "请求格式或跳转地址无效"},
+				"401": map[string]any{"description": "凭证或浏览器证明无效、凭证已使用或到期；error.code=mfa_required 时可用同一凭证补交验证码"},
+				"403": map[string]any{"description": "账户已停用，或认证插件已停用、登录授权已撤回"},
+			},
+		},
+	}
 	return out
 }

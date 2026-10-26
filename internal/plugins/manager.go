@@ -83,8 +83,16 @@ func (m *Manager) binary(id, version string) string {
 	return filepath.Join(m.Dir, id, version, n)
 }
 func (m *Manager) Enable(id string) error {
+	m.mutation.Lock()
+	defer m.mutation.Unlock()
+	return m.enable(id)
+}
+func (m *Manager) enable(id string) error {
 	p, err := m.Get(id)
 	if err != nil {
+		return err
+	}
+	if err = checkCoreVersion(p.Manifest); err != nil {
 		return err
 	}
 	for dep, min := range p.Dependencies {
@@ -101,17 +109,27 @@ func (m *Manager) Enable(id string) error {
 		proc.Stop()
 		return fmt.Errorf("插件启动失败，请检查版本与平台")
 	}
-	m.mu.Lock()
+	m.mu.RLock()
 	old := m.running[id]
-	m.running[id] = proc
-	m.mu.Unlock()
+	m.mu.RUnlock()
 	if old != nil {
 		old.Stop()
 	}
+	m.mu.Lock()
+	m.running[id] = proc
+	m.mu.Unlock()
 	_, err = m.Store.DB.Exec("UPDATE plugins SET enabled=1 WHERE id=?", id)
 	return err
 }
 func (m *Manager) Disable(id string) error {
+	m.mutation.Lock()
+	defer m.mutation.Unlock()
+	return m.disable(id)
+}
+func (m *Manager) disable(id string) error {
+	if _, err := m.Get(id); err != nil {
+		return err
+	}
 	all, err := m.List()
 	if err != nil {
 		return err
@@ -121,21 +139,26 @@ func (m *Manager) Disable(id string) error {
 			return fmt.Errorf("请先停用依赖它的插件：%s", p.Name)
 		}
 	}
-	m.mu.Lock()
-	proc := m.running[id]
-	delete(m.running, id)
-	m.mu.Unlock()
-	if proc != nil {
-		proc.Stop()
-	}
+	m.stopProcess(id)
 	_, err = m.Store.DB.Exec("UPDATE plugins SET enabled=0 WHERE id=?", id)
 	return err
 }
 func (m *Manager) Remove(id string) error {
-	if err := m.Disable(id); err != nil {
+	m.mutation.Lock()
+	defer m.mutation.Unlock()
+	all, err := m.List()
+	if err != nil {
 		return err
 	}
-	_, err := m.Store.DB.Exec("DELETE FROM plugins WHERE id=?", id)
+	for _, p := range all {
+		if _, needs := p.Dependencies[id]; needs {
+			return fmt.Errorf("请先卸载依赖它的插件：%s", p.Name)
+		}
+	}
+	if err := m.disable(id); err != nil {
+		return err
+	}
+	_, err = m.Store.DB.Exec("DELETE FROM plugins WHERE id=?", id)
 	return err
 }
 func (m *Manager) Boot() {
@@ -157,11 +180,28 @@ func (m *Manager) Boot() {
 	}
 }
 func (m *Manager) Close() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	for _, p := range m.running {
+	m.mutation.Lock()
+	defer m.mutation.Unlock()
+	m.mu.RLock()
+	running := m.running
+	m.mu.RUnlock()
+	for _, p := range running {
 		p.Stop()
 	}
+	m.mu.Lock()
+	m.running = map[string]*Process{}
+	m.mu.Unlock()
+}
+func (m *Manager) stopProcess(id string) {
+	m.mu.RLock()
+	proc := m.running[id]
+	m.mu.RUnlock()
+	if proc != nil {
+		proc.Stop()
+	}
+	m.mu.Lock()
+	delete(m.running, id)
+	m.mu.Unlock()
 }
 func (m *Manager) Authenticate(token string) (string, bool) {
 	m.mu.RLock()
@@ -188,21 +228,20 @@ func (m *Manager) Call(ctx context.Context, id string, req plugin.Request) (plug
 	return proc.Call(ctx, req)
 }
 func (m *Manager) LocalInstall(manifest plugin.Manifest, binary string) error {
+	m.mutation.Lock()
+	defer m.mutation.Unlock()
 	if !validID(manifest.ID) || manifest.APIVersion != plugin.APIVersion || !validVersion(manifest.Version) {
 		return fmt.Errorf("插件标识或版本无效")
 	}
-	dest := m.binary(manifest.ID, manifest.Version)
-	if err := os.MkdirAll(filepath.Dir(dest), 0700); err != nil {
+	if err := checkCoreVersion(manifest); err != nil {
 		return err
 	}
 	b, err := os.ReadFile(binary)
 	if err != nil {
 		return err
 	}
-	if err = os.WriteFile(dest, b, 0700); err != nil {
-		return err
-	}
-	return m.persist(manifest, "local")
+	old, _ := m.Get(manifest.ID)
+	return m.installBinary(manifest, "local", b, old.Enabled)
 }
 func (m *Manager) persist(p plugin.Manifest, source string) error {
 	b, _ := json.Marshal(p)

@@ -40,6 +40,7 @@ export interface Field {
   type?: string
   required?: boolean
   options?: { label: string; value: any }[]
+  optionsEndpoint?: string
   default?: any
   hint?: string
   readOnly?: boolean

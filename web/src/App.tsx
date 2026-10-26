@@ -16,6 +16,7 @@ import ModeSetup from './pages/ModeSetup'
 import Portal from './pages/Portal'
 import Storefront from './pages/Storefront'
 import type { AuthInfo } from './pages/Register'
+import OAuthComplete from './pages/OAuthComplete'
 
 function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => void }) {
   const [me, setMe] = useState<User | null>(null)
@@ -92,6 +93,7 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
         }}
       />
     )
+  if (location.pathname === '/auth/external') return <OAuthComplete onLogin={refresh} />
   if (!me)
     return (
       <Routes>

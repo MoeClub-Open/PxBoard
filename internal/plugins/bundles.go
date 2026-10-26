@@ -64,6 +64,9 @@ func (m *Manager) BundlePlan(id, sourceID string) ([]Entry, error) {
 		if !validID(entry.ID) || !validVersion(entry.Version) || entry.APIVersion != plugin.APIVersion {
 			return fmt.Errorf("插件声明无效：%s", name)
 		}
+		if e := checkCoreVersion(entry.Manifest); e != nil {
+			return e
+		}
 		platform := runtime.GOOS + "-" + runtime.GOARCH
 		if entry.Artifacts[platform] == "" {
 			return fmt.Errorf("%s 暂不支持当前平台 %s", entry.Name, platform)
@@ -107,7 +110,7 @@ func (m *Manager) InstallPlan(plan []Entry, sourceID string, progress func(strin
 		old, e := m.Get(entry.ID)
 		if e == nil && compatible(old.Version, entry.Version) {
 			if !old.Enabled || old.Error != "" {
-				e = m.Enable(old.ID)
+				e = m.enable(old.ID)
 			}
 		} else {
 			e = m.install(entry.ID, sourceID, plan, sources, map[string]bool{})

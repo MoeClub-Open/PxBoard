@@ -26,7 +26,7 @@ type Server struct {
 	modeWorking            bool
 }
 
-const Version = "0.2.0"
+const Version = plugin.CoreVersion
 
 type actorContext struct{}
 
@@ -42,6 +42,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/setup", s.setupStatus)
 	m.HandleFunc("POST /api/v1/setup", s.setup)
 	m.HandleFunc("POST /api/v1/auth/login", s.login)
+	m.HandleFunc("POST /api/v1/auth/external/complete", s.completeExternalLogin)
 	m.HandleFunc("POST /api/v1/auth/logout", s.logout)
 	m.HandleFunc("POST /api/v1/auth/reset-request", s.resetRequest)
 	m.HandleFunc("POST /api/v1/auth/reset", s.resetPassword)

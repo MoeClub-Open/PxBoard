@@ -1,6 +1,28 @@
 import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd'
 import dayjs from 'dayjs'
-import type { Field, Row } from '../api'
+import { useData, type Field, type Row } from '../api'
+
+function RemoteSelect({ field, value, onChange }: {
+  field: Field
+  value?: string
+  onChange?: (value: string) => void
+}) {
+  const { data, loading, error } = useData<Row[]>(field.optionsEndpoint || null)
+  return (
+    <Select
+      value={value}
+      onChange={onChange}
+      disabled={field.readOnly}
+      loading={loading}
+      showSearch
+      optionFilterProp="label"
+      allowClear={!field.required}
+      options={(data || []).map((row) => ({ label: row.name, value: row.id }))}
+      notFoundContent={error || (loading ? '加载中' : '暂无可用选项')}
+      status={error ? 'error' : undefined}
+    />
+  )
+}
 
 export function Fields({ fields }: { fields: Field[] }) {
   return fields.map((f) => {
@@ -24,6 +46,8 @@ export function Fields({ fields }: { fields: Field[] }) {
         />
       )
     else if (f.type === 'boolean') control = <Switch />
+    else if (f.type === 'select' && f.optionsEndpoint)
+      control = <RemoteSelect field={f} />
     else if (f.type === 'select')
       control = (
         <Select

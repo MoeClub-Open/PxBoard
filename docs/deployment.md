@@ -2,7 +2,7 @@
 
 ## 目录与依赖
 
-本地构建需要 Go 1.25+、Node.js 24+ 和 pnpm。主项目、官方插件与插件源分别维护，按以下结构放置：
+本地构建需要 Go 1.26+、Node.js 24+ 和 pnpm。主项目、官方插件与插件源分别维护，按以下结构放置：
 
 ```text
 workspace/
@@ -220,6 +220,8 @@ machine_id = 1
 ```
 
 机器密钥通过 `X-Machine-Key` 请求头传递。流量批次持久保存在 NodeRS 工作目录，网络失败后用同一批次重试；迁移或移动节点时一并保留该目录。完整的 NodeRS 安装、证书、协议和维护说明见所使用 NodeRS 仓库的 `docs/zh/pxboard.md`。
+
+需要由面板认证下发本地配置、迁移到另一面板时，使用 NodeRS `v0.1.49-pxboard.2` 或更新版本，以及节点插件 `1.3.0` 或更新版本。管理员入口、源 Xboard 桥接与回退操作见 [NodeRS 配置管理](../../PxBoard-Plugins/docs/noders-management.md)。
 
 ### 官方 Xray / sing-box 代理
 
