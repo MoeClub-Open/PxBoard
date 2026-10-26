@@ -1,0 +1,20 @@
+.theme-dark .auth-page {
+  background: #141418;
+}
+.theme-dark .auth-page .brand {
+  color: #e1dbeb;
+}
+.theme-dark .mode-option {
+  background: #1d1d24;
+  border-color: #37303f;
+}
+.theme-dark .mode-option.selected {
+  background: #292236;
+  border-color: #805bc7;
+}
+.theme-dark .mode-option strong {
+  color: #dfd7e8;
+}
+.theme-dark .mode-option small {
+  color: #a99bb9;
+}

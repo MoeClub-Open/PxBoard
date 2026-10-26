@@ -1,0 +1,38 @@
+.affiliate-invitation {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 24px;
+}
+.affiliate-invitation > label {
+  font-size: 14px;
+  font-weight: 500;
+}
+.affiliate-link {
+  width: 100%;
+  max-width: 800px;
+}
+.affiliate-rules {
+  row-gap: 8px;
+  column-gap: 20px;
+}
+.affiliate-statistics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.affiliate-actions {
+  padding-block: 22px;
+}
+.affiliate-form {
+  margin-top: 22px;
+}
+.affiliate-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+@media (max-width: 760px) {
+  .affiliate-statistics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .affiliate-rules {
+    column-gap: 12px;
+  }
+}

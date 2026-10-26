@@ -1,0 +1,225 @@
+.customer-portal {
+  min-height: 100vh;
+  --portal-border: #e9e9ed;
+  --portal-surface: #fff;
+  --portal-muted: #858592;
+}
+.customer-portal.portal-dark {
+  --portal-border: #303039;
+  --portal-surface: #1b1b20;
+  --portal-muted: #aaaab5;
+  color: #e6e6eb;
+}
+.customer-portal .portal-header {
+  padding-inline: 24px;
+  border-bottom: 1px solid var(--portal-border);
+  background: var(--portal-surface);
+}
+.portal-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1180px;
+  height: 100%;
+  margin: auto;
+  gap: 16px;
+}
+.portal-brand {
+  color: inherit;
+  font-weight: 650;
+  font-size: 19px;
+  letter-spacing: -0.4px;
+}
+.portal-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.portal-desktop-nav {
+  background: var(--portal-surface);
+  border-bottom: 1px solid var(--portal-border);
+  padding-inline: 24px;
+}
+.portal-desktop-nav .ant-menu {
+  max-width: 1180px;
+  margin: auto;
+  border: 0;
+}
+.portal-content {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+  padding: 36px 24px 64px;
+}
+.portal-mobile-toggle {
+  display: none;
+}
+.portal-secondary {
+  color: var(--portal-muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+.portal-notice {
+  margin-block: 18px;
+}
+.portal-statistics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  border-block: 1px solid var(--portal-border);
+  padding-block: 24px;
+  gap: 24px;
+}
+.portal-statistics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.portal-statistics span {
+  color: var(--portal-muted);
+  font-size: 13px;
+}
+.portal-statistics strong {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.portal-usage {
+  padding-block: 28px;
+  border-bottom: 1px solid var(--portal-border);
+}
+.portal-usage > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.portal-announcements {
+  margin-top: 32px;
+}
+.portal-announcements h2 {
+  margin-bottom: 12px;
+}
+.portal-inline-button {
+  padding-inline: 0;
+  height: auto;
+  white-space: normal;
+  text-align: left;
+}
+.portal-wallet {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding-block: 24px;
+  border-block: 1px solid var(--portal-border);
+  margin-bottom: 24px;
+}
+.portal-wallet > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.portal-wallet strong {
+  font-size: 30px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.portal-recharge {
+  display: flex;
+  gap: 8px;
+}
+.portal-redeem {
+  margin-bottom: 24px;
+  row-gap: 10px;
+}
+.portal-checkout-form {
+  margin-top: 20px;
+}
+.portal-payment-methods {
+  border-top: 1px solid var(--portal-border, #e9e9ed);
+  margin-top: 20px;
+  padding-top: 1px;
+}
+.portal-payment-methods .ant-radio-group {
+  display: block;
+  margin-bottom: 20px;
+}
+.portal-subscription-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--portal-border);
+}
+.portal-subscription-format {
+  display: grid;
+  gap: 14px;
+  padding-block: 28px;
+  border-bottom: 1px solid var(--portal-border);
+}
+.portal-qr {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 24px;
+}
+.portal-break {
+  overflow-wrap: anywhere;
+}
+.portal-ticket-thread,
+.portal-article {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.9;
+}
+.portal-ticket-thread {
+  padding-block: 20px;
+  margin-block: 12px 24px;
+  border-block: 1px solid var(--portal-border, #e9e9ed);
+}
+@media (max-width: 760px) {
+  .portal-desktop-nav {
+    display: none;
+  }
+  .portal-mobile-toggle {
+    display: inline-flex;
+  }
+  .customer-portal .portal-header {
+    padding-inline: 12px;
+  }
+  .portal-account > span:not(.ant-avatar) {
+    display: none;
+  }
+  .portal-content {
+    padding: 24px 16px 48px;
+  }
+  .portal-brand {
+    max-width: 155px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .portal-wallet {
+    align-items: start;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .portal-statistics {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .portal-statistics > div {
+    gap: 6px;
+  }
+  .portal-usage > div:first-child {
+    align-items: start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .portal-subscription-heading {
+    align-items: start;
+  }
+}

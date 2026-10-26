@@ -1,0 +1,22 @@
+services:
+  panel:
+    build: .
+    environment:
+      PX_PLUGIN_SOURCE: http://127.0.0.1:8091/index.json
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - panel-data:/app/data
+  registry:
+    build:
+      context: ../PxBoard-Registry
+      additional_contexts:
+        core: .
+        official-plugins: ../PxBoard-Plugins
+    network_mode: service:panel
+    depends_on:
+      - panel
+    restart: unless-stopped
+volumes:
+  panel-data:
