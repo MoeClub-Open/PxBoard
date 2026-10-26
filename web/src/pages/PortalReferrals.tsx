@@ -31,7 +31,7 @@ function CommissionStatus({ value }: { value: string }) {
 }
 function WithdrawalStatus({ row }: { row: Row }) {
   const states: Record<string, [string, string]> = {
-    pending: ['待审核', 'warning'],
+    pending: row.method === 'wallet' ? ['待转入', 'warning'] : ['待审核', 'warning'],
     approving: ['转入中', 'processing'],
     approved: row.method === 'wallet' ? ['已入余额', 'success'] : ['待打款', 'processing'],
     paid: ['已打款', 'success'],
@@ -73,6 +73,22 @@ export default function PortalReferrals() {
     } catch (e) {
       message.error(errorText(e))
       throw e
+    } finally {
+      setCanceling('')
+    }
+  }
+  async function transfer(row: Row) {
+    setCanceling(String(row.id))
+    try {
+      const result = await api<Row>(
+        `/extensions/affiliate/withdrawals/${encodeURIComponent(row.id)}/transfer`,
+        { method: 'POST', body: {} },
+      )
+      refresh()
+      if (result.status === 'approved') message.success('已转入余额')
+      else message.info('正在转入余额，请稍后查看')
+    } catch (e) {
+      message.error(errorText(e))
     } finally {
       setCanceling('')
     }
@@ -142,8 +158,8 @@ export default function PortalReferrals() {
       </div>
       <div className="affiliate-actions">
         <Space wrap>
-          <Button disabled={available < 100 || summary.loading} onClick={() => setMethod('wallet')}>
-            申请转入余额
+          <Button disabled={available < 1 || summary.loading} onClick={() => setMethod('wallet')}>
+            转入余额
           </Button>
           <Button
             type="primary"
@@ -210,7 +226,7 @@ export default function PortalReferrals() {
           },
           {
             key: 'withdrawals',
-            label: '结算申请',
+            label: '结算记录',
             children: (
               <>
                 {withdrawals.error && (
@@ -229,7 +245,7 @@ export default function PortalReferrals() {
                   scroll={{ x: 760 }}
                   locale={{
                     emptyText: (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有结算申请" />
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有结算记录" />
                     ),
                   }}
                   columns={[
@@ -246,7 +262,7 @@ export default function PortalReferrals() {
                       render: (value) => value || '—',
                       ellipsis: true,
                     },
-                    { title: '申请时间', dataIndex: 'createdAt', render: date },
+                    { title: '提交时间', dataIndex: 'createdAt', render: date },
                     {
                       title: '流水号',
                       dataIndex: 'reference',
@@ -257,13 +273,21 @@ export default function PortalReferrals() {
                       title: '操作',
                       width: 85,
                       render: (_, row) =>
-                        row.status === 'pending' ? (
+                        row.method === 'wallet' && row.status === 'pending' ? (
+                          <Button
+                            size="small"
+                            loading={canceling === row.id}
+                            onClick={() => void transfer(row)}
+                          >
+                            转入余额
+                          </Button>
+                        ) : row.method === 'cash' && row.status === 'pending' ? (
                           <Button
                             size="small"
                             loading={canceling === row.id}
                             onClick={() =>
                               modal.confirm({
-                                title: '撤回这笔结算申请？',
+                                title: '撤回这笔提现申请？',
                                 okText: '撤回申请',
                                 cancelText: '返回',
                                 onOk: () => cancel(row),

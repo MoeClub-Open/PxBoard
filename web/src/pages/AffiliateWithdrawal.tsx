@@ -24,6 +24,8 @@ export default function AffiliateWithdrawal({
   const { message } = App.useApp()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const wallet = method === 'wallet'
+  const minimum = wallet ? 1 : 100
   const requestId = useRef(crypto.randomUUID())
   const sending = useRef(false)
   async function submit(values: { amount: string; payoutAccount?: string }) {
@@ -35,15 +37,15 @@ export default function AffiliateWithdrawal({
       setError(errorText(e))
       return
     }
-    if (amount < 100 || amount > available) {
-      setError('申请金额需在 1 元至可用佣金之间')
+    if (amount < minimum || amount > available) {
+      setError(wallet ? '转入金额需在 0.01 元至可用佣金之间' : '申请金额需在 1 元至可用佣金之间')
       return
     }
     sending.current = true
     setBusy(true)
     setError('')
     try {
-      await api('/extensions/affiliate/withdrawals', {
+      const result = await api<{ status: string }>('/extensions/affiliate/withdrawals', {
         method: 'POST',
         body: {
           amount,
@@ -54,7 +56,8 @@ export default function AffiliateWithdrawal({
       })
       onClose()
       onSubmitted()
-      message.success('结算申请已提交，等待审核')
+      if (wallet && result.status !== 'approved') message.info('正在转入余额，请稍后查看')
+      else message.success(wallet ? '已转入余额' : '提现申请已提交，等待审核')
     } catch (e) {
       setError(errorText(e))
     } finally {
@@ -65,7 +68,7 @@ export default function AffiliateWithdrawal({
   return (
     <Modal
       open
-      title={method === 'cash' ? '申请提现' : '申请转入余额'}
+      title={wallet ? '转入余额' : '申请提现'}
       onCancel={busy ? undefined : onClose}
       closable={!busy}
       maskClosable={!busy}
@@ -81,7 +84,7 @@ export default function AffiliateWithdrawal({
           {
             key: 'process',
             label: '处理方式',
-            children: method === 'cash' ? '审核通过后安排打款' : '审核通过后计入账户余额',
+            children: wallet ? '直接计入账户余额' : '审核通过后安排打款',
           },
         ]}
       />
@@ -98,13 +101,13 @@ export default function AffiliateWithdrawal({
       >
         <Form.Item
           name="amount"
-          label="申请金额（元）"
-          rules={[{ required: true, message: '请输入申请金额' }]}
+          label={wallet ? '转入金额（元）' : '申请金额（元）'}
+          rules={[{ required: true, message: wallet ? '请输入转入金额' : '请输入申请金额' }]}
         >
           <InputNumber<string>
             stringMode
             precision={2}
-            min="1"
+            min={wallet ? '0.01' : '1'}
             max={(available / 100).toFixed(2)}
             prefix="¥"
             style={{ width: '100%' }}
@@ -129,7 +132,7 @@ export default function AffiliateWithdrawal({
             取消
           </Button>
           <Button type="primary" htmlType="submit" loading={busy}>
-            提交申请
+            {wallet ? '确认转入' : '提交申请'}
           </Button>
         </Space>
       </Form>
