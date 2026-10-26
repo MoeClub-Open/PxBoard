@@ -47,6 +47,19 @@ pnpm --dir web dev
 
 ## 插件源配置
 
+### 网络代理
+
+插件源索引和安装包通过 HTTPS 下载。面板进程支持标准 `HTTPS_PROXY`、`HTTP_PROXY` 和 `NO_PROXY` 环境变量。若直连 GitHub 不可用，可在启动面板前配置已经可用的代理；Windows 的系统代理开关不会自动转换成 Go 服务进程的环境变量。
+
+```powershell
+$env:HTTPS_PROXY = 'http://127.0.0.1:7890'
+$env:HTTP_PROXY = $env:HTTPS_PROXY
+$env:NO_PROXY = '127.0.0.1,localhost,::1'
+.\pxboard.exe
+```
+
+示例端口需要替换为实际代理端口。Linux 服务可以在服务管理器中设置同名环境变量。保留本机地址的直连，供核心和本机插件相互调用。安装页会显示源连接错误，修复网络后可重试同一模式，已有账号和数据会保留。
+
 启动参数和环境变量用于指定模式安装时使用的默认插件源：
 
 | 参数                 | 环境变量               | 默认值或用途                       |
