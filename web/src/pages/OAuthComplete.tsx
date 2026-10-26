@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Alert, Button, Form, Input, Spin } from 'antd'
+import { Alert, Button, Form, Input, Spin, Typography } from 'antd'
 import { Brand } from '../components/Brand'
 import { oauthFlowKey } from '../components/OAuthButtons'
 import type { OAuthFlow } from '../components/OAuthButtons'
@@ -26,15 +26,24 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
   const [mfa, setMfa] = useState(false)
+  const [registration, setRegistration] = useState<{
+    providerName: string
+    displayName: string
+    expiresAt: string
+  } | null>(null)
+  const loginTicket = useRef(callback.mode === 'login' ? callback.ticket : null)
+  function validCallback() {
+    const { ticket, flow } = callback
+    return (
+      !callback.error &&
+      !!ticket &&
+      !!flow &&
+      flow.purpose === (callback.mode === 'register' ? 'login' : callback.mode)
+    )
+  }
   async function complete(code?: string) {
     const { ticket, flow } = callback
-    if (
-      callback.error ||
-      !ticket ||
-      !flow ||
-      flow.purpose !== callback.mode ||
-      Date.now() - flow.createdAt > 15 * 60_000
-    ) {
+    if (!validCallback() || !flow) {
       setError(callback.error || '登录请求已失效，请返回后重试')
       setBusy(false)
       return
@@ -42,6 +51,15 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
     setBusy(true)
     setError('')
     try {
+      if (callback.mode === 'register' && !loginTicket.current) {
+        setRegistration(
+          await api('/extensions/oauth/registration', {
+            method: 'POST',
+            body: { ticket, proof: flow.proof },
+          }),
+        )
+        return
+      }
       if (!completed.current) {
         if (callback.mode === 'bind') {
           await api('/extensions/oauth/complete-binding', {
@@ -52,7 +70,7 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
         } else {
           completed.current = await api<{ redirectPath: string }>('/auth/external/complete', {
             method: 'POST',
-            body: { ticket, proof: flow.proof, code },
+            body: { ticket: loginTicket.current, proof: flow.proof, code },
           })
         }
       }
@@ -65,6 +83,29 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
       )
     } catch (e) {
       if (e instanceof ApiError && e.code === 'mfa_required') setMfa(true)
+      setError(errorText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  async function register(values: { email: string; password: string }) {
+    if (!validCallback() || !callback.flow) {
+      setError('注册请求已失效，请返回后重试')
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      if (!loginTicket.current) {
+        const result = await api<{ ticket: string }>('/extensions/oauth/complete-registration', {
+          method: 'POST',
+          body: { ticket: callback.ticket, proof: callback.flow.proof, ...values },
+        })
+        loginTicket.current = result.ticket
+        setRegistration(null)
+      }
+      await complete()
+    } catch (e) {
       setError(errorText(e))
     } finally {
       setBusy(false)
@@ -85,9 +126,42 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
         </Link>
       </div>
       <div className="auth-form">
-        <h1>{callback.mode === 'bind' ? '绑定登录方式' : '正在登录'}</h1>
+        <h1>
+          {callback.mode === 'bind'
+            ? '绑定登录方式'
+            : callback.mode === 'register' && !loginTicket.current
+              ? '完成注册'
+              : '正在登录'}
+        </h1>
         {busy && !mfa && <Spin />}
         {error && <Alert type="error" title={error} showIcon className="page-notice" />}
+        {registration && !loginTicket.current && (
+          <>
+            <Typography.Paragraph type="secondary">
+              {registration.providerName}
+              {registration.displayName && ` · ${registration.displayName}`}
+            </Typography.Paragraph>
+            <Form layout="vertical" onFinish={register} requiredMark={false}>
+              <Form.Item
+                name="email"
+                label="邮箱"
+                rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}
+              >
+                <Input size="large" type="email" autoComplete="email" />
+              </Form.Item>
+              <Form.Item
+                name="password"
+                label="登录密码"
+                rules={[{ required: true, min: 10, message: '密码至少 10 位' }]}
+              >
+                <Input.Password size="large" autoComplete="new-password" />
+              </Form.Item>
+              <Button type="primary" block size="large" htmlType="submit" loading={busy}>
+                创建账户并登录
+              </Button>
+            </Form>
+          </>
+        )}
         {mfa && (
           <Form layout="vertical" onFinish={(values) => complete(values.code)}>
             <Form.Item
@@ -108,7 +182,7 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
             </Button>
           </Form>
         )}
-        {!busy && error && !mfa && completed.current && (
+        {!busy && error && !mfa && (completed.current || loginTicket.current || !registration) && (
           <Button block onClick={() => void complete()}>
             重试
           </Button>

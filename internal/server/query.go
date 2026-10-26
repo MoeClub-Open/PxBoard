@@ -31,8 +31,13 @@ func (s *Server) queryRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 	where := "namespace=? AND collection=?"
 	args := []any{actor.Plugin, b.Collection}
 	for _, f := range b.Filters {
-		where += " AND json_extract(data,?) IS ?"
-		args = append(args, "$."+f.Field, f.Value)
+		if f.Field == "id" {
+			where += " AND id IS ?"
+			args = append(args, f.Value)
+		} else {
+			where += " AND json_extract(data,?) IS ?"
+			args = append(args, "$."+f.Field, f.Value)
+		}
 	}
 	var total int
 	if bad(w, s.Store.DB.QueryRow("SELECT COUNT(*) FROM documents WHERE "+where, args...).Scan(&total)) {
