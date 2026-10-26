@@ -202,16 +202,13 @@ export function Settings() {
             }
           }}
         >
-          <Form.Item
-            name="name"
-            label="站点名称"
-            rules={[{ required: true, message: '请输入站点名称' }]}
-          >
-            <Input />
-          </Form.Item>
           <Form.Item label="使用方式">
             <Space>
-              <span>{{ personal: '自用', sharing: '分享', business: '商业运营' }[String(data?.mode)] || data?.mode}</span>
+              <span>
+                {{ personal: '自用', sharing: '公益 / 分享', business: '商业运营' }[
+                  String(data?.mode)
+                ] || data?.mode}
+              </span>
               <Link to="/mode">切换使用方式</Link>
             </Space>
           </Form.Item>

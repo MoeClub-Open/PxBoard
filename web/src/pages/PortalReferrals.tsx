@@ -42,11 +42,12 @@ function WithdrawalStatus({ row }: { row: Row }) {
   return <Tag color={state?.[1]}>{state?.[0] || row.status}</Tag>
 }
 export default function PortalReferrals() {
-  const { me } = useSession()
+  const { me, plugins } = useSession()
   const { message, modal } = App.useApp()
-  const summary = useData<Summary>('/extensions/commerce/affiliate/summary', 15)
-  const commissions = useData<Row[]>('/extensions/commerce/referrals', 15)
-  const withdrawals = useData<Row[]>('/extensions/commerce/withdrawals', 15)
+  const enabled = plugins.some((plugin) => plugin.id === 'affiliate' && plugin.enabled)
+  const summary = useData<Summary>(enabled ? '/extensions/affiliate/summary' : null, 15)
+  const commissions = useData<Row[]>(enabled ? '/extensions/affiliate/commissions' : null, 15)
+  const withdrawals = useData<Row[]>(enabled ? '/extensions/affiliate/withdrawals' : null, 15)
   const [method, setMethod] = useState<Method>()
   const [canceling, setCanceling] = useState('')
   const available = Number(summary.data?.availableAmount || 0)
@@ -63,7 +64,7 @@ export default function PortalReferrals() {
   async function cancel(row: Row) {
     setCanceling(String(row.id))
     try {
-      await api(`/extensions/commerce/withdrawals/${encodeURIComponent(row.id)}/cancel`, {
+      await api(`/extensions/affiliate/withdrawals/${encodeURIComponent(row.id)}/cancel`, {
         method: 'POST',
         body: {},
       })
@@ -76,6 +77,7 @@ export default function PortalReferrals() {
       setCanceling('')
     }
   }
+  if (!enabled) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="推广暂不可用" />
   return (
     <>
       <div className="page-heading">

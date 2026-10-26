@@ -7,6 +7,7 @@ import type { AuthInfo } from './Register'
 
 import { Brand } from '../components/Brand'
 import { OAuthButtons } from '../components/OAuthButtons'
+import { useBrand, useBrandTitle } from '../branding'
 export default function Auth({
   setup = false,
   onLogin,
@@ -14,6 +15,8 @@ export default function Auth({
   setup?: boolean
   onLogin: () => Promise<void>
 }) {
+  const { name } = useBrand()
+  useBrandTitle(setup ? '初始化' : '登录')
   const { data: auth } = useData<AuthInfo>('/setup')
   const { message } = App.useApp()
   const [busy, setBusy] = useState(false)
@@ -62,7 +65,7 @@ export default function Auth({
       </div>
       <div className="auth-form">
         <div className="eyebrow">{setup ? '欢迎使用' : '控制台'}</div>
-        <h1>{setup ? '创建你的工作空间' : '登录 PxBoard'}</h1>
+        <h1>{setup ? '创建你的工作空间' : `登录 ${name}`}</h1>
         {setup && (
           <Steps
             size="small"
@@ -77,7 +80,7 @@ export default function Auth({
             <div className="mode-options">
               {[
                 { id: 'personal', name: '自用', text: '管理自己的节点与订阅' },
-                { id: 'sharing', name: '分享', text: '邀请亲友，分配独立流量额度' },
+                { id: 'sharing', name: '公益 / 分享', text: '用户注册、兑换码与独立订阅' },
                 { id: 'business', name: '商业运营', text: '套餐、订单、支付与用户服务' },
               ].map((item) => (
                 <button
@@ -152,7 +155,7 @@ export default function Auth({
               </Button>
             ) : (
               <div className="auth-links">
-                {!!auth?.registration?.length && <Link to={registerPath}>注册 / 接受邀请</Link>}
+                {!!auth?.registration?.length && <Link to={registerPath}>注册</Link>}
                 {auth?.passwordReset && <Link to="/forgot">忘记密码</Link>}
               </div>
             )}
@@ -161,7 +164,7 @@ export default function Auth({
         {!setup && <OAuthButtons redirectPath={/^\/user(?:\/|\?|$)/.test(next) ? next : '/user'} />}
       </div>
       <footer className="auth-footer">
-        PxBoard <span>© {new Date().getFullYear()}</span>
+        {name} <span>© {new Date().getFullYear()}</span>
       </footer>
     </div>
   )
@@ -169,6 +172,7 @@ export default function Auth({
 
 export { default as Register } from './Register'
 export function Reset({ request = false }: { request?: boolean }) {
+  useBrandTitle(request ? '找回密码' : '设置新密码')
   const [query] = useSearchParams()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')

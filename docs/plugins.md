@@ -96,6 +96,10 @@ func main() {
 
 每个页面提供 `GET /ui/{pageId}`，返回 `p.View`。资源通过 `endpoint`、`columns`、`fields`、`createLabel`、`editable`、`deletable`、`actions` 和可选刷新间隔声明行为。
 
+核心 `0.4.0` 支持页面声明 `capability`，例如节点用户页设置 `"capability": "portal.status"`。核心向插件内部 `GET /_capabilities` 查询该布尔值，并从普通用户的插件列表中移除关闭的页面，同时拒绝直接访问对应 `/ui/{pageId}`。管理员保留声明给管理员的管理与监控页面。插件还应在业务接口检查开关；导航展示不能代替接口权限。
+
+页面的 `surface` 指定展示位置：`admin` 为管理后台，`portal` 为用户前台，省略则两边均可展示。导航和前端直接路由都遵循此声明；访问权限仍由 `roles`、`capability` 和插件业务接口共同检查。例如兑换码管理页使用 `surface: "admin"`，用户兑换页使用 `surface: "portal"`，管理员可在用户前台预览兑换功能，后台不重复展示兑换入口。
+
 | 操作     | 默认请求                    |
 | -------- | --------------------------- |
 | 列表     | `GET /items`                |
@@ -104,11 +108,19 @@ func main() {
 | 删除     | `DELETE /items/{id}`        |
 | 记录操作 | `POST /items/{id}/{action}` |
 
+单例配置资源设置 `"singleton": true`，读取仍返回一条记录的数组，编辑直接请求 `PATCH <endpoint>`，不附加记录 ID。例如设置资源的读写路径都为 `/settings`。普通列表资源继续使用表中的记录路径。
+
 `Action.endpoint` 可以覆盖默认操作路径。`bind: {"orderId": "id"}` 将当前记录字段映射到操作请求，`when: {"status": ["pending"]}` 控制操作展示。调用其他插件的页面动作使用完整的 `/api/v1/extensions/...` 路径，目标接口仍须检查权限。
 
 字段支持 `text`、`email`、`password`、`number`、`money`、`gib`、`boolean`、`select`、`datetime`、`textarea` 和 `hidden`。展示另支持 `status`、`tag`、`longtext`、`copy`、`link`。`money` 的接口值为整数分，界面以元输入与显示；`link` 可以是同源相对地址。
 
 下拉字段可以使用 `optionsEndpoint` 指向同源 API，例如 `/api/v1/extensions/payments/channels`，返回 `data: [{id, name}]`。浏览器以当前用户身份获取选项，避免页面提供方同步调用目标插件后又被目标插件反向调用。可用权限仍由目标接口判断。
+
+字段可声明 `when`，例如 `{"key":"amount","type":"money","when":{"kind":["balance"]}}`。条件全部匹配时才显示、校验和提交该字段，值按字符串与选项匹配，适合兑换类型等互斥配置。隐藏的条件字段不会混入提交内容。
+
+表单字段键支持点路径，例如 `certConfig.mode`。读取记录时解析嵌套对象，提交时恢复为 `{"certConfig":{"mode":"file"}}`；`when` 使用同一字段键。编辑已有记录时，不为缺少的嵌套字段补默认值，也不提交未填写的嵌套字段；新增记录仍使用字段默认值。插件处理嵌套配置更新时应合并已有对象，保留表单未展示的高级配置。
+
+通用资源保存和插件启停后，前端会广播 `px:configuration-changed`，刷新页面声明及品牌等公开配置；同源的其他标签页在收到配置变更后也会刷新。停用插件保留数据，同时移除它的用户导航与入口。
 
 长任务列表可设置 `pollIntervalSeconds`。操作结果可以返回：
 
@@ -151,6 +163,8 @@ func main() {
 ```
 
 `modes` 限制表单在自用、分享或商业模式中的展示，省略表示不按模式筛选。`query` 可以将 URL 参数映射到表单字段，用于邀请码或推荐关系。`capability` 把表单绑定到实际运行状态。
+
+公开的 `GET /api/v1/setup` 同时返回 `extensions`，内容为已启用且正常运行的插件 ID 数组，不包含版本、权限或配置。前端依据可用模块决定入口，避免仅根据使用方式显示已停用的功能。插件和配置变更会通知当前及其他同源标签页刷新声明。
 
 声明了 `capabilities` 的插件提供内部 `GET /_capabilities`，返回能力名称到布尔值的映射。`auth.password-reset` 表示已配置可用的密码找回投递服务。表单的模式和能力筛选不能代替业务端点限制；插件应在公开注册处理器中执行相同的开放条件。
 

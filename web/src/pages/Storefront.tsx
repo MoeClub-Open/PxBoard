@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Alert, Button, Empty, Space, Table, Tag, Typography, theme } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useData } from '../api'
+import { Brand } from '../components/Brand'
+import { useBrandTitle } from '../branding'
 import '../storefront.css'
 
 interface StoreAuth {
@@ -29,6 +31,7 @@ function duration(plan: PublicPlan) {
 }
 
 export default function Storefront({ auth }: { auth?: StoreAuth }) {
+  useBrandTitle()
   const { token } = theme.useToken()
   const {
     data: site,
@@ -53,7 +56,7 @@ export default function Storefront({ auth }: { auth?: StoreAuth }) {
       <header className="storefront-header">
         <div className="storefront-header-inner">
           <Link to="/" className="storefront-name">
-            {currentSite?.name || 'PxBoard'}
+            <Brand />
           </Link>
           <Space>
             <Link to="/login">

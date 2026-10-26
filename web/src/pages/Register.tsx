@@ -7,6 +7,7 @@ import type { Field, Row } from '../api'
 import { Fields, formValues, serialize } from '../components/Fields'
 import { Brand } from '../components/Brand'
 import { OAuthButtons } from '../components/OAuthButtons'
+import { useBrandTitle } from '../branding'
 
 export interface AuthProvider {
   key: string
@@ -21,10 +22,12 @@ export interface AuthInfo {
   mode?: string
   requestedMode?: string
   needsModeSetup?: boolean
+  extensions: string[]
   registration: AuthProvider[]
   passwordReset: boolean
 }
 export default function Register() {
+  useBrandTitle('注册')
   const [query] = useSearchParams()
   const { data, error: loadError, loading } = useData<AuthInfo>('/setup')
   const [selected, setSelected] = useState('')

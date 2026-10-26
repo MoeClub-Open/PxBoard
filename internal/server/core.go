@@ -59,8 +59,12 @@ func (s *Server) listPlugins(w http.ResponseWriter, r *http.Request) {
 	if actor(r).Role != "admin" {
 		for i := range all {
 			pages := []plugin.Page{}
+			caps := map[string]bool{}
+			if all[i].Enabled && all[i].Error == "" {
+				caps = s.pageCapabilities(r, all[i].Manifest, actor(r).Role)
+			}
 			for _, p := range all[i].Pages {
-				if slices.Contains(p.Roles, actor(r).Role) {
+				if pageAllowed(p, actor(r).Role, caps) {
 					pages = append(pages, p)
 				}
 			}

@@ -33,6 +33,7 @@ import {
   WalletOutlined,
   ShareAltOutlined,
   CloudServerOutlined,
+  GiftOutlined,
 } from '@ant-design/icons'
 import { api, useData } from '../api'
 import type { Row } from '../api'
@@ -49,6 +50,9 @@ import {
 import '../portal.css'
 import PortalReferrals from './PortalReferrals'
 import PortalStatus from './PortalStatus'
+import PortalRedeem from './PortalRedeem'
+import { Brand } from '../components/Brand'
+import { useBrandTitle } from '../branding'
 
 function ServiceOverview() {
   const { me, plugins } = useSession()
@@ -144,7 +148,7 @@ function ServiceOverview() {
                   ? '请联系工作人员处理账户状态。'
                   : business
                     ? '购买或续费后，可在“我的订阅”获取连接。'
-                    : '请联系分享者检查访问权限。'
+                    : '请联系工作人员检查访问权限。'
               }
               className="portal-notice"
               action={
@@ -180,7 +184,8 @@ const coveredPages = new Set([
   'commerce/plans',
   'commerce/orders',
   'commerce/wallet',
-  'commerce/referrals',
+  'affiliate/referrals',
+  'redeem/redeem',
   'support/tickets',
   'support/content',
   'support/notifications',
@@ -201,7 +206,19 @@ export default function Portal({
   const navigate = useNavigate()
   const [mobile, setMobile] = useState(false)
   const enabled = (id: string) => plugins.some((plugin) => plugin.id === id && plugin.enabled)
+  const hasPage = (id: string, pageId: string) =>
+    plugins.some(
+      (plugin) =>
+        plugin.id === id &&
+        plugin.enabled &&
+        plugin.pages.some(
+          (page) => page.id === pageId && page.roles.includes('member') && page.surface !== 'admin',
+        ),
+    )
   const business = me.mode === 'business' && enabled('commerce')
+  const affiliate = hasPage('affiliate', 'referrals')
+  const redeem = hasPage('redeem', 'redeem')
+  const nodeStatus = hasPage('nodes', 'status')
   const navigation = [
     { key: '/user', label: '我的服务', icon: <DashboardOutlined /> },
     ...(business ? [{ key: '/user/plans', label: '选购套餐', icon: <ShopOutlined /> }] : []),
@@ -212,10 +229,13 @@ export default function Portal({
       ? [
           { key: '/user/orders', label: '我的订单', icon: <FileTextOutlined /> },
           { key: '/user/wallet', label: '账户余额', icon: <WalletOutlined /> },
-          { key: '/user/referrals', label: '推广返佣', icon: <ShareAltOutlined /> },
         ]
       : []),
-    ...(enabled('nodes')
+    ...(affiliate
+      ? [{ key: '/user/referrals', label: '推广返佣', icon: <ShareAltOutlined /> }]
+      : []),
+    ...(redeem ? [{ key: '/user/redeem', label: '兑换码', icon: <GiftOutlined /> }] : []),
+    ...(nodeStatus
       ? [{ key: '/user/status', label: '节点状态', icon: <CloudServerOutlined /> }]
       : []),
     ...(enabled('support')
@@ -230,7 +250,11 @@ export default function Portal({
     .flatMap((plugin) =>
       plugin.pages
         .filter(
-          (page) => page.roles.includes('member') && !coveredPages.has(`${plugin.id}/${page.id}`),
+          (page) =>
+            page.roles.includes('member') &&
+            page.roles.includes(me.role) &&
+            page.surface !== 'admin' &&
+            !coveredPages.has(`${plugin.id}/${page.id}`),
         )
         .map((page) => ({
           key: `/user/extensions/${plugin.id}/${page.id}`,
@@ -238,15 +262,15 @@ export default function Portal({
           icon: <AppstoreOutlined />,
         })),
     )
-  if (me.role === 'member') navigation.push(...extraPages)
+  navigation.push(...extraPages)
   const selected = location.pathname.replace(/\/$/, '')
   const current = [...navigation, { key: '/user/account', label: '我的账户' }].find(
     (item) => item.key === selected,
   )
   useEffect(() => {
     setMobile(false)
-    document.title = `${current?.label || '用户中心'} · ${me.siteName || 'PxBoard'}`
-  }, [location.pathname, me.siteName, current?.label])
+  }, [location.pathname])
+  useBrandTitle(current?.label || '用户中心')
   async function logout() {
     try {
       await api('/auth/logout', { method: 'POST' })
@@ -278,7 +302,7 @@ export default function Portal({
               onClick={() => setMobile(true)}
             />
             <Link className="portal-brand" to="/user">
-              {me.siteName || 'PxBoard'}
+              <Brand />
             </Link>
           </Space>
           <Space size={8}>
@@ -331,7 +355,7 @@ export default function Portal({
         />
       </div>
       <Drawer
-        title={me.siteName || 'PxBoard'}
+        title={<Brand />}
         placement="left"
         size={260}
         open={mobile}
@@ -346,8 +370,9 @@ export default function Portal({
           <Route path="plans" element={business ? <PortalPlans /> : unavailable} />
           <Route path="orders" element={business ? <PortalOrders /> : unavailable} />
           <Route path="wallet" element={business ? <PortalWallet /> : unavailable} />
-          <Route path="referrals" element={business ? <PortalReferrals /> : unavailable} />
-          <Route path="status" element={enabled('nodes') ? <PortalStatus /> : unavailable} />
+          <Route path="referrals" element={affiliate ? <PortalReferrals /> : unavailable} />
+          <Route path="redeem" element={redeem ? <PortalRedeem /> : unavailable} />
+          <Route path="status" element={nodeStatus ? <PortalStatus /> : unavailable} />
           <Route
             path="subscriptions"
             element={enabled('subscriptions') ? <PortalSubscriptions /> : unavailable}
@@ -355,12 +380,10 @@ export default function Portal({
           <Route path="support" element={enabled('support') ? <PortalSupport /> : unavailable} />
           <Route path="help" element={enabled('support') ? <PortalHelp /> : unavailable} />
           <Route path="account" element={<Account />} />
-          {me.role === 'member' && (
-            <Route
-              path="extensions/:pluginId/:pageId"
-              element={<ResourcePage key={location.pathname} />}
-            />
-          )}
+          <Route
+            path="extensions/:pluginId/:pageId"
+            element={<ResourcePage key={location.pathname} />}
+          />
           <Route path="*" element={<Navigate to="/user" replace />} />
         </Routes>
       </Layout.Content>

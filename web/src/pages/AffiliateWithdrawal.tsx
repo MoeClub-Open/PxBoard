@@ -43,7 +43,7 @@ export default function AffiliateWithdrawal({
     setBusy(true)
     setError('')
     try {
-      await api('/extensions/commerce/withdrawals', {
+      await api('/extensions/affiliate/withdrawals', {
         method: 'POST',
         body: {
           amount,

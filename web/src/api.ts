@@ -15,6 +15,8 @@ export interface Page {
   icon: string
   group: string
   roles: string[]
+  surface?: 'admin' | 'portal'
+  capability?: string
 }
 export interface Plugin {
   id: string
@@ -44,6 +46,7 @@ export interface Field {
   default?: any
   hint?: string
   readOnly?: boolean
+  when?: Record<string, string[]>
 }
 export interface Action {
   key: string
@@ -56,6 +59,7 @@ export interface Action {
   when?: Record<string, string[]>
 }
 export interface Resource {
+  singleton?: boolean
   pollIntervalSeconds?: number
   key: string
   title: string
@@ -153,3 +157,10 @@ export function useData<T>(path: string | null, pollIntervalSeconds = 0) {
 }
 export const errorText = (e: unknown) => (e instanceof Error ? e.message : '操作失败')
 export const absoluteURL = (value: string) => new URL(value, window.location.origin).toString()
+
+export function configurationChanged() {
+  window.dispatchEvent(new Event('px:configuration-changed'))
+  try {
+    localStorage.setItem('px:configuration-change', String(Date.now()))
+  } catch {}
+}

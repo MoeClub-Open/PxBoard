@@ -4,9 +4,12 @@ import './index.css'
 import './bundles.css'
 import './theme.css'
 import App from './App.tsx'
+import { BrandingProvider } from './branding'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <BrandingProvider>
+      <App />
+    </BrandingProvider>
   </StrictMode>,
 )

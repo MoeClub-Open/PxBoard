@@ -63,7 +63,15 @@ export function OAuthButtons({
       sessionStorage.setItem(oauthFlowKey, JSON.stringify(flow))
       const result = await api<{ authorizationUrl: string }>('/extensions/oauth/authorize', {
         method: 'POST',
-        body: { providerId: provider.id, purpose, proof, redirectPath },
+        body: {
+          providerId: provider.id,
+          purpose,
+          proof,
+          redirectPath,
+          ...(purpose === 'login'
+            ? { referral: new URLSearchParams(window.location.search).get('ref') || undefined }
+            : {}),
+        },
       })
       const url = new URL(result.authorizationUrl)
       if (url.protocol !== 'https:') throw new Error('授权地址无效，请联系管理员')

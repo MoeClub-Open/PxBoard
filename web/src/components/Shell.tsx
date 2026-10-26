@@ -40,9 +40,10 @@ import {
   WalletOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
-import { api } from '../api'
+import { api, useData } from '../api'
 import { useSession } from '../context'
 import { Brand } from './Brand'
+import { useBrand, useBrandTitle } from '../branding'
 
 const icons: Record<string, ReactNode> = {
   server: <CloudServerOutlined />,
@@ -71,6 +72,8 @@ export default function Shell({
   children: ReactNode
 }) {
   const { me, plugins } = useSession()
+  const brand = useBrand()
+  const health = useData<{ version: string }>('/health')
   const [collapsed, setCollapsed] = useState(false)
   const [mobile, setMobile] = useState(false)
   const [command, setCommand] = useState(false)
@@ -97,7 +100,7 @@ export default function Shell({
       .filter((p) => p.enabled)
       .flatMap((p) =>
         p.pages
-          .filter((page) => page.roles.includes(me.role))
+          .filter((page) => page.roles.includes(me.role) && page.surface !== 'portal')
           .map((page) => ({
             key: `/p/${p.id}/${page.id}`,
             label: page.title,
@@ -135,6 +138,7 @@ export default function Shell({
     />
   )
   const current = entries.find((e) => e.key === location.pathname)
+  useBrandTitle(current?.label || '管理后台')
   const logout = async () => {
     try {
       await api('/auth/logout', { method: 'POST' })
@@ -155,24 +159,16 @@ export default function Shell({
           className="desktop-sider"
           theme={dark ? 'dark' : 'light'}
         >
-          <Link to="/" className="sidebar-brand">
-            {collapsed ? (
-              <span className="brand-mark">
-                <i />
-                <i />
-                <i />
-              </span>
-            ) : (
-              <Brand />
-            )}
+          <Link to="/" className="sidebar-brand" aria-label={brand.name}>
+            <Brand compact={collapsed} />
           </Link>
           <div className="sidebar-menu">{menu}</div>
           <div className="sidebar-bottom">
             <span className="online-dot" />
             {!collapsed && (
               <>
-                <span>服务已连接</span>
-                <small>v0.2.0</small>
+                <span>{health.error ? '连接异常' : health.loading ? '连接中' : '服务已连接'}</span>
+                {health.data?.version && <small>v{health.data.version}</small>}
               </>
             )}
           </div>
@@ -205,8 +201,7 @@ export default function Shell({
                 onClick={() => setMobile(true)}
               />
               <span className="header-path">
-                {me.siteName || 'PxBoard'} <span>/</span>{' '}
-                <strong>{current?.label || '页面'}</strong>
+                {brand.name} <span>/</span> <strong>{current?.label || '页面'}</strong>
               </span>
             </Space>
             <Space size={12}>
@@ -263,7 +258,7 @@ export default function Shell({
           <Layout.Content className="workspace-content">
             <div className="page-container">{children}</div>
             <footer className="workspace-footer">
-              PxBoard <span>v0.2.0</span>
+              {brand.name} {health.data?.version && <span>v{health.data.version}</span>}
             </footer>
           </Layout.Content>
         </Layout>

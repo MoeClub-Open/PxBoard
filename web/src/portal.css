@@ -30,6 +30,9 @@
   font-size: 19px;
   letter-spacing: -0.4px;
 }
+.portal-brand .brand {
+  font-size: 19px;
+}
 .portal-account {
   display: flex;
   align-items: center;

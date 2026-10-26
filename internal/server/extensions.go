@@ -5,7 +5,6 @@ import (
 	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
 	"io"
 	"net/http"
-	"slices"
 	"strings"
 )
 
@@ -45,8 +44,9 @@ func (s *Server) extension(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(path, "/ui/") {
 		allowed := false
+		caps := s.pageCapabilities(r, p.Manifest, a.Role)
 		for _, page := range p.Pages {
-			if page.ID == strings.TrimPrefix(path, "/ui/") && slices.Contains(page.Roles, a.Role) {
+			if page.ID == strings.TrimPrefix(path, "/ui/") && pageAllowed(page, a.Role, caps) {
 				allowed = true
 			}
 		}

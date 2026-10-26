@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import {
   Alert,
   App,
@@ -28,6 +28,9 @@ import {
 import type { Action, Field, Resource, Row, View } from '../api'
 import { absoluteURL, api, errorText, useData } from '../api'
 import { Fields, formValues, serialize } from './Fields'
+import { useSession } from '../context'
+import { useBrandTitle } from '../branding'
+import { configurationChanged } from '../api'
 
 const statuses: Record<string, [string, string]> = {
   active: ['正常', 'success'],
@@ -219,10 +222,11 @@ function ResourceTable({
     form.setFieldsValue(formValues(fs, action ? undefined : row))
     setEditor({ row, action })
   }
-  function complete(result?: Row) {
+  function complete(result?: Row, changed = false) {
     reload()
     onChange()
     setEditor(null)
+    if (changed) configurationChanged()
     if (result?.redirectUrl)
       modal.info({
         title: '支付收银台',
@@ -310,10 +314,16 @@ function ResourceTable({
     setBusy(true)
     try {
       complete(
-        await api(editor?.row ? `${endpoint.split('?')[0]}/${editor.row.id}` : endpoint, {
-          method: editor?.row ? 'PATCH' : 'POST',
-          body: values,
-        }),
+        await api(
+          editor?.row && !resource.singleton
+            ? `${endpoint.split('?')[0]}/${editor.row.id}`
+            : endpoint,
+          {
+            method: editor?.row ? 'PATCH' : 'POST',
+            body: values,
+          },
+        ),
+        true,
       )
     } catch (e) {
       message.error(errorText(e))
@@ -432,10 +442,15 @@ function ResourceTable({
                                   okButtonProps: { danger: true },
                                   onOk: async () => {
                                     try {
-                                      await api(`${endpoint.split('?')[0]}/${row.id}`, {
-                                        method: 'DELETE',
-                                      })
-                                      complete()
+                                      await api(
+                                        resource.singleton
+                                          ? endpoint
+                                          : `${endpoint.split('?')[0]}/${row.id}`,
+                                        {
+                                          method: 'DELETE',
+                                        },
+                                      )
+                                      complete(undefined, true)
                                     } catch (e) {
                                       message.error(errorText(e))
                                     }
@@ -482,8 +497,20 @@ function ResourceTable({
 
 export default function ResourcePage() {
   const { pluginId, pageId } = useParams()
+  const location = useLocation()
+  const { me, plugins } = useSession()
+  const selected = plugins.find((plugin) => plugin.id === pluginId && plugin.enabled)
+  const surface = location.pathname.startsWith('/user/') ? 'portal' : 'admin'
+  const page = selected?.pages.find(
+    (page) =>
+      page.id === pageId &&
+      page.roles.includes(me.role) &&
+      (!page.surface || page.surface === surface),
+  )
   const base = `/api/v1/extensions/${pluginId}`
-  const { data, loading, error, reload } = useData<View>(`${base}/ui/${pageId}`)
+  const { data, loading, error, reload } = useData<View>(page ? `${base}/ui/${pageId}` : null)
+  useBrandTitle(data?.title || page?.title || '功能未开放')
+  if (!page) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
   if (loading)
     return (
       <div className="page-loading">

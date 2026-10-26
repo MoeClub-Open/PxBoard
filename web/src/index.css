@@ -87,6 +87,12 @@ code {
 .brand-dot {
   color: #805cdc;
 }
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
 .brand-mark {
   width: 30px;
   height: 31px;

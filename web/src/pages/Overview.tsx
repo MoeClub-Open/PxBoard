@@ -13,7 +13,7 @@ import { useSession } from '../context'
 
 const modeLabels: Record<string, string> = {
   personal: '自用',
-  sharing: '分享',
+  sharing: '公益 / 分享',
   business: '商业运营',
 }
 function Summary({ plugin }: { plugin: Plugin }) {

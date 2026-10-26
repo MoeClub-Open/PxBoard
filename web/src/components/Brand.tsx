@@ -1,14 +1,19 @@
-export function Brand() {
+import { useBrand } from '../branding'
+
+export function Brand({ compact = false }: { compact?: boolean }) {
+  const { name, logoUrl } = useBrand()
   return (
     <div className="brand">
-      <span className="brand-mark">
-        <i />
-        <i />
-        <i />
-      </span>
-      <span>
-        PxBoard<span className="brand-dot">.</span>
-      </span>
+      {logoUrl ? (
+        <img className="brand-logo" src={logoUrl} alt="" />
+      ) : (
+        <span className="brand-mark" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+      )}
+      {!compact && <span>{name}</span>}
     </div>
   )
 }

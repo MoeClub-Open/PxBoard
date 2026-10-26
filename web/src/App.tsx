@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { Alert, App as AntApp, Button, ConfigProvider, Spin, theme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import type { Plugin, User } from './api'
-import { api } from './api'
+import { api, configurationChanged } from './api'
 import { SessionContext } from './context'
 import ResourcePage from './components/ResourcePage'
 import Shell from './components/Shell'
@@ -41,6 +41,28 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
     window.addEventListener('px:unauthenticated', expired)
     return () => window.removeEventListener('px:unauthenticated', expired)
   }, [])
+  useEffect(() => {
+    const update = () => {
+      if (me) void refresh().catch(() => {})
+      else
+        void api<AuthInfo>('/setup')
+          .then(setSite)
+          .catch(() => {})
+    }
+    const shared = (event: StorageEvent) => {
+      if (event.key === 'px:configuration-change') {
+        window.dispatchEvent(new Event('px:configuration-changed'))
+      }
+    }
+    window.addEventListener('px:configuration-changed', update)
+    window.addEventListener('focus', update)
+    window.addEventListener('storage', shared)
+    return () => {
+      window.removeEventListener('px:configuration-changed', update)
+      window.removeEventListener('focus', update)
+      window.removeEventListener('storage', shared)
+    }
+  }, [me?.id, refresh])
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -97,7 +119,9 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
   if (!me)
     return (
       <Routes>
-        {site?.mode === 'business' && <Route path="/" element={<Storefront auth={site} />} />}
+        {site?.mode === 'business' && site.extensions.includes('commerce') && (
+          <Route path="/" element={<Storefront auth={site} />} />
+        )}
         <Route path="/register" element={<Register />} />
         <Route path="/forgot" element={<Reset request />} />
         <Route path="/reset" element={<Reset />} />
@@ -128,7 +152,13 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
       ) : !admin ? (
         <Navigate to="/user" replace />
       ) : location.pathname === '/mode' ? (
-        <ModeSetup onReady={refresh} initialMode={site?.requestedMode || me.mode} />
+        <ModeSetup
+          onReady={async () => {
+            await refresh()
+            configurationChanged()
+          }}
+          initialMode={site?.requestedMode || me.mode}
+        />
       ) : location.pathname === '/' && site?.needsModeSetup ? (
         <Navigate to="/mode" replace />
       ) : (

@@ -139,12 +139,14 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 func (s *Server) setupStatus(w http.ResponseWriter, r *http.Request) {
 	mode := s.Store.Setting("mode", "personal")
 	forms := []plugin.AuthForm{}
+	extensions := []string{}
 	passwordReset := false
 	all, _ := s.Plugins.List()
 	for _, p := range all {
 		if !p.Enabled || p.Error != "" {
 			continue
 		}
+		extensions = append(extensions, p.ID)
 		caps := map[string]bool{}
 		if len(p.Capabilities) > 0 {
 			res, e := s.Plugins.Call(r.Context(), p.ID, plugin.Request{Method: "GET", Path: "/_capabilities", Actor: plugin.Actor{Role: "service", Plugin: "core"}})
@@ -173,7 +175,7 @@ func (s *Server) setupStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	state := s.modeState()
-	plugin.JSON(w, plugin.Record{"initialized": s.initialized(), "name": s.Store.Setting("name", "PxBoard"), "mode": mode, "requestedMode": state.RequestedMode, "needsModeSetup": state.Phase != "ready", "registration": forms, "passwordReset": passwordReset})
+	plugin.JSON(w, plugin.Record{"initialized": s.initialized(), "name": s.Store.Setting("name", "PxBoard"), "mode": mode, "requestedMode": state.RequestedMode, "needsModeSetup": state.Phase != "ready", "extensions": extensions, "registration": forms, "passwordReset": passwordReset})
 }
 func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	if s.initialized() {

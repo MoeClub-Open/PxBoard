@@ -1,7 +1,7 @@
 package plugin
 
 const APIVersion = "1.0"
-const CoreVersion = "0.3.2"
+const CoreVersion = "0.4.0"
 
 type Manifest struct {
 	ID             string            `json:"id"`
@@ -33,11 +33,13 @@ type AuthForm struct {
 	Capability string            `json:"capability,omitempty"`
 }
 type Page struct {
-	ID    string   `json:"id"`
-	Title string   `json:"title"`
-	Icon  string   `json:"icon"`
-	Group string   `json:"group"`
-	Roles []string `json:"roles"`
+	ID         string   `json:"id"`
+	Title      string   `json:"title"`
+	Icon       string   `json:"icon"`
+	Group      string   `json:"group"`
+	Roles      []string `json:"roles"`
+	Surface    string   `json:"surface,omitempty"`
+	Capability string   `json:"capability,omitempty"`
 }
 type Actor struct {
 	ID     string `json:"id"`
@@ -62,15 +64,16 @@ type Response struct {
 }
 type Record map[string]any
 type Field struct {
-	Key             string   `json:"key"`
-	Label           string   `json:"label"`
-	Type            string   `json:"type,omitempty"`
-	Required        bool     `json:"required,omitempty"`
-	Options         []Option `json:"options,omitempty"`
-	OptionsEndpoint string   `json:"optionsEndpoint,omitempty"`
-	Default         any      `json:"default,omitempty"`
-	Hint            string   `json:"hint,omitempty"`
-	ReadOnly        bool     `json:"readOnly,omitempty"`
+	Key             string              `json:"key"`
+	Label           string              `json:"label"`
+	Type            string              `json:"type,omitempty"`
+	Required        bool                `json:"required,omitempty"`
+	Options         []Option            `json:"options,omitempty"`
+	OptionsEndpoint string              `json:"optionsEndpoint,omitempty"`
+	Default         any                 `json:"default,omitempty"`
+	Hint            string              `json:"hint,omitempty"`
+	ReadOnly        bool                `json:"readOnly,omitempty"`
+	When            map[string][]string `json:"when,omitempty"`
 }
 type Option struct {
 	Label string `json:"label"`
@@ -87,6 +90,7 @@ type Action struct {
 	When     map[string][]string `json:"when,omitempty"`
 }
 type Resource struct {
+	Singleton           bool     `json:"singleton,omitempty"`
 	PollIntervalSeconds int      `json:"pollIntervalSeconds,omitempty"`
 	Key                 string   `json:"key"`
 	Title               string   `json:"title"`

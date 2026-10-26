@@ -28,7 +28,7 @@ import {
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
 import type { Plugin, Row } from '../api'
-import { api, errorText, useData } from '../api'
+import { api, configurationChanged, errorText, useData } from '../api'
 import { useSession } from '../context'
 
 interface Catalog {
@@ -46,10 +46,10 @@ const permissionLabel = (p: string) =>
   (p.startsWith('import:')
     ? `迁移${p.slice(7) === 'users' ? '用户账户和密码' : `${p.slice(7)} 插件的数据`}`
     : p.startsWith('call:')
-    ? `调用 ${p.slice(5)} 插件`
-    : p.startsWith('emit:')
-      ? `发布 ${p.slice(5)} 事件`
-      : p)
+      ? `调用 ${p.slice(5)} 插件`
+      : p.startsWith('emit:')
+        ? `发布 ${p.slice(5)} 事件`
+        : p)
 
 export function Sources() {
   const { message, modal } = App.useApp()
@@ -196,6 +196,7 @@ function Installed() {
         method: operation === 'remove' ? 'DELETE' : 'POST',
       })
       await refresh()
+      configurationChanged()
       message.success('操作完成')
     } catch (e) {
       message.error(errorText(e))
@@ -314,6 +315,7 @@ function Marketplace() {
         body: { id: detail.id, sourceId: detail.sourceId },
       })
       await refresh()
+      configurationChanged()
       setDetail(null)
       message.success(`${detail.name} 已安装并启用`)
     } catch (e) {
@@ -329,6 +331,7 @@ function Marketplace() {
         await api('/plugins/install', { method: 'POST', body: { id, sourceId: bundle.sourceId } })
       }
       await refresh()
+      configurationChanged()
       message.success(`${bundle.name}功能已安装`)
     } catch (e) {
       await refresh()
