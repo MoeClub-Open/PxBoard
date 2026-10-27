@@ -73,7 +73,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 | `registration` | 公开 `POST /register`；管理员 `GET/PATCH /settings` |
 | `nodes` | `/nodes`、`/machines`；`POST /nodes/{id}/rotate`；`GET /status`；管理员 `GET/PATCH /settings`；节点代理 `POST /agent/sync` 使用 `X-Node-Token` |
 | `access` | `GET/POST /accounts`、`PATCH /accounts/{id}`、`POST /accounts/{id}/reset`、`POST /accounts/{id}/suspend` |
-| `subscriptions` | `GET/POST /links`、`POST /links/{id}/rotate`；公开订阅 `GET /s/{token}?format=clash\|sing-box\|uri` |
+| `subscriptions` | `GET/POST /links`、`POST /links/{id}/rotate`、`POST /links/{id}/verify`；公开订阅 `GET /s/{token}` 根据客户端选择格式，也可显式指定 `format=clash\|sing-box\|uri` |
 | `redeem` | 管理员 `/codes`、`/codes/{id}`；用户 `POST /redeem`、`GET /claims` |
 | `commerce` | `/plans`、`/coupons`；`GET/POST /orders`、`POST /orders/{id}/{action}`；`GET/POST /ledger`；公开 `GET /public/plans` |
 | `affiliate` | `GET /summary`、`GET /commissions`、`GET/POST /withdrawals`、`POST /withdrawals/{id}/{action}`；管理员 `/profiles`、`GET/PATCH /settings` |
@@ -141,6 +141,8 @@ NodeRS 原生机器接口以 `/extensions/nodes/machines/{machineId}` 为前缀�
 ## 人机验证
 
 `GET /auth/challenge` 返回公开服务类型、站点密钥和受保护场景；没有启用验证插件时返回 `enabled=false`。受保护的 `POST /auth/login`、`POST /auth/reset-request`、插件声明的注册表单以及声明 `auth:login` 的插件的 `POST /authorize` 接受 `challengeToken`。验证失败返回 `challenge_required`；服务故障返回 `challenge_unavailable`。第三方登录在密码登录或账户注册任一项受保护时验证；账号绑定不验证。每次提交需要使用新的服务商凭证，动态验证码补交也需重新验证。验证插件停用后，这些接口恢复原行为。
+
+订阅验证由订阅插件独立控制，默认关闭。启用时先配置人机验证插件；用户使用 `POST /extensions/subscriptions/links/{id}/verify` 提交 `challengeToken`，验证成功后该链接可供客户端持续拉取。重置链接或重新开启验证需要再次验证。管理员通过 `GET/PATCH /extensions/subscriptions/verification/settings` 管理开关。
 
 ## 工单附件
 

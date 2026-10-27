@@ -114,6 +114,8 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 	}
 	path := r.PathValue("path")
 	switch {
+	case path == "challenge" && r.Method == "GET", path == "challenge/verify" && r.Method == "POST":
+		s.runtimeChallenge(w, r, a)
 	case path == "auth/grants" && r.Method == "POST":
 		s.createLoginGrant(w, r, a)
 	case path == "auth/verify" && r.Method == "POST":

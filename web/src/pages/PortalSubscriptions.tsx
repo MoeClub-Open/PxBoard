@@ -6,6 +6,7 @@ import { absoluteURL, api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { date } from './PortalShared'
+import { ChallengeNotice, HumanChallenge, useHumanChallenge } from '../components/HumanChallenge'
 
 export function PortalSubscriptions() {
   const { me } = useSession()
@@ -14,6 +15,7 @@ export function PortalSubscriptions() {
   const accounts = useData<Row[]>('/extensions/access/accounts?mine=1', 5)
   const [busy, setBusy] = useState(false)
   const [qr, setQr] = useState<{ label: string; url: string }>()
+  const challenge = useHumanChallenge()
   const ownLinks = (links.data || []).filter((row) => row.userId === me.id)
   const account = accounts.data?.find((row) => row.userId === me.id)
   async function create() {
@@ -35,6 +37,23 @@ export function PortalSubscriptions() {
       message.success('订阅链接已重置')
     } catch (e) {
       message.error(errorText(e))
+    }
+  }
+  async function verify(link: Row) {
+    if (!challenge.token) return
+    setBusy(true)
+    try {
+      await api(`/extensions/subscriptions/links/${link.id}/verify`, {
+        method: 'POST',
+        body: { challengeToken: challenge.token },
+      })
+      links.reload()
+      message.success('验证成功，订阅链接已启用')
+    } catch (e) {
+      message.error(errorText(e))
+    } finally {
+      challenge.reset()
+      setBusy(false)
     }
   }
   return (
@@ -65,43 +84,65 @@ export function PortalSubscriptions() {
           <Spin />
         </div>
       ) : ownLinks.length ? (
-        ownLinks.map((link) => (
-          <section className="portal-subscription" key={link.id}>
-            <div className="portal-subscription-heading">
-              <Typography.Text type="secondary">创建于 {date(link.createdAt)}</Typography.Text>
-              <Button
-                danger
-                onClick={() =>
-                  modal.confirm({
-                    title: '重置订阅链接？',
-                    content: '旧链接会立即失效，需要重新添加到客户端。',
-                    okText: '重置链接',
-                    cancelText: '取消',
-                    onOk: () => rotate(link),
-                  })
-                }
-              >
-                重置链接
-              </Button>
-            </div>
-            {account && !account.effective && (
-              <Alert
-                type="warning"
-                title="当前服务不可用，请先检查到期时间、流量或账户状态"
-                className="portal-notice"
-              />
-            )}
-            {[
-              { key: 'clashUrl', label: 'Clash / Mihomo' },
-              { key: 'singboxUrl', label: 'sing-box' },
-              { key: 'shareUrl', label: '通用订阅' },
-            ].map((item) => {
-              if (!link[item.key]) return null
-              const url = absoluteURL(String(link[item.key]))
-              return (
-                <div className="portal-subscription-format" key={item.key}>
-                  <h2>{item.label}</h2>
-                  <Input readOnly value={url} aria-label={`${item.label}订阅链接`} />
+        ownLinks.map((link) => {
+          const url = link.shareUrl ? absoluteURL(String(link.shareUrl)) : ''
+          return (
+            <section className="portal-subscription" key={link.id}>
+              <div className="portal-subscription-heading">
+                <Typography.Text type="secondary">创建于 {date(link.createdAt)}</Typography.Text>
+                <Button
+                  danger
+                  onClick={() =>
+                    modal.confirm({
+                      title: '重置订阅链接？',
+                      content: '旧链接会立即失效，需要重新添加到客户端。',
+                      okText: '重置链接',
+                      cancelText: '取消',
+                      onOk: () => rotate(link),
+                    })
+                  }
+                >
+                  重置链接
+                </Button>
+              </div>
+              {account && !account.effective && (
+                <Alert
+                  type="warning"
+                  title="当前服务不可用，请先检查到期时间、流量或账户状态"
+                  className="portal-notice"
+                />
+              )}
+              {link.verificationRequired && !link.verified ? (
+                <div className="portal-subscription-format">
+                  <h2>验证订阅</h2>
+                  <Typography.Paragraph type="secondary">
+                    完成验证后，订阅链接可供客户端持续更新。重置链接或重新启用验证后需要再次验证。
+                  </Typography.Paragraph>
+                  <ChallengeNotice loading={challenge.loading} error={challenge.error} />
+                  {!challenge.loading && !challenge.error && !challenge.policy?.enabled && (
+                    <Alert type="error" title="人机验证暂不可用，请联系管理员" showIcon />
+                  )}
+                  {challenge.policy?.enabled && (
+                    <HumanChallenge
+                      policy={challenge.policy}
+                      generation={challenge.generation}
+                      onToken={challenge.setToken}
+                      onError={challenge.setError}
+                    />
+                  )}
+                  <Button
+                    type="primary"
+                    loading={busy}
+                    disabled={!challenge.token || !!challenge.error}
+                    onClick={() => void verify(link)}
+                  >
+                    验证并启用订阅
+                  </Button>
+                </div>
+              ) : url ? (
+                <div className="portal-subscription-format">
+                  <h2>通用订阅</h2>
+                  <Input readOnly value={url} aria-label="通用订阅链接" />
                   <Space wrap>
                     <Button
                       icon={<CopyOutlined />}
@@ -116,7 +157,7 @@ export function PortalSubscriptions() {
                     </Button>
                     <Button
                       icon={<QrcodeOutlined />}
-                      onClick={() => setQr({ label: item.label, url })}
+                      onClick={() => setQr({ label: '通用订阅', url })}
                     >
                       二维码
                     </Button>
@@ -125,10 +166,10 @@ export function PortalSubscriptions() {
                     </Button>
                   </Space>
                 </div>
-              )
-            })}
-          </section>
-        ))
+              ) : null}
+            </section>
+          )
+        })
       ) : (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}

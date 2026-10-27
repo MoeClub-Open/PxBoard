@@ -229,6 +229,7 @@ SDK 提供 `List`、`Put`、`Delete`、`Increment`、`Call`、`Users`、`Emit` �
 | `users:create`       | 创建普通用户                     |
 | `auth:login`         | 为已有用户签发外部认证登录凭证   |
 | `call:<id>`          | 调用目标插件                     |
+| `challenge:verify`   | 复用已启用的订阅人机验证服务     |
 | `emit:<event>`       | 发布指定事件类型                 |
 | `import:users`       | 暂存并导入核心用户及原密码元数据 |
 | `import:<namespace>` | 导入指定插件的业务数据           |
@@ -324,3 +325,5 @@ pxboard -data data \
 核心 0.4.5 支持声明 `security.challenge` 的可选插件，最多启用一个。核心向插件内部 `GET /_challenge` 请求公开配置，通过 `POST /_challenge/verify` 传递 `action`（`login`、`register`、`reset`、`oauth`）及 `token`。插件应仅接受核心服务身份，按配置决定哪些场景需要验证，向服务商完成服务端核验；未通过返回 400，服务不可用返回 503。核心不将服务端密钥和验证凭证写入日志。插件进程不可用时受保护入口拒绝请求。
 
 核心对自身密码登录和密码找回、插件 `auth` 声明的注册表单，以及声明 `auth:login` 权限的插件的公开 `POST /authorize` 执行验证。身份插件应使用该入口发起授权并通过 `purpose=bind` 区分已登录的绑定操作；普通登录和第三方注册发送 `purpose=login`。授权前端通过 `challengeToken` 传递凭证。此机制不会代替插件自身的权限校验。停用验证插件不改动已有账户或注册设置。
+
+核心 `0.4.7` 允许具有 `challenge:verify` 权限的插件复用订阅人机验证。`GET /api/v1/runtime/challenge` 返回公开验证配置；`POST /api/v1/runtime/challenge/verify` 接收 `action: "subscription"` 和一次性 `token`，成功返回 `data: true`。这两个接口要求当前验证服务已启用并声明 `security.challenge.subscription` 能力；服务缺失、停用或异常时返回 503，验证未通过时返回 400。调用插件必须自行检查当前用户的权限，不能将服务端密钥或验证凭证保存到客户端订阅地址。

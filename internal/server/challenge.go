@@ -75,3 +75,54 @@ func (s *Server) verifyChallenge(w http.ResponseWriter, r *http.Request, action,
 	}
 	return true
 }
+
+// runtimeChallenge lets authorized plugins reuse a configured challenge provider.
+// A missing or disabled provider must not turn a protected plugin action into a success.
+func (s *Server) runtimeChallenge(w http.ResponseWriter, r *http.Request, actor plugin.Actor) {
+	if !s.Plugins.Permission(actor.Plugin, "challenge:verify") {
+		forbidden(w, "插件未获人机验证权限")
+		return
+	}
+	provider, err := s.challengeProvider()
+	if err != nil || provider == nil || provider.ID == actor.Plugin || provider.Error != "" || !slices.Contains(provider.Capabilities, "security.challenge.subscription") {
+		plugin.Fail(w, 503, "订阅人机验证服务不可用")
+		return
+	}
+	config, err := s.Plugins.Call(r.Context(), provider.ID, plugin.Request{Method: "GET", Path: "/_challenge", Actor: plugin.Actor{Role: "service", Plugin: "core"}})
+	var envelope struct {
+		Data struct {
+			Enabled  bool   `json:"enabled"`
+			SiteKey  string `json:"siteKey"`
+			Provider string `json:"provider"`
+		} `json:"data"`
+	}
+	if err != nil || config.Status != 200 || json.Unmarshal(config.Body, &envelope) != nil || !envelope.Data.Enabled || envelope.Data.SiteKey == "" || envelope.Data.Provider == "" {
+		plugin.Fail(w, 503, "订阅人机验证服务不可用")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	if r.Method == "GET" {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(config.Body)
+		return
+	}
+	var request struct{ Action, Token string }
+	if plugin.Decode(r, &request) != nil || request.Action != "subscription" || request.Token == "" {
+		plugin.Fail(w, 400, "请完成人机验证")
+		return
+	}
+	body, _ := json.Marshal(request)
+	result, err := s.Plugins.Call(r.Context(), provider.ID, plugin.Request{Method: "POST", Path: "/_challenge/verify", Body: body, Actor: plugin.Actor{Role: "service", Plugin: "core"}})
+	if err != nil || (result.Status != 200 && result.Status != 400) {
+		plugin.Fail(w, 503, "订阅人机验证服务不可用")
+		return
+	}
+	var verified struct {
+		Data bool `json:"data"`
+	}
+	if result.Status == 400 || json.Unmarshal(result.Body, &verified) != nil || !verified.Data {
+		plugin.Fail(w, 400, "人机验证未通过")
+		return
+	}
+	plugin.JSON(w, true)
+}
