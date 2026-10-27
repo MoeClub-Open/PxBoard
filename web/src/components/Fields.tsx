@@ -101,6 +101,8 @@ function fieldItem(f: Field, symbol: string) {
   else if (f.type === 'boolean') control = <Switch />
   else if (f.type === 'periods') control = <PlanPeriods />
   else if (f.type === 'groups') control = <GroupSelect field={f} />
+  else if (f.type === 'multiselect')
+    control = <Select mode="multiple" options={f.options || []} allowClear />
   else if (f.type === 'select' && f.optionsEndpoint) control = <RemoteSelect field={f} />
   else if (f.type === 'select')
     control = (
@@ -211,12 +213,16 @@ export function serialize(fields: Field[], values: Row) {
         ? Array.isArray(value)
           ? value.join(',')
           : ''
-        : field.type === 'datetime'
-          ? value?.toISOString() || ''
-          : (field.type === 'money' || (field.type === 'discount' && values.type === 'fixed')) &&
-              typeof value === 'number'
-            ? Math.round(value * 100)
-            : (value ?? (field.type === 'boolean' ? false : ''))
+        : field.type === 'multiselect'
+          ? Array.isArray(value)
+            ? value
+            : []
+          : field.type === 'datetime'
+            ? value?.toISOString() || ''
+            : (field.type === 'money' || (field.type === 'discount' && values.type === 'fixed')) &&
+                typeof value === 'number'
+              ? Math.round(value * 100)
+              : (value ?? (field.type === 'boolean' ? false : ''))
   }
   return result
 }

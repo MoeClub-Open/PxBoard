@@ -33,6 +33,7 @@ export function PortalSubscriptions() {
   const { message, modal } = App.useApp()
   const links = useData<Row[]>('/extensions/subscriptions/links?mine=1')
   const accounts = useData<Row[]>('/extensions/access/accounts?mine=1', 5)
+  const settings = useData<Row>('/extensions/subscriptions/settings/public')
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
   const [verifying, setVerifying] = useState<Row>()
@@ -222,7 +223,7 @@ export function PortalSubscriptions() {
                     <Button icon={<QrcodeOutlined />} onClick={() => setQr({ label: name, url })}>
                       二维码
                     </Button>
-                    {!link.bindUserAgent && (
+                    {!link.bindUserAgent && settings.data && !settings.data.hideFromBrowsers && (
                       <Button
                         icon={<DownloadOutlined />}
                         href={url}

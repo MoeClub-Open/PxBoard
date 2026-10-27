@@ -103,6 +103,14 @@ function Cell({
   const [open, setOpen] = useState(false)
   if (value === null || value === undefined || value === '') return <span className="muted">—</span>
   const text = String(value)
+  if (field.type === 'multiselect' && Array.isArray(value))
+    return (
+      <span>
+        {value
+          .map((item) => field.options?.find((option) => option.value === item)?.label || item)
+          .join('、') || '—'}
+      </span>
+    )
   if (field.type === 'groups')
     return (
       <Space size={[4, 4]} wrap>
@@ -535,7 +543,7 @@ function ResourceTable({
         okText={editor?.action?.label || (editor?.row ? '保存' : resource.createLabel || '确定')}
         cancelText="取消"
         destroyOnHidden
-        width={560}
+        width={fields.some((field) => field.type === 'periods') ? 760 : 560}
       >
         <Form form={form} layout="vertical" requiredMark="optional" className="editor-form">
           <Fields fields={fields} row={editor?.row} />

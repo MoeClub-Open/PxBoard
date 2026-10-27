@@ -115,6 +115,8 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 管理员以 `PATCH /extensions/nodes/settings` 提交 `{"userStatusEnabled":false}`，关闭用户节点状态入口和用户状态接口；管理员监控、NodeRS 接入、流量上报及订阅继续运行。节点记录的 `enabled` 控制服务启用，`visible` 控制订阅及用户状态列表中的显示，两者独立。共用父节点的记录通过 `parentId` 保留关系，子节点可使用父节点服务与状态而不重复启动监听。
 
+管理员可同时设置 `userStatusFields` 字符串数组，选择用户状态页的展示项；用户通过 `GET /extensions/nodes/status/display` 读取所选字段，未选择的数据不会出现在用户状态接口中。订阅浏览器伪装由管理员通过 `GET/PATCH /extensions/subscriptions/settings` 配置 `hideFromBrowsers` 和按行分隔的 `browserAgents`，根据 User-Agent 匹配；该标识可以伪造。
+
 OAuth 授权、完成注册、绑定与人工搬入的准确请求结构见 [第三方登录文档](../../PxBoard-Plugins/docs/oauth.md#接口)。普通用户不能调用管理员的绑定导入或提供方配置接口，最终会话由核心 `/auth/external/complete` 建立。
 
 ## NodeRS 与迁移
