@@ -7,6 +7,7 @@ import { useData } from '../api'
 import { Brand } from '../components/Brand'
 import { useBrandTitle } from '../branding'
 import '../storefront.css'
+import { availablePeriods, periodLabel } from '../planPeriods'
 
 interface StoreAuth {
   name?: string
@@ -17,18 +18,18 @@ interface StoreAuth {
 interface PublicPlan {
   id: string
   name: string
-  price: number
-  durationUnit: 'day' | 'month' | 'permanent'
-  durationValue: number
+  periods: {
+    id: string
+    label?: string
+    price: number
+    durationUnit: string
+    durationValue: number
+    kind: string
+  }[]
   quotaGiB: number
   unlimited: boolean
   kind: string
   currency?: string
-}
-
-function duration(plan: PublicPlan) {
-  if (plan.durationUnit === 'permanent') return '长期'
-  return `${plan.durationValue} ${plan.durationUnit === 'month' ? '个月' : '天'}`
 }
 
 export default function Storefront({ auth }: { auth?: StoreAuth }) {
@@ -44,7 +45,11 @@ export default function Storefront({ auth }: { auth?: StoreAuth }) {
     '/extensions/commerce/public/plans',
   )
   const currentSite = auth || site
-  const plans = (data || []).filter((plan) => ['subscription', 'time'].includes(plan.kind))
+  const plans = (data || []).filter((plan) =>
+    availablePeriods(plan).some((period) =>
+      ['subscription', 'time'].includes(period.kind || plan.kind),
+    ),
+  )
   const style = {
     '--store-border': token.colorBorderSecondary,
     '--store-surface': token.colorBgContainer,
@@ -116,9 +121,14 @@ export default function Storefront({ auth }: { auth?: StoreAuth }) {
               ),
             },
             {
-              title: '有效期',
-              key: 'duration',
-              render: (_, plan) => duration(plan),
+              title: '购买选项',
+              key: 'periods',
+              render: (_, plan) =>
+                availablePeriods(plan).map((period) => (
+                  <div key={period.id}>
+                    {periodLabel(period)} · {money(Number(period.price))}
+                  </div>
+                )),
             },
             {
               title: '每周期流量',
@@ -131,15 +141,6 @@ export default function Storefront({ auth }: { auth?: StoreAuth }) {
                 ) : (
                   `${Number(plan.quotaGiB).toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB`
                 ),
-            },
-            {
-              title: '价格',
-              dataIndex: 'price',
-              render: (value: number) => (
-                <Typography.Text strong className="storefront-price">
-                  {money(value)}
-                </Typography.Text>
-              ),
             },
             {
               title: '购买',

@@ -2,6 +2,7 @@ import { useCurrency } from '../currency'
 import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd'
 import dayjs from 'dayjs'
 import { useData, type Field, type Row } from '../api'
+import { PlanPeriods } from './PlanPeriods'
 
 function RemoteSelect({
   field,
@@ -63,6 +64,7 @@ function fieldItem(f: Field, symbol: string) {
       />
     )
   else if (f.type === 'boolean') control = <Switch />
+  else if (f.type === 'periods') control = <PlanPeriods />
   else if (f.type === 'select' && f.optionsEndpoint) control = <RemoteSelect field={f} />
   else if (f.type === 'select')
     control = (
@@ -91,10 +93,19 @@ function fieldItem(f: Field, symbol: string) {
   )
 }
 
-export function Fields({ fields }: { fields: Field[] }) {
+export function Fields({ fields, row }: { fields: Field[]; row?: Row }) {
   const { currencySymbol } = useCurrency()
-  return fields.map((field) =>
-    field.type === 'discount' ? (
+  return fields.map((original) => {
+    const field = original.optionsEndpoint?.includes('{id}')
+      ? {
+          ...original,
+          optionsEndpoint: original.optionsEndpoint.replace(
+            '{id}',
+            encodeURIComponent(String(row?.id || '')),
+          ),
+        }
+      : original
+    return field.type === 'discount' ? (
       <Form.Item
         key={field.key}
         noStyle
@@ -125,8 +136,8 @@ export function Fields({ fields }: { fields: Field[] }) {
       </Form.Item>
     ) : (
       fieldItem(field, currencySymbol)
-    ),
-  )
+    )
+  })
 }
 export function formValues(fields: Field[], row?: Row) {
   return Object.fromEntries(

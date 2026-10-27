@@ -32,6 +32,7 @@ import { Fields, formValues, serialize } from './Fields'
 import { useSession } from '../context'
 import { useBrandTitle } from '../branding'
 import { configurationChanged } from '../api'
+import { periodLabel } from '../planPeriods'
 
 const statuses: Record<string, [string, string]> = {
   active: ['正常', 'success'],
@@ -92,6 +93,17 @@ function Cell({ field, value, row }: { field: Field; value: any; row: Row }) {
   const [open, setOpen] = useState(false)
   if (value === null || value === undefined || value === '') return <span className="muted">—</span>
   const text = String(value)
+  if (field.type === 'periods' && Array.isArray(value))
+    return (
+      <>
+        {value.map((period: Row) => (
+          <div key={period.id}>
+            {periodLabel(period)} · {money(Number(period.price))}
+            {period.enabled === false ? '（下架）' : ''}
+          </div>
+        ))}
+      </>
+    )
   if (field.type === 'discount')
     return <span>{row.type === 'fixed' ? money(Number(value)) : `${value}%`}</span>
   if (field.type === 'money')
@@ -486,7 +498,7 @@ function ResourceTable({
         width={560}
       >
         <Form form={form} layout="vertical" requiredMark="optional" className="editor-form">
-          <Fields fields={fields} />
+          <Fields fields={fields} row={editor?.row} />
         </Form>
       </Modal>
     </section>

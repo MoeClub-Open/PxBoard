@@ -104,9 +104,9 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 ## 用户前台接口
 
-公开套餐为 `GET /extensions/commerce/public/plans`，返回已上架套餐的展示字段，不返回原始迁移快照或内部限制。新套餐期限统一使用 `durationUnit`（`day`、`month`、`permanent`）与 `durationValue`，按月续费按日历月计算。`quotaGiB` 为周期额度，`unlimited` 明确决定是否不限流量；额度为零不会自动变成不限流量。
+公开套餐为 `GET /extensions/commerce/public/plans`，返回已上架套餐及其可选周期的展示字段，不返回原始迁移快照或内部限制。每个 `periods` 项包含标识、价格、类型和期限；期限单位 `durationUnit` 为 `day`、`month` 或 `permanent`，按月续费按日历月计算。`quotaGiB` 为周期额度，`unlimited` 明确决定是否不限流量；额度为零不会自动变成不限流量。
 
-`POST /extensions/commerce/orders` 创建订单，`POST /extensions/commerce/orders/{id}/{action}` 支持 `pay/cancel/confirm/refund`，其中人工确认和退回余额需要管理员。创建订单和提现申请可携带 `requestId`，同一用户重试相同内容时返回原记录，用同一标识改动内容返回冲突。客户端在用户重新确认另一笔操作时生成新标识，网络失败重试保留原标识。支付跳转或回跳参数不代表到账，须查询服务端订单状态。
+`POST /extensions/commerce/orders` 创建订单，购买套餐时通过 `planId` 和 `periodId` 指定套餐与周期；订单保存选中周期的价格及权益快照。`POST /extensions/commerce/orders/{id}/{action}` 支持 `pay/cancel/confirm/refund`，其中人工确认和退回余额需要管理员。创建订单和提现申请可携带 `requestId`，同一用户重试相同内容时返回原记录，用同一标识改动内容返回冲突。客户端在用户重新确认另一笔操作时生成新标识，网络失败重试保留原标识。支付跳转或回跳参数不代表到账，须查询服务端订单状态。
 
 推广使用独立路径 `GET /extensions/affiliate/summary`，返回当前账户的推广链接、邀请人数、可用、冻结和累计佣金等信息。`POST /extensions/affiliate/withdrawals` 接收 `method=wallet` 时由本人直接转入余额，无需申请审批；`method=cash` 时创建现金提现申请。余额转入最低 1 分，现金提现最低 1 元。相同 `requestId` 重试保留原记录与入账标识。本人可使用 `POST /extensions/affiliate/withdrawals/{id}/transfer` 完成旧的待处理余额转入；`cancel` 可撤回本人尚未处理的现金申请或旧余额转入，新余额转入直接进入处理中，不可撤回。管理员使用同一资源的 `approve/reject/paid` 操作审批现金提现、拒绝未处理记录或登记现金打款。现金打款由管理员在外部完成，不会通过此接口自动转账。推广设置使用 `GET/PATCH /extensions/affiliate/settings`；个人规则使用 `GET/POST /extensions/affiliate/profiles`、`PATCH /extensions/affiliate/profiles/{userId}`。停用该插件不影响商业订单与钱包。
 

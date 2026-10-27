@@ -15,7 +15,8 @@ import {
 import { api, errorText, redirectToPayment, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
-import { duration, OrderStatus, useWallet } from './PortalShared'
+import { OrderStatus, useWallet } from './PortalShared'
+import { availablePeriods, periodLabel } from '../planPeriods'
 
 type Intent = { plan?: Row; order?: Row; rechargeAmount?: number }
 export default function Checkout({
@@ -39,6 +40,9 @@ export default function Checkout({
     intent.order?.kind === 'recharge' || intent.rechargeAmount !== undefined ? '' : 'wallet',
   )
   const [coupon, setCoupon] = useState('')
+  const periods = intent.plan ? availablePeriods(intent.plan) : []
+  const [periodId, setPeriodId] = useState<string>(String(periods[0]?.id || ''))
+  const period = periods.find((item) => item.id === periodId)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const working = useRef(false)
@@ -48,7 +52,7 @@ export default function Checkout({
   const requestId = useRef(crypto.randomUUID())
   const recharge = intent.rechargeAmount !== undefined || order?.kind === 'recharge'
   const { money } = useCurrency()
-  const amount = Number(order?.amount ?? intent.rechargeAmount ?? intent.plan?.price ?? 0)
+  const amount = Number(order?.amount ?? intent.rechargeAmount ?? period?.price ?? 0)
   useEffect(() => {
     if (!method && enabledChannels.length) setMethod(String(enabledChannels[0].id))
   }, [enabledChannels, method])
@@ -67,7 +71,7 @@ export default function Checkout({
       if (!order) {
         const body = recharge
           ? { kind: 'recharge', amount: intent.rechargeAmount }
-          : { planId: intent.plan?.id, coupon: coupon.trim() }
+          : { planId: intent.plan?.id, periodId, coupon: coupon.trim() }
         setOrder(
           await api<Row>('/extensions/commerce/orders', {
             method: 'POST',
@@ -120,7 +124,8 @@ export default function Checkout({
               type="primary"
               loading={busy}
               disabled={
-                !!order && (insufficient || !method || (method === 'wallet' && wallet.loading))
+                (!order && !recharge && !period) ||
+                (!!order && (insufficient || !method || (method === 'wallet' && wallet.loading)))
               }
               onClick={() => void proceed()}
             >
@@ -140,9 +145,6 @@ export default function Checkout({
             label: '商品',
             children: order?.planName || intent.plan?.name || '余额充值',
           },
-          ...(intent.plan
-            ? [{ key: 'duration', label: '期限', children: duration(intent.plan) }]
-            : []),
           {
             key: 'amount',
             label: order ? '订单金额' : '金额',
@@ -162,6 +164,23 @@ export default function Checkout({
       />
       {!order && !recharge && (
         <Form layout="vertical" className="portal-checkout-form">
+          <Form.Item label="购买选项">
+            <Radio.Group
+              value={periodId}
+              onChange={(e) => {
+                setPeriodId(e.target.value)
+                requestId.current = crypto.randomUUID()
+              }}
+            >
+              <Space orientation="vertical">
+                {periods.map((item) => (
+                  <Radio key={item.id} value={item.id}>
+                    {periodLabel(item)} · {money(Number(item.price))}
+                  </Radio>
+                ))}
+              </Space>
+            </Radio.Group>
+          </Form.Item>
           <Form.Item label="优惠码（可选）">
             <Input
               value={coupon}

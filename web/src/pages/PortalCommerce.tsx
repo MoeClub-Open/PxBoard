@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useData } from '../api'
 import type { Row } from '../api'
 import Checkout from './Checkout'
-import { duration } from './PortalShared'
+import { availablePeriods, periodLabel } from '../planPeriods'
 
 export { date, duration, OrderStatus, useWallet } from './PortalShared'
 export { PortalOrders } from './PortalOrders'
@@ -17,11 +17,11 @@ export function PortalPlans() {
   const navigate = useNavigate()
   const { message } = App.useApp()
   const [query, setQuery] = useSearchParams()
-  const plans = useData<Row[]>('/extensions/commerce/plans')
+  const plans = useData<Row[]>('/extensions/commerce/plans?scope=mine')
   const [selected, setSelected] = useState<Row>()
   const openedPlan = useRef<string | null>(null)
   const requestedPlan = query.get('plan')
-  const rows = (plans.data || []).filter((row) => row.enabled)
+  const rows = (plans.data || []).filter((row) => availablePeriods(row).length > 0)
   function clearPlanQuery() {
     setQuery(
       (current) => {
@@ -43,7 +43,9 @@ export function PortalPlans() {
     }
     if (!plans.data || plans.loading || openedPlan.current === requestedPlan) return
     openedPlan.current = requestedPlan
-    const plan = plans.data.find((row) => row.id === requestedPlan && row.enabled)
+    const plan = plans.data.find(
+      (row) => row.id === requestedPlan && availablePeriods(row).length > 0,
+    )
     if (plan) setSelected(plan)
     else {
       message.warning('该套餐已下架或不存在')
@@ -83,13 +85,20 @@ export function PortalPlans() {
               </div>
             ),
           },
-          { title: '服务期限', render: (_, row) => duration(row) },
+          {
+            title: '购买选项',
+            render: (_, row) =>
+              availablePeriods(row).map((period) => (
+                <div key={period.id}>
+                  {periodLabel(period)} · {money(Number(period.price))}
+                </div>
+              )),
+          },
           {
             title: '流量',
             render: (_, row) =>
               row.unlimited ? '不限量' : `${Number(row.quotaGiB || 0).toLocaleString()} GB`,
           },
-          { title: '价格', dataIndex: 'price', render: (value) => <strong>{money(value)}</strong> },
           {
             title: '',
             width: 100,
