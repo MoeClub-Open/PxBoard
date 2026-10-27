@@ -52,7 +52,7 @@
   width: 100%;
   max-width: 1180px;
   margin-inline: auto;
-  padding: 36px 24px 64px;
+  padding: 24px 24px 40px;
 }
 .portal-mobile-toggle {
   display: none;
@@ -69,13 +69,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   border-block: 1px solid var(--portal-border);
-  padding-block: 24px;
-  gap: 24px;
+  padding-block: 16px;
+  gap: 16px;
 }
 .portal-statistics > div {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 .portal-statistics span {
   color: var(--portal-muted);
@@ -85,9 +85,10 @@
   font-size: 20px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .portal-usage {
-  padding-block: 28px;
+  padding-block: 18px;
   border-bottom: 1px solid var(--portal-border);
 }
 .portal-usage > div:first-child {
@@ -95,10 +96,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .portal-announcements {
-  margin-top: 32px;
+  margin-top: 24px;
 }
 .portal-announcements h2 {
   margin-bottom: 12px;
@@ -113,15 +114,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 24px;
-  padding-block: 24px;
+  gap: 16px;
+  padding-block: 16px;
   border-block: 1px solid var(--portal-border);
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 .portal-wallet > div:first-child {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 .portal-wallet strong {
   font-size: 30px;
@@ -153,13 +154,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding-bottom: 20px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--portal-border);
 }
 .portal-subscription-format {
   display: grid;
-  gap: 14px;
-  padding-block: 28px;
+  gap: 10px;
+  padding-block: 16px;
   border-bottom: 1px solid var(--portal-border);
 }
 .portal-qr {
@@ -197,7 +198,7 @@
     display: none;
   }
   .portal-content {
-    padding: 24px 16px 48px;
+    padding: 18px 16px 36px;
   }
   .portal-brand {
     max-width: 155px;
@@ -208,11 +209,11 @@
   .portal-wallet {
     align-items: start;
     flex-direction: column;
-    gap: 20px;
+    gap: 14px;
   }
   .portal-statistics {
-    grid-template-columns: 1fr;
-    gap: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
   .portal-statistics > div {
     gap: 6px;

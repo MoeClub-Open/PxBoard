@@ -232,10 +232,10 @@ export default function App() {
           Menu: {
             itemSelectedBg: dark ? '#33294f' : '#f0ecfa',
             itemSelectedColor: dark ? '#c4b5fd' : '#6d45cf',
-            itemHeight: 40,
+            itemHeight: 36,
             itemMarginInline: 12,
           },
-          Table: { headerBg: dark ? '#24242b' : '#f8f9fc', cellPaddingBlockMD: 15 },
+          Table: { headerBg: dark ? '#24242b' : '#f8f9fc', cellPaddingBlockMD: 10, cellPaddingInlineMD: 12 },
         },
       }}
     >

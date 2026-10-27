@@ -32,7 +32,7 @@ h2 {
 h3 {
   font-size: 14px;
   font-weight: 600;
-  margin: 25px 0 14px;
+  margin: 20px 0 12px;
 }
 a {
   text-decoration: none;
@@ -135,8 +135,8 @@ code {
   z-index: 20;
 }
 .sidebar-brand {
-  height: 90px;
-  padding: 26px;
+  height: 72px;
+  padding: 18px 26px;
   display: flex;
   align-items: center;
 }
@@ -144,7 +144,7 @@ code {
   font-size: 23px;
 }
 .sidebar-menu {
-  height: calc(100vh - 150px);
+  height: calc(100vh - 124px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #b5b2c0 transparent;
@@ -155,7 +155,7 @@ code {
 .sidebar-menu .ant-menu-item-group-title {
   font-size: 11px;
   letter-spacing: 1px;
-  padding: 16px 28px 8px !important;
+  padding: 12px 28px 5px !important;
   color: #a2a0af !important;
 }
 .sidebar-menu .ant-menu-item .anticon {
@@ -190,9 +190,9 @@ code {
   min-width: 0;
 }
 .workspace-header {
-  height: 72px;
+  height: 60px;
   line-height: normal;
-  padding: 0 30px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -236,7 +236,7 @@ kbd {
   flex-direction: column;
 }
 .page-container {
-  padding: 34px 38px 28px;
+  padding: 24px 28px 24px;
   width: 100%;
   max-width: 1550px;
   margin: 0 auto;
@@ -247,7 +247,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 28px;
+  margin-bottom: 18px;
   min-height: 38px;
 }
 .shared-page-heading {
@@ -262,13 +262,13 @@ kbd {
   border: 1px solid #e9eaf2;
   background: white;
   border-radius: 8px;
-  margin: 8px 0 30px;
+  margin: 8px 0 20px;
 }
 .metric-strip > div {
-  padding: 25px 26px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   border-right: 1px solid #efeff5;
 }
 .metric-strip > div:last-child {
@@ -305,18 +305,18 @@ kbd {
   color: #35a27d;
 }
 .workspace-section {
-  padding: 22px 24px;
+  padding: 18px 20px;
   background: white;
   border: 1px solid #e9eaf2;
   border-radius: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 .section-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 .section-heading a,
 .section-heading > span {
@@ -325,7 +325,7 @@ kbd {
 .overview-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 18px;
 }
 .overview-columns .ant-list-item-meta-avatar {
   padding-top: 6px;
@@ -342,7 +342,7 @@ kbd {
   gap: 0 24px;
 }
 .shortcut {
-  padding: 16px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #f0eff5;
   font-size: 13px;
   display: flex;
@@ -378,7 +378,7 @@ kbd {
   margin-bottom: 25px;
 }
 .workspace-footer {
-  padding: 20px 38px;
+  padding: 16px 28px;
   font-size: 11px;
   color: #b0abbc;
   display: flex;
@@ -389,7 +389,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  margin: 8px 0 22px;
+  margin: 8px 0 16px;
   flex-wrap: wrap;
 }
 .table-toolbar > div:first-child {
@@ -401,7 +401,7 @@ kbd {
   font-size: 11px;
 }
 .resource-section {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 .ant-table-wrapper {
   background: white;
@@ -431,14 +431,14 @@ kbd {
   font-size: 11px;
 }
 .editor-form {
-  margin-top: 22px;
+  margin-top: 16px;
 }
 .settings-form {
   max-width: 560px;
   background: white;
   border: 1px solid #e9eaf2;
   border-radius: 8px;
-  padding: 28px;
+  padding: 20px;
 }
 .qr-content {
   display: flex;
@@ -494,8 +494,8 @@ kbd {
 .market-row {
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 25px 26px;
+  gap: 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid #efeff5;
 }
 .market-row:last-child {
@@ -520,7 +520,7 @@ kbd {
 .market-copy p {
   font-size: 12px;
   color: #8b849a;
-  margin: 9px 0;
+  margin: 6px 0;
 }
 .market-copy > .muted {
   font-size: 10px;
@@ -715,7 +715,7 @@ kbd {
 }
 @media (min-width: 1600px) {
   .page-container {
-    padding-top: 42px;
+    padding-top: 28px;
   }
 }
 @media (max-width: 1100px) {
@@ -723,13 +723,13 @@ kbd {
     padding: 0 22px;
   }
   .page-container {
-    padding: 26px 24px;
+    padding: 22px 24px;
   }
   .overview-columns {
     grid-template-columns: 1fr;
   }
   .metric-strip > div {
-    padding: 22px 18px;
+    padding: 18px;
   }
   .shortcut-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -751,10 +751,10 @@ kbd {
     padding: 0 16px;
   }
   .page-container {
-    padding: 24px 16px;
+    padding: 18px 16px;
   }
   .page-heading {
-    margin-bottom: 22px;
+    margin-bottom: 16px;
   }
   .page-heading h1 {
     font-size: 22px;
@@ -764,7 +764,7 @@ kbd {
   }
   .metric-strip > div {
     border-bottom: 1px solid #efeff5;
-    padding: 20px;
+    padding: 16px;
   }
   .metric-strip > div:nth-child(2n) {
     border-right: 0;
@@ -773,7 +773,7 @@ kbd {
     font-size: 25px;
   }
   .workspace-section {
-    padding: 20px 18px;
+    padding: 16px;
   }
   .shortcut-grid {
     gap: 0 18px;
@@ -785,7 +785,7 @@ kbd {
     width: 100%;
   }
   .market-row {
-    padding: 20px 15px;
+    padding: 16px 15px;
     gap: 12px;
     align-items: flex-start;
   }
@@ -815,7 +815,7 @@ kbd {
     padding: 20px 16px;
   }
   .settings-form {
-    padding: 22px 20px;
+    padding: 18px 16px;
   }
   .overview-columns {
     gap: 0;
