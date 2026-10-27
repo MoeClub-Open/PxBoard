@@ -19,17 +19,25 @@ import { api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { date } from './PortalShared'
+import { TicketEditor } from '../components/TicketEditor'
+import { TicketMarkdown } from '../components/TicketMarkdown'
+import '../tickets.css'
 
-export function PortalSupport() {
+export function PortalSupport({ admin = false }: { admin?: boolean }) {
   const { me } = useSession()
   const { message, modal } = App.useApp()
-  const tickets = useData<Row[]>('/extensions/support/tickets?mine=1', 10)
+  const tickets = useData<Row[]>(
+    admin ? '/extensions/support/tickets' : '/extensions/support/tickets?mine=1',
+    10,
+  )
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<string>()
   const [busy, setBusy] = useState(false)
+  const [uploadingCreate, setUploadingCreate] = useState(false)
+  const [uploadingReply, setUploadingReply] = useState(false)
   const [form] = Form.useForm()
   const [replyForm] = Form.useForm()
-  const rows = (tickets.data || []).filter((row) => row.userId === me.id)
+  const rows = (tickets.data || []).filter((row) => admin || row.userId === me.id)
   const current = rows.find((row) => row.id === selected)
   const statuses: Record<string, [string, string]> = {
     open: ['等待回复', 'warning'],
@@ -69,12 +77,14 @@ export function PortalSupport() {
   return (
     <>
       <div className="page-heading">
-        <h1>我的工单</h1>
+        <h1>{admin ? '工单管理' : '我的工单'}</h1>
         <Space>
           <Button icon={<ReloadOutlined />} onClick={tickets.reload} aria-label="刷新工单" />
-          <Button type="primary" onClick={() => setCreating(true)}>
-            提交工单
-          </Button>
+          {!admin && (
+            <Button type="primary" onClick={() => setCreating(true)}>
+              提交工单
+            </Button>
+          )}
         </Space>
       </div>
       {tickets.error && (
@@ -91,7 +101,12 @@ export function PortalSupport() {
         pagination={{ pageSize: 10 }}
         scroll={{ x: 560 }}
         locale={{
-          emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有工单" />,
+          emptyText: (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={admin ? '暂无工单' : '还没有工单'}
+            />
+          ),
         }}
         columns={[
           {
@@ -110,6 +125,7 @@ export function PortalSupport() {
               </Button>
             ),
           },
+          ...(admin ? [{ title: '用户', dataIndex: 'email' }] : []),
           {
             title: '状态',
             dataIndex: 'status',
@@ -126,6 +142,7 @@ export function PortalSupport() {
         onCancel={() => setCreating(false)}
         onOk={() => void submit()}
         confirmLoading={busy}
+        okButtonProps={{ disabled: uploadingCreate }}
         okText="提交"
         cancelText="取消"
       >
@@ -142,7 +159,7 @@ export function PortalSupport() {
             label="问题描述"
             rules={[{ required: true, message: '请描述遇到的问题' }]}
           >
-            <Input.TextArea rows={5} />
+            <TicketEditor onUploadingChange={setUploadingCreate} />
           </Form.Item>
         </Form>
       </Modal>
@@ -182,7 +199,18 @@ export function PortalSupport() {
                 { key: 'updated', label: '最近更新', children: date(current.updatedAt) },
               ]}
             />
-            <div className="portal-ticket-thread">{current.thread}</div>
+            <div className="ticket-conversation">
+              {current.thread && <div className="ticket-legacy">{current.thread}</div>}
+              {(current.messages || []).map((entry: Row) => (
+                <article className="ticket-message" key={entry.id}>
+                  <div className="ticket-message-meta">
+                    <strong>{entry.author || '用户'}</strong>
+                    <span>{date(entry.createdAt)}</span>
+                  </div>
+                  <TicketMarkdown value={String(entry.content || '')} />
+                </article>
+              ))}
+            </div>
             {current.status !== 'closed' && (
               <Form
                 form={replyForm}
@@ -209,9 +237,9 @@ export function PortalSupport() {
                   label="回复"
                   rules={[{ required: true, message: '请输入回复内容' }]}
                 >
-                  <Input.TextArea rows={4} />
+                  <TicketEditor onUploadingChange={setUploadingReply} />
                 </Form.Item>
-                <Button type="primary" htmlType="submit" loading={busy}>
+                <Button type="primary" htmlType="submit" loading={busy} disabled={uploadingReply}>
                   发送回复
                 </Button>
               </Form>

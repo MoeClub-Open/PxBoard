@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Alert, App as AntApp, Button, ConfigProvider, Spin, theme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
@@ -17,6 +17,10 @@ import Portal from './pages/Portal'
 import Storefront from './pages/Storefront'
 import type { AuthInfo } from './pages/Register'
 import OAuthComplete from './pages/OAuthComplete'
+
+const PortalSupport = lazy(() =>
+  import('./pages/PortalSupport').then((module) => ({ default: module.PortalSupport })),
+)
 
 function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => void }) {
   const [me, setMe] = useState<User | null>(null)
@@ -176,7 +180,22 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
           <Routes>
             <Route path="/admin" element={<Overview />} />
             <Route path="/admin/account" element={<Account />} />
-            <Route path="/admin/p/:pluginId/:pageId" element={<ResourcePage key={location.pathname} />} />
+            <Route
+              path="/admin/p/support/tickets"
+              element={
+                plugins.some((p) => p.id === 'support' && p.enabled) ? (
+                  <Suspense fallback={<Spin />}>
+                    <PortalSupport admin />
+                  </Suspense>
+                ) : (
+                  <Navigate to="/admin" replace />
+                )
+              }
+            />
+            <Route
+              path="/admin/p/:pluginId/:pageId"
+              element={<ResourcePage key={location.pathname} />}
+            />
             {admin && (
               <>
                 <Route path="/admin/users" element={<Users />} />

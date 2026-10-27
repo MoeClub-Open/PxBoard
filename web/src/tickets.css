@@ -1,0 +1,82 @@
+.ticket-conversation {
+  margin-block: 16px 24px;
+  border-block: 1px solid var(--portal-border, #e9e9ed);
+}
+.ticket-legacy {
+  padding-block: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ticket-message {
+  padding-block: 16px;
+  overflow-wrap: anywhere;
+}
+.ticket-message + .ticket-message,
+.ticket-legacy + .ticket-message {
+  border-top: 1px solid var(--portal-border, #e9e9ed);
+}
+.ticket-message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.ticket-message-meta span {
+  color: #777;
+  font-size: 12px;
+}
+.ticket-markdown {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.ticket-markdown p {
+  white-space: pre-wrap;
+  margin-block: 0 10px;
+}
+.ticket-markdown > :last-child {
+  margin-bottom: 0;
+}
+.ticket-markdown img,
+.ticket-markdown video {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  border-radius: 4px;
+}
+.ticket-markdown pre {
+  overflow: auto;
+  padding: 12px;
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 4px;
+}
+.ticket-markdown blockquote {
+  margin-inline: 0;
+  padding-left: 12px;
+  border-left: 3px solid #aaa;
+}
+.ticket-markdown table {
+  border-collapse: collapse;
+  max-width: 100%;
+}
+.ticket-markdown td,
+.ticket-markdown th {
+  border: 1px solid #aaa;
+  padding: 4px 8px;
+}
+.ticket-video {
+  display: block;
+}
+.ticket-editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.ticket-preview {
+  min-height: 130px;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+}

@@ -141,3 +141,7 @@ NodeRS 原生机器接口以 `/extensions/nodes/machines/{machineId}` 为前缀�
 ## 人机验证
 
 `GET /auth/challenge` 返回公开服务类型、站点密钥和受保护场景；没有启用验证插件时返回 `enabled=false`。受保护的 `POST /auth/login`、`POST /auth/reset-request`、插件声明的注册表单以及声明 `auth:login` 的插件的 `POST /authorize` 接受 `challengeToken`。验证失败返回 `challenge_required`；服务故障返回 `challenge_unavailable`。第三方登录在密码登录或账户注册任一项受保护时验证；账号绑定不验证。每次提交需要使用新的服务商凭证，动态验证码补交也需重新验证。验证插件停用后，这些接口恢复原行为。
+
+## 工单附件
+
+工单支持 Markdown 文本；用户通过 `POST /extensions/support/attachments` 上传单张 PNG、JPEG、GIF 或 WebP 图片，JSON 的 `data` 字段是图片内容的 Base64，大小上限 2 MiB。响应包含受权限保护的 `url`，可插入工单内容。`GET` 图片地址需要登录，只有上传者、工单发起人或管理员可读取。站内图片引用在提交工单或回复时校验权限。已有旧文本对话保留，新消息按条存储。插件状态目录与数据库须一起备份。

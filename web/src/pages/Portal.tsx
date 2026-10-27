@@ -1,5 +1,5 @@
 import { useCurrency } from '../currency'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import {
   Alert,
@@ -42,18 +42,17 @@ import { useSession } from '../context'
 import Account from './Account'
 import ResourcePage from '../components/ResourcePage'
 import { date, PortalOrders, PortalPlans, PortalWallet, useWallet } from './PortalCommerce'
-import {
-  PortalAnnouncements,
-  PortalHelp,
-  PortalSubscriptions,
-  PortalSupport,
-} from './PortalServices'
+import { PortalAnnouncements, PortalHelp, PortalSubscriptions } from './PortalServices'
 import '../portal.css'
 import PortalReferrals from './PortalReferrals'
 import PortalStatus from './PortalStatus'
 import PortalRedeem from './PortalRedeem'
 import { Brand } from '../components/Brand'
 import { useBrandTitle } from '../branding'
+
+const PortalSupport = lazy(() =>
+  import('./PortalSupport').then((module) => ({ default: module.PortalSupport })),
+)
 
 function ServiceOverview() {
   const { money } = useCurrency()
@@ -381,7 +380,18 @@ export default function Portal({
             path="subscriptions"
             element={enabled('subscriptions') ? <PortalSubscriptions /> : unavailable}
           />
-          <Route path="support" element={enabled('support') ? <PortalSupport /> : unavailable} />
+          <Route
+            path="support"
+            element={
+              enabled('support') ? (
+                <Suspense fallback={<Spin />}>
+                  <PortalSupport />
+                </Suspense>
+              ) : (
+                unavailable
+              )
+            }
+          />
           <Route path="help" element={enabled('support') ? <PortalHelp /> : unavailable} />
           <Route path="account" element={<Account />} />
           <Route
