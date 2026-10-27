@@ -89,10 +89,10 @@ func checkCoreVersion(manifest plugin.Manifest) error {
 	if manifest.MinCoreVersion == "" {
 		return nil
 	}
-	if !validVersion(manifest.MinCoreVersion) {
+	if _, ok := orderedVersion(manifest.MinCoreVersion); !ok {
 		return fmt.Errorf("插件 %s 的最低核心版本声明无效：%s", manifest.ID, manifest.MinCoreVersion)
 	}
-	if !compatible(plugin.CoreVersion, manifest.MinCoreVersion) {
+	if !compatible(strconv.Itoa(plugin.CoreVersionEpoch)+"!"+plugin.CoreVersion, manifest.MinCoreVersion) {
 		return fmt.Errorf("插件 %s 需要 PxBoard 核心 %s 或更新版本，当前为 %s，请先升级核心", manifest.ID, manifest.MinCoreVersion, plugin.CoreVersion)
 	}
 	return nil
