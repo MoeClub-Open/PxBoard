@@ -6,6 +6,8 @@ import { api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { activityLabel } from './Overview'
+import ResourcePage from '../components/ResourcePage'
+import { settingsDestinations } from '../settingsDestinations'
 
 export function Users() {
   const { message } = App.useApp()
@@ -175,7 +177,7 @@ export function Users() {
 
 export function Settings() {
   const { message } = App.useApp()
-  const { refresh } = useSession()
+  const { refresh, plugins } = useSession()
   const { data, loading, error } = useData<Row>('/settings')
   const [busy, setBusy] = useState(false)
   if (loading) return null
@@ -185,6 +187,7 @@ export function Settings() {
         <h1>系统设置</h1>
       </div>
       {error && <Alert type="error" title={error} />}
+      <h2 className="settings-section-title">基础设置</h2>
       <div className="settings-form">
         <Form
           layout="vertical"
@@ -205,9 +208,7 @@ export function Settings() {
           <Form.Item label="使用方式">
             <Space>
               <span>
-                {{ personal: '自用', sharing: '公益 / 分享', business: '商业运营' }[
-                  String(data?.mode)
-                ] || data?.mode}
+                {{ personal: '自用', business: '商业运营' }[String(data?.mode)] || data?.mode}
               </span>
               <Link to="/admin/mode">切换使用方式</Link>
             </Space>
@@ -220,6 +221,25 @@ export function Settings() {
           </Button>
         </Form>
       </div>
+      {plugins
+        .filter((plugin) => plugin.enabled)
+        .flatMap((plugin) =>
+          plugin.pages
+            .filter(
+              (page) =>
+                page.roles.includes('admin') &&
+                page.surface !== 'portal' &&
+                settingsDestinations[`${plugin.id}/${page.id}`] === '/admin/settings',
+            )
+            .map((page) => (
+              <ResourcePage
+                key={`${plugin.id}/${page.id}`}
+                pluginId={plugin.id}
+                pageId={page.id}
+                hideHeading
+              />
+            )),
+        )}
     </>
   )
 }

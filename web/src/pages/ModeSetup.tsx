@@ -37,7 +37,6 @@ interface ModeState {
 
 const modes = [
   { value: 'personal', label: '自用', description: '节点管理、访问账户和订阅' },
-  { value: 'sharing', label: '公益 / 分享', description: '用户注册、兑换码、订阅和流量审计' },
   { value: 'business', label: '商业运营', description: '用户前台、套餐订单、支付和工单' },
 ]
 const pluginNames: Record<string, string> = {

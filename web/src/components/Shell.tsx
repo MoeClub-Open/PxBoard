@@ -41,10 +41,11 @@ import {
   WalletOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
-import { api, useData } from '../api'
+import { api } from '../api'
 import { useSession } from '../context'
 import { Brand } from './Brand'
 import { useBrand, useBrandTitle } from '../branding'
+import { settingsDestinations } from '../settingsDestinations'
 
 const icons: Record<string, ReactNode> = {
   server: <CloudServerOutlined />,
@@ -75,7 +76,6 @@ export default function Shell({
 }) {
   const { me, plugins } = useSession()
   const brand = useBrand()
-  const health = useData<{ version: string }>('/health')
   const [collapsed, setCollapsed] = useState(false)
   const [mobile, setMobile] = useState(false)
   const [command, setCommand] = useState(false)
@@ -101,24 +101,33 @@ export default function Shell({
     .filter((plugin) => plugin.enabled)
     .flatMap((plugin) =>
       plugin.pages
-        .filter((page) => page.roles.includes(me.role) && page.surface !== 'portal')
+        .filter(
+          (page) =>
+            page.roles.includes(me.role) &&
+            page.surface !== 'portal' &&
+            !settingsDestinations[`${plugin.id}/${page.id}`],
+        )
         .flatMap((page) => {
           if (page.shared) {
             if (sharedSeen.has(page.shared.id)) return []
             sharedSeen.add(page.shared.id)
-            return [{
-              key: `/admin/shared/${encodeURIComponent(page.shared.id)}`,
-              label: page.shared.title,
+            return [
+              {
+                key: `/admin/shared/${encodeURIComponent(page.shared.id)}`,
+                label: page.shared.title,
+                icon: icons[page.icon] || <AppstoreOutlined />,
+                group: page.group,
+              },
+            ]
+          }
+          return [
+            {
+              key: `/admin/p/${plugin.id}/${page.id}`,
+              label: page.title,
               icon: icons[page.icon] || <AppstoreOutlined />,
               group: page.group,
-            }]
-          }
-          return [{
-            key: `/admin/p/${plugin.id}/${page.id}`,
-            label: page.title,
-            icon: icons[page.icon] || <AppstoreOutlined />,
-            group: page.group,
-          }]
+            },
+          ]
         }),
     )
   const entries = [
@@ -134,7 +143,12 @@ export default function Shell({
         ]
       : []),
   ]
-  entries.push({ key: '/admin/account', label: '我的账户', icon: <SettingOutlined />, group: '账户' })
+  entries.push({
+    key: '/admin/account',
+    label: '我的账户',
+    icon: <SettingOutlined />,
+    group: '账户',
+  })
   const groups = new Map<string, typeof entries>()
   entries.forEach((e) => groups.set(e.group, [...(groups.get(e.group) || []), e]))
   const items = collapsed
@@ -179,15 +193,6 @@ export default function Shell({
             <Brand compact={collapsed} />
           </Link>
           <div className="sidebar-menu">{menu}</div>
-          <div className="sidebar-bottom">
-            <span className="online-dot" />
-            {!collapsed && (
-              <>
-                <span>{health.error ? '连接异常' : health.loading ? '连接中' : '服务已连接'}</span>
-                {health.data?.version && <small>v{health.data.version}</small>}
-              </>
-            )}
-          </div>
         </Layout.Sider>
         <Drawer
           placement="left"
@@ -273,9 +278,6 @@ export default function Shell({
           </Layout.Header>
           <Layout.Content className="workspace-content">
             <div className="page-container">{children}</div>
-            <footer className="workspace-footer">
-              {brand.name} {health.data?.version && <span>v{health.data.version}</span>}
-            </footer>
           </Layout.Content>
         </Layout>
       </Layout>

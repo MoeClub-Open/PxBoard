@@ -28,7 +28,7 @@ type modeState struct {
 }
 
 func validMode(mode string) bool {
-	return mode == "personal" || mode == "sharing" || mode == "business"
+	return mode == "personal" || mode == "business"
 }
 func (s *Server) modeState() modeState {
 	mode := s.Store.Setting("mode", "personal")
@@ -69,7 +69,7 @@ func (s *Server) workspaceMode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !validMode(request.Mode) {
-		p.Fail(w, 400, "请选择自用、分享或商业运营")
+		p.Fail(w, 400, "请选择自用或商业运营")
 		return
 	}
 	s.modeMu.Lock()

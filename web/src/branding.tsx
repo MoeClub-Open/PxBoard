@@ -59,9 +59,9 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
 
 export const useBrand = () => useContext(BrandingContext)
 
-export function useBrandTitle(title?: string) {
+export function useBrandTitle(title?: string, enabled = true) {
   const { name } = useBrand()
   useEffect(() => {
-    document.title = title ? `${title} · ${name}` : name
-  }, [name, title])
+    if (enabled) document.title = title ? `${title} · ${name}` : name
+  }, [name, title, enabled])
 }

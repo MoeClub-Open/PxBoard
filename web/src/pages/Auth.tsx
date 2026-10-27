@@ -97,7 +97,6 @@ export default function Auth({
             <div className="mode-options">
               {[
                 { id: 'personal', name: '自用', text: '管理自己的节点与订阅' },
-                { id: 'sharing', name: '公益 / 分享', text: '用户注册、兑换码与独立订阅' },
                 { id: 'business', name: '商业运营', text: '套餐、订单、支付与用户服务' },
               ].map((item) => (
                 <button

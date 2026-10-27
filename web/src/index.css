@@ -135,8 +135,8 @@ code {
   z-index: 20;
 }
 .sidebar-brand {
-  height: 72px;
-  padding: 18px 26px;
+  height: 60px;
+  padding: 14px 26px;
   display: flex;
   align-items: center;
 }
@@ -144,7 +144,7 @@ code {
   font-size: 23px;
 }
 .sidebar-menu {
-  height: calc(100vh - 124px);
+  height: calc(100vh - 60px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: #b5b2c0 transparent;
@@ -163,28 +163,6 @@ code {
 }
 .sidebar-menu .ant-menu-item {
   font-size: 13px;
-}
-.sidebar-bottom {
-  position: absolute;
-  bottom: 0;
-  height: 52px;
-  left: 18px;
-  right: 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-top: 1px solid #f0eff5;
-  color: #9895a5;
-  font-size: 11px;
-}
-.sidebar-bottom small {
-  margin-left: auto;
-}
-.online-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #53b493;
 }
 .main-layout {
   min-width: 0;
@@ -377,13 +355,6 @@ kbd {
   color: #9791a5;
   margin-bottom: 25px;
 }
-.workspace-footer {
-  padding: 16px 28px;
-  font-size: 11px;
-  color: #b0abbc;
-  display: flex;
-  justify-content: space-between;
-}
 .table-toolbar {
   display: flex;
   align-items: center;
@@ -432,6 +403,12 @@ kbd {
 }
 .editor-form {
   margin-top: 16px;
+}
+.settings-section-title {
+  margin: 20px 0 12px;
+}
+.settings-inline-form {
+  max-width: 560px;
 }
 .settings-form {
   max-width: 560px;
@@ -684,8 +661,7 @@ kbd {
 }
 .dark .metric-strip > div,
 .dark .market-row,
-.dark .shortcut,
-.dark .sidebar-bottom {
+.dark .shortcut {
   border-color: #303039;
 }
 .theme-dark .ant-table-wrapper {
@@ -810,9 +786,6 @@ kbd {
   }
   .auth-form {
     margin: 55px auto;
-  }
-  .workspace-footer {
-    padding: 20px 16px;
   }
   .settings-form {
     padding: 18px 16px;

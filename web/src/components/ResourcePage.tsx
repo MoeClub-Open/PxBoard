@@ -33,6 +33,7 @@ import { useSession } from '../context'
 import { useBrandTitle } from '../branding'
 import { configurationChanged } from '../api'
 import { periodLabel } from '../planPeriods'
+import NodeAddresses from './NodeAddresses'
 
 const statuses: Record<string, [string, string]> = {
   active: ['正常', 'success'],
@@ -155,6 +156,10 @@ function Cell({
         {new Date(value).toLocaleString('zh-CN', { hour12: false })}
       </span>
     )
+  if (field.type === 'nodeService') {
+    const label = row.parentId && !value ? '复用主节点' : value ? '独立服务' : '已停用'
+    return <Tag color={value || row.parentId ? 'success' : 'default'}>{label}</Tag>
+  }
   if (field.type === 'boolean')
     return <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>
   if (field.type === 'status') {
@@ -244,14 +249,74 @@ function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map
   URL.revokeObjectURL(href)
 }
 
+function SingletonResource({ resource, base }: { resource: Resource; base: string }) {
+  const { message } = App.useApp()
+  const endpoint = resource.endpoint.startsWith('/api/')
+    ? resource.endpoint
+    : base + resource.endpoint
+  const { data, loading, error, reload } = useData<Row[]>(endpoint)
+  const [busy, setBusy] = useState(false)
+  const fields = resource.fields || []
+  const row = data?.[0]
+
+  return (
+    <section className="resource-section">
+      <h2 className="settings-section-title">{resource.title}</h2>
+      {error && (
+        <Alert
+          type="error"
+          title={error}
+          showIcon
+          action={<Button onClick={reload}>重试</Button>}
+        />
+      )}
+      {loading ? (
+        <Spin />
+      ) : (
+        row && (
+          <div className="settings-inline-form">
+            <Form
+              layout="vertical"
+              requiredMark={false}
+              initialValues={formValues(fields, row)}
+              onFinish={async (values) => {
+                setBusy(true)
+                try {
+                  await api(endpoint, { method: 'PATCH', body: serialize(fields, values) })
+                  configurationChanged()
+                  message.success('已保存')
+                  reload()
+                } catch (e) {
+                  message.error(errorText(e))
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              <Fields fields={fields} row={row} />
+              <Button type="primary" htmlType="submit" loading={busy}>
+                保存
+              </Button>
+            </Form>
+          </div>
+        )
+      )}
+    </section>
+  )
+}
+
 function ResourceTable({
   resource,
   base,
   onChange,
+  nodeAddresses = false,
+  groupNodes = false,
 }: {
   resource: Resource
   base: string
   onChange: () => void
+  nodeAddresses?: boolean
+  groupNodes?: boolean
 }) {
   const { message, modal } = App.useApp()
   const endpoint = resource.endpoint.startsWith('/api/')
@@ -266,18 +331,32 @@ function ResourceTable({
   const groupNames = new Map((groups || []).map((group) => [String(group.id), String(group.name)]))
   const [search, setSearch] = useState('')
   const [editor, setEditor] = useState<{ row?: Row; action?: Action } | null>(null)
+  const [addressParent, setAddressParent] = useState<Row | null>(null)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
   const fields = editor?.action?.fields || resource.fields || []
-  const rows = (data || []).filter(
-    (row) =>
-      !search ||
-      resource.columns.some((c) =>
-        String(row[c.key] ?? '')
+  const allRows = data || []
+  const ids = new Set(allRows.map((row) => row.id))
+  const rows = allRows.filter((row) => {
+    if (groupNodes && row.parentId && ids.has(row.parentId) && (!nodeAddresses || !row.enabled))
+      return false
+    if (!search) return true
+    const candidates = groupNodes
+      ? [
+          row,
+          ...allRows.filter(
+            (child) => child.parentId === row.id && (!nodeAddresses || !child.enabled),
+          ),
+        ]
+      : [row]
+    return candidates.some((candidate) =>
+      resource.columns.some((column) =>
+        String(candidate[column.key] ?? '')
           .toLowerCase()
           .includes(search.toLowerCase()),
       ),
-  )
+    )
+  })
   function openEditor(row?: Row, action?: Action) {
     const fs = action?.fields || resource.fields || []
     form.resetFields()
@@ -410,7 +489,27 @@ function ResourceTable({
                 aria-label="导出记录"
                 icon={<DownloadOutlined />}
                 disabled={!rows.length}
-                onClick={() => exportCSV(resource.title, resource.columns, rows, groupNames)}
+                onClick={() => {
+                  if (!nodeAddresses)
+                    return exportCSV(resource.title, resource.columns, rows, groupNames)
+                  const selected = new Set(rows.map((row) => row.id))
+                  const exportRows = allRows
+                    .filter(
+                      (row) => selected.has(row.id) || (!row.enabled && selected.has(row.parentId)),
+                    )
+                    .map((row) => ({
+                      ...row,
+                      parentName: selected.has(row.parentId)
+                        ? allRows.find((parent) => parent.id === row.parentId)?.name
+                        : '',
+                    }))
+                  exportCSV(
+                    resource.title,
+                    [...resource.columns, { key: 'parentName', label: '所属主节点' }],
+                    exportRows,
+                    groupNames,
+                  )
+                }}
               />
             </>
           )}
@@ -455,9 +554,27 @@ function ResourceTable({
               key: f.key,
               dataIndex: f.key,
               title: f.label,
-              render: (v: any, row: Row) => (
-                <Cell field={f} value={v} row={row} groupNames={groupNames} />
-              ),
+              render: (v: any, row: Row) =>
+                nodeAddresses && f.key === 'name' ? (
+                  <div>
+                    <Cell field={f} value={v} row={row} groupNames={groupNames} />
+                    <div>
+                      <Button
+                        type="link"
+                        size="small"
+                        style={{ padding: 0, height: 'auto' }}
+                        onClick={() => setAddressParent(row)}
+                      >
+                        {1 +
+                          allRows.filter((child) => child.parentId === row.id && !child.enabled)
+                            .length}{' '}
+                        个地址
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Cell field={f} value={v} row={row} groupNames={groupNames} />
+                ),
               sorter: (a: Row, b: Row) =>
                 typeof a[f.key] === 'number'
                   ? a[f.key] - b[f.key]
@@ -482,7 +599,16 @@ function ResourceTable({
                         ...(resource.editable ? [{ key: 'edit', label: '编辑' }] : []),
                         ...actions.map((a) => ({ key: a.key, label: a.label, danger: a.danger })),
                         ...(resource.deletable
-                          ? [{ key: 'delete', label: '删除', danger: true }]
+                          ? [
+                              {
+                                key: 'delete',
+                                label: '删除',
+                                danger: true,
+                                disabled:
+                                  nodeAddresses &&
+                                  allRows.some((child) => child.parentId === row.id),
+                              },
+                            ]
                           : []),
                       ]
                       return items.length ? (
@@ -532,6 +658,20 @@ function ResourceTable({
           ]}
         />
       )}
+      {addressParent && (
+        <NodeAddresses
+          parent={addressParent}
+          nodes={allRows}
+          resource={resource}
+          endpoint={endpoint}
+          onClose={() => setAddressParent(null)}
+          onChange={reload}
+          onEditParent={() => {
+            setAddressParent(null)
+            openEditor(addressParent)
+          }}
+        />
+      )}
       <Modal
         open={!!editor}
         title={
@@ -574,7 +714,7 @@ export default function ResourcePage({
   )
   const base = `/api/v1/extensions/${pluginId}`
   const { data, loading, error, reload } = useData<View>(page ? `${base}/ui/${pageId}` : null)
-  useBrandTitle(data?.title || page?.title || '功能未开放')
+  useBrandTitle(data?.title || page?.title || '功能未开放', !hideHeading)
   if (!page) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
   if (loading)
     return (
@@ -615,24 +755,42 @@ export default function ResourcePage({
           ))}
         </div>
       )}
-      {data.resources.length > 1 ? (
-        <Tabs
-          items={data.resources.map((resource) => ({
-            key: resource.key,
-            label: resource.title,
-            children: <ResourceTable resource={resource} base={base} onChange={() => {}} />,
-          }))}
-        />
-      ) : (
-        data.resources.map((resource) => (
-          <ResourceTable
-            key={`${pluginId}/${pageId}/${resource.key}`}
-            resource={resource}
-            base={base}
-            onChange={() => {}}
-          />
-        ))
-      )}
+      {(() => {
+        const settings = data.resources.filter(
+          (resource) => resource.singleton && resource.editable,
+        )
+        const lists = data.resources.filter((resource) => !settings.includes(resource))
+        const renderResource = (resource: Resource) =>
+          resource.singleton && resource.editable ? (
+            <SingletonResource key={resource.key} resource={resource} base={base} />
+          ) : (
+            <ResourceTable
+              key={resource.key}
+              resource={resource}
+              base={base}
+              onChange={() => {}}
+              nodeAddresses={pluginId === 'nodes' && pageId === 'nodes' && resource.key === 'nodes'}
+              groupNodes={
+                pluginId === 'nodes' &&
+                ((pageId === 'nodes' && resource.key === 'nodes') ||
+                  (pageId === 'status' && resource.key === 'status'))
+              }
+            />
+          )
+        if (data.resources.length === 1) return renderResource(data.resources[0])
+        const items = lists.map((resource) => ({
+          key: resource.key,
+          label: resource.title,
+          children: renderResource(resource),
+        }))
+        if (settings.length)
+          items.push({
+            key: '__settings',
+            label: settings.length === 1 ? settings[0].title : '设置',
+            children: <>{settings.map(renderResource)}</>,
+          })
+        return <Tabs items={items} />
+      })()}
     </>
   )
 }

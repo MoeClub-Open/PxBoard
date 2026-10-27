@@ -101,7 +101,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 管理员向 `POST /mode` 提交 `{"mode":"business","sourceUrl":"https://plugins.example.com/index.json"}`；已注册源也可用 `sourceId`，省略源时使用当前或默认源。返回 HTTP 202，后台解析组合、安装依赖并启用。`GET /mode` 返回 `mode`（当前生效）、`requestedMode`、`phase`、`plugins`、`sourceId`、`sourceUrl`、`error` 与 `updatedAt`。`phase` 为 `needs_install`、`installing`、`ready` 或 `failed`，插件状态为 `pending`、`installing`、`ready` 或 `failed`。失败可再次提交同一请求；功能全部就绪后才更新当前模式。
 
-模式值为 `personal`、`sharing`、`business`，`sharing` 表示公益 / 分享组合，与已删除的旧同名插件不同。模式决定默认安装组合与使用入口，切换不自动卸载额外插件或清空数据。推广和 OAuth 均不随任何官方模式默认安装。各功能通过其插件启停或独立设置控制，默认组合见 [使用模式](modes.md)。
+模式值为 `personal` 和 `business`。旧公益 / 分享模式在升级时自动归入自用，保留已安装插件和数据。模式决定默认安装组合与使用入口，切换不自动卸载额外插件或清空数据。推广和 OAuth 均不随任何官方模式默认安装。各功能通过其插件启停或独立设置控制，默认组合见 [使用模式](modes.md)。
 
 ## 用户前台接口
 

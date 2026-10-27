@@ -68,7 +68,7 @@ func apiPaths() map[string]any {
 	}
 	out["/mode"] = map[string]any{
 		"get":  map[string]any{"operationId": "getWorkspaceMode", "responses": map[string]any{"200": map[string]any{"description": "当前模式与安装进度"}}},
-		"post": map[string]any{"operationId": "applyWorkspaceMode", "requestBody": map[string]any{"required": true, "content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"type": "object", "required": []string{"mode"}, "properties": map[string]any{"mode": map[string]any{"type": "string", "enum": []string{"personal", "sharing", "business"}}, "sourceId": map[string]string{"type": "string"}, "sourceUrl": map[string]string{"type": "string", "format": "uri"}}}}}}, "responses": map[string]any{"202": map[string]any{"description": "后台安装已开始，通过 GET /mode 查询进度"}, "409": map[string]any{"description": "已有安装任务在运行"}}},
+		"post": map[string]any{"operationId": "applyWorkspaceMode", "requestBody": map[string]any{"required": true, "content": map[string]any{"application/json": map[string]any{"schema": map[string]any{"type": "object", "required": []string{"mode"}, "properties": map[string]any{"mode": map[string]any{"type": "string", "enum": []string{"personal", "business"}}, "sourceId": map[string]string{"type": "string"}, "sourceUrl": map[string]string{"type": "string", "format": "uri"}}}}}}, "responses": map[string]any{"202": map[string]any{"description": "后台安装已开始，通过 GET /mode 查询进度"}, "409": map[string]any{"description": "已有安装任务在运行"}}},
 	}
 	out["/auth/external/complete"] = map[string]any{
 		"post": map[string]any{

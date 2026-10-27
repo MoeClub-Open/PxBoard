@@ -42,7 +42,29 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = migrateWorkspaceModes(db); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return &Store{db}, nil
+}
+
+func migrateWorkspaceModes(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(`UPDATE settings SET value='personal' WHERE key IN ('mode','requested_mode') AND value='sharing'`); err != nil {
+		return err
+	}
+	for _, field := range []string{"mode", "requestedMode"} {
+		path := "$." + field
+		if _, err = tx.Exec(`UPDATE settings SET value=json_set(value, ?, 'personal') WHERE key='mode_state' AND json_valid(value) AND json_extract(value, ?)='sharing'`, path, path); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 func Now() string { return time.Now().UTC().Format(time.RFC3339) }
 func (s *Store) Setting(key, fallback string) string {
