@@ -158,6 +158,17 @@ export function useData<T>(path: string | null, pollIntervalSeconds = 0) {
 export const errorText = (e: unknown) => (e instanceof Error ? e.message : '操作失败')
 export const absoluteURL = (value: string) => new URL(value, window.location.origin).toString()
 
+export function redirectToPayment(value: unknown) {
+  let url: URL
+  try {
+    url = new URL(String(value))
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error()
+  } catch {
+    throw new Error('支付地址无效，请重试')
+  }
+  window.location.assign(url.href)
+}
+
 export function configurationChanged() {
   window.dispatchEvent(new Event('px:configuration-changed'))
   try {

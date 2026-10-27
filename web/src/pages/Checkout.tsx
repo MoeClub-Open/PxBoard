@@ -12,7 +12,7 @@ import {
   Space,
   Typography,
 } from 'antd'
-import { api, errorText, useData } from '../api'
+import { api, errorText, redirectToPayment, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { duration, OrderStatus, useWallet } from './PortalShared'
@@ -27,7 +27,7 @@ export default function Checkout({
   onClose: () => void
   onComplete: () => void
 }) {
-  const { me, plugins } = useSession()
+  const { plugins } = useSession()
   const { message } = App.useApp()
   const wallet = useWallet()
   const channels = useData<Row[]>(
@@ -41,7 +41,6 @@ export default function Checkout({
   const [coupon, setCoupon] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [redirect, setRedirect] = useState('')
   const working = useRef(false)
   const completed = useRef(false)
   const onCompleteRef = useRef(onComplete)
@@ -59,30 +58,6 @@ export default function Checkout({
     message.success(recharge ? '充值已到账' : '支付成功，服务已开通')
     onCompleteRef.current()
   }
-  useEffect(() => {
-    if (!redirect || !order?.id) return
-    const controller = new AbortController()
-    const timer = setInterval(() => {
-      if (document.hidden) return
-      void api<Row[]>('/extensions/commerce/orders?mine=1', { signal: controller.signal })
-        .then((orders) => {
-          if (controller.signal.aborted) return
-          const current = orders.find((row) => row.id === order.id && row.userId === me.id)
-          if (!current) return
-          setOrder(current)
-          setError('')
-          if (current.status === 'fulfilled') complete()
-          else if (!['pending', 'paid'].includes(current.status)) setRedirect('')
-        })
-        .catch((e) => {
-          if (e.name !== 'AbortError') setError(errorText(e))
-        })
-    }, 5000)
-    return () => {
-      clearInterval(timer)
-      controller.abort()
-    }
-  }, [redirect, order?.id, me.id])
   async function proceed() {
     if (working.current) return
     working.current = true
@@ -98,17 +73,6 @@ export default function Checkout({
             method: 'POST',
             body: { ...body, requestId: requestId.current },
           }),
-        )
-      } else if (redirect) {
-        const orders = await api<Row[]>('/extensions/commerce/orders?mine=1')
-        const current = orders.find((row) => row.id === order.id && row.userId === me.id)
-        if (current?.status === 'fulfilled') {
-          complete()
-          return
-        }
-        if (current) setOrder(current)
-        message.info(
-          current?.status === 'paid' ? '已收到付款，正在开通' : '尚未确认付款，请稍后刷新',
         )
       } else if (method === 'wallet') {
         const result = await api<Row>(`/extensions/commerce/orders/${order.id}/pay`, {
@@ -126,8 +90,7 @@ export default function Checkout({
           method: 'POST',
           body: { orderId: order.id, channelId: method },
         })
-        if (!result.redirectUrl) throw new Error('未取得支付地址，请重试')
-        setRedirect(String(result.redirectUrl))
+        redirectToPayment(result.redirectUrl)
       }
     } catch (e) {
       setError(errorText(e))
@@ -137,7 +100,7 @@ export default function Checkout({
     }
   }
   const insufficient = method === 'wallet' && wallet.balance < amount
-  const settled = order && !['pending', 'paid'].includes(order.status)
+  const settled = order && order.status !== 'pending'
   return (
     <Modal
       open
@@ -156,16 +119,12 @@ export default function Checkout({
             <Button
               type="primary"
               loading={busy}
-              disabled={!!order && !redirect && (insufficient || !method || wallet.loading)}
+              disabled={
+                !!order && (insufficient || !method || (method === 'wallet' && wallet.loading))
+              }
               onClick={() => void proceed()}
             >
-              {!order
-                ? '创建订单'
-                : redirect
-                  ? '刷新支付状态'
-                  : method === 'wallet'
-                    ? '余额支付'
-                    : '获取支付链接'}
+              {!order ? '创建订单' : method === 'wallet' ? '余额支付' : '立即支付'}
             </Button>
           </Space>
         )
@@ -214,7 +173,7 @@ export default function Checkout({
           </Form.Item>
         </Form>
       )}
-      {order && !settled && !redirect && (
+      {order && !settled && (
         <div className="portal-payment-methods">
           <h3>支付方式</h3>
           {channels.error && (
@@ -252,22 +211,6 @@ export default function Checkout({
             <Typography.Paragraph type="secondary">本站暂未提供在线支付渠道。</Typography.Paragraph>
           )}
         </div>
-      )}
-      {redirect && (
-        <Alert
-          type="info"
-          showIcon
-          title="等待支付"
-          description={
-            <Space orientation="vertical">
-              <a href={redirect} target="_blank" rel="noreferrer">
-                打开支付页面
-              </a>
-              <span>完成付款后刷新订单状态。</span>
-            </Space>
-          }
-          className="portal-notice"
-        />
       )}
     </Modal>
   )

@@ -72,7 +72,7 @@ export function PortalOrders() {
               ['pending', 'paid'].includes(row.status) ? (
                 <Space>
                   <Button size="small" type="primary" onClick={() => setSelected(row)}>
-                    继续支付
+                    {row.status === 'paid' ? '查看' : '继续支付'}
                   </Button>
                   {row.status === 'pending' && (
                     <Button

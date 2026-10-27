@@ -27,7 +27,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import type { Action, Field, Resource, Row, View } from '../api'
-import { absoluteURL, api, errorText, useData } from '../api'
+import { absoluteURL, api, errorText, redirectToPayment, useData } from '../api'
 import { Fields, formValues, serialize } from './Fields'
 import { useSession } from '../context'
 import { useBrandTitle } from '../branding'
@@ -227,21 +227,15 @@ function ResourceTable({
     setEditor({ row, action })
   }
   function complete(result?: Row, changed = false) {
+    if (result?.redirectUrl) {
+      redirectToPayment(result.redirectUrl)
+      return
+    }
     reload()
     onChange()
     setEditor(null)
     if (changed) configurationChanged()
-    if (result?.redirectUrl)
-      modal.info({
-        title: '支付收银台',
-        content: (
-          <a href={result.redirectUrl} target="_blank" rel="noreferrer">
-            打开收银台完成支付
-          </a>
-        ),
-        okText: '关闭',
-      })
-    else if (result?.details)
+    if (result?.details)
       modal.info({
         title: result.title || '详情',
         width: 800,
