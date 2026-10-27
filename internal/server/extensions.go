@@ -1,10 +1,12 @@
 package server
 
 import (
+	"encoding/json"
 	"github.com/MoeClub-Open/PxBoard/internal/store"
 	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -62,6 +64,32 @@ func (s *Server) extension(w http.ResponseWriter, r *http.Request) {
 	if bad(w, e) {
 		return
 	}
+	if r.Method == "POST" && public && a.Role != "service" {
+		requestPath := "/" + r.PathValue("path")
+		action := ""
+		for _, form := range p.Auth {
+			if form.Path == requestPath {
+				action = "register"
+				break
+			}
+		}
+		if action == "" && requestPath == "/authorize" && slices.Contains(p.Permissions, "auth:login") {
+			action = "oauth"
+		}
+		if action != "" {
+			var challenge struct{ Purpose, ChallengeToken string }
+			if json.Unmarshal(body, &challenge) != nil {
+				plugin.Fail(w, 400, "请求格式无效")
+				return
+			}
+			if action != "oauth" || challenge.Purpose != "bind" {
+				if !s.verifyChallenge(w, r, action, challenge.ChallengeToken) {
+					return
+				}
+			}
+		}
+	}
+
 	headers := r.Header.Clone()
 	headers.Del("Authorization")
 	headers.Del("Cookie")

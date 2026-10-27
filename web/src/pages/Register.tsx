@@ -1,3 +1,4 @@
+import { ChallengeNotice, HumanChallenge, useHumanChallenge } from '../components/HumanChallenge'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, App, Button, Empty, Form, Segmented, Spin } from 'antd'
@@ -28,6 +29,7 @@ export interface AuthInfo {
 }
 export default function Register() {
   useBrandTitle('注册')
+  const challenge = useHumanChallenge()
   const [query] = useSearchParams()
   const { data, error: loadError, loading } = useData<AuthInfo>('/setup')
   const [selected, setSelected] = useState('')
@@ -49,6 +51,19 @@ export default function Register() {
   Object.entries(provider?.query || {}).forEach(([field, key]) => {
     if (query.has(key)) initial[field] = query.get(key)
   })
+  const challengeBlock = (
+    <>
+      <ChallengeNotice loading={challenge.loading} error={challenge.error} />
+      {challenge.policy && (challenge.required('register') || challenge.required('oauth')) && (
+        <HumanChallenge
+          policy={challenge.policy}
+          generation={challenge.generation}
+          onToken={challenge.setToken}
+          onError={challenge.setError}
+        />
+      )}
+    </>
+  )
   return (
     <div className="auth-page">
       <div className="auth-brand">
@@ -83,30 +98,52 @@ export default function Register() {
               layout="vertical"
               initialValues={initial}
               onFinish={async (values) => {
+                if (
+                  challenge.loading ||
+                  (!challenge.policy && !!challenge.error) ||
+                  (challenge.required('register') && (!!challenge.error || !challenge.token))
+                ) {
+                  setError(challenge.error || '请先完成人机验证')
+                  return
+                }
                 setBusy(true)
                 setError('')
                 try {
                   await api(provider.path, {
                     method: 'POST',
-                    body: serialize(provider.fields, values),
+                    body: {
+                      ...serialize(provider.fields, values),
+                      challengeToken: challenge.token,
+                    },
                   })
                   message.success('账户已创建，请登录')
                   navigate(loginPath)
                 } catch (e) {
                   setError(errorText(e))
                 } finally {
+                  challenge.reset()
                   setBusy(false)
                 }
               }}
             >
               <Fields fields={provider.fields} />
-              <Button type="primary" htmlType="submit" size="large" block loading={busy}>
+              {challengeBlock}
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="large"
+                block
+                loading={busy}
+                disabled={challenge.loading}
+              >
                 创建账户
               </Button>
             </Form>
           </>
         )}
+        {!provider && challengeBlock}
         <OAuthButtons
+          challenge={challenge}
           registration
           redirectPath={/^\/user(?:\/|\?|$)/.test(redirect) ? redirect : '/user'}
         />

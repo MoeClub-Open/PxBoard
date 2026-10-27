@@ -1,3 +1,4 @@
+import type { useHumanChallenge } from './HumanChallenge'
 import { useEffect, useState } from 'react'
 import { Alert, App, Button, Empty, Form, Input, List, Space, Spin, Typography } from 'antd'
 import { GithubOutlined, GoogleOutlined, LinkOutlined } from '@ant-design/icons'
@@ -30,11 +31,13 @@ export function OAuthButtons({
   redirectPath = '/user',
   registration = false,
   exclude = [],
+  challenge,
 }: {
   purpose?: 'login' | 'bind'
   redirectPath?: string
   registration?: boolean
   exclude?: string[]
+  challenge?: ReturnType<typeof useHumanChallenge>
 }) {
   const [providers, setProviders] = useState<Provider[]>([])
   const [busy, setBusy] = useState('')
@@ -51,6 +54,16 @@ export function OAuthButtons({
   )
   if (!available.length) return null
   async function authorize(provider: Provider) {
+    if (
+      purpose === 'login' &&
+      challenge &&
+      (challenge.loading ||
+        (!challenge.policy && !!challenge.error) ||
+        (challenge.required('oauth') && (!!challenge.error || !challenge.token)))
+    ) {
+      setError(challenge.error || '请先完成人机验证')
+      return
+    }
     setBusy(provider.id)
     setError('')
     try {
@@ -68,6 +81,7 @@ export function OAuthButtons({
           purpose,
           proof,
           redirectPath,
+          challengeToken: challenge?.token,
           ...(purpose === 'login'
             ? { referral: new URLSearchParams(window.location.search).get('ref') || undefined }
             : {}),
@@ -79,6 +93,7 @@ export function OAuthButtons({
     } catch (e) {
       sessionStorage.removeItem(oauthFlowKey)
       setError(errorText(e))
+      challenge?.reset()
       setBusy('')
     }
   }

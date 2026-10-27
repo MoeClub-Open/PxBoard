@@ -14,7 +14,7 @@ func (s *Server) openapi(w http.ResponseWriter, r *http.Request) {
 func apiPaths() map[string]any {
 	out := map[string]any{}
 	params := regexp.MustCompile(`\{([^}]+)\}`)
-	for path, methods := range map[string][]string{"/health": {"get"}, "/setup": {"get", "post"}, "/auth/login": {"post"}, "/auth/logout": {"post"}, "/auth/reset-request": {"post"}, "/auth/reset": {"post"}, "/me": {"get"}, "/me/password": {"post"}, "/tokens": {"get", "post"}, "/tokens/{id}": {"delete"}, "/overview": {"get"}, "/settings": {"get", "patch"}, "/users": {"get", "post"}, "/users/{id}": {"patch"}, "/plugins": {"get"}, "/plugins/catalog": {"get"}, "/plugins/install": {"post"}, "/plugins/{id}/{action}": {"post"}, "/plugins/{id}": {"delete"}, "/sources": {"get", "post"}, "/sources/{id}": {"patch", "delete"}, "/activity": {"get"}, "/jobs": {"get"}, "/jobs/{id}/retry": {"post"}} {
+	for path, methods := range map[string][]string{"/health": {"get"}, "/setup": {"get", "post"}, "/auth/challenge": {"get"}, "/auth/login": {"post"}, "/auth/logout": {"post"}, "/auth/reset-request": {"post"}, "/auth/reset": {"post"}, "/me": {"get"}, "/me/password": {"post"}, "/tokens": {"get", "post"}, "/tokens/{id}": {"delete"}, "/overview": {"get"}, "/settings": {"get", "patch"}, "/users": {"get", "post"}, "/users/{id}": {"patch"}, "/plugins": {"get"}, "/plugins/catalog": {"get"}, "/plugins/install": {"post"}, "/plugins/{id}/{action}": {"post"}, "/plugins/{id}": {"delete"}, "/sources": {"get", "post"}, "/sources/{id}": {"patch", "delete"}, "/activity": {"get"}, "/jobs": {"get"}, "/jobs/{id}/retry": {"post"}} {
 		item := map[string]any{}
 		for _, method := range methods {
 			responses := map[string]any{}
@@ -37,7 +37,7 @@ func apiPaths() map[string]any {
 				schema := map[string]any{"type": "object", "additionalProperties": true}
 				properties := map[string]any{}
 				required := []string{}
-				fields := map[string][]string{"/auth/login": {"email", "password", "code"}, "/auth/reset-request": {"email"}, "/auth/reset": {"token", "password"}, "/me/password": {"currentPassword", "password"}, "/setup": {"email", "password", "name", "mode"}, "/plugins/install": {"id", "sourceId"}, "/sources": {"url", "name", "publicKey"}, "/tokens": {"name", "scope", "expiresAt"}, "/users": {"email", "password", "name", "role"}}[path]
+				fields := map[string][]string{"/auth/login": {"email", "password", "code", "challengeToken"}, "/auth/reset-request": {"email", "challengeToken"}, "/auth/reset": {"token", "password"}, "/me/password": {"currentPassword", "password"}, "/setup": {"email", "password", "name", "mode"}, "/plugins/install": {"id", "sourceId"}, "/sources": {"url", "name", "publicKey"}, "/tokens": {"name", "scope", "expiresAt"}, "/users": {"email", "password", "name", "role"}}[path]
 				for _, name := range fields {
 					properties[name] = map[string]string{"type": "string"}
 				}

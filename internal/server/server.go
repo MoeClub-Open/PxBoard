@@ -41,6 +41,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	m.HandleFunc("GET /api/v1/setup", s.setupStatus)
 	m.HandleFunc("POST /api/v1/setup", s.setup)
+	m.HandleFunc("GET /api/v1/auth/challenge", s.challengeConfig)
 	m.HandleFunc("POST /api/v1/auth/login", s.login)
 	m.HandleFunc("POST /api/v1/auth/external/complete", s.completeExternalLogin)
 	m.HandleFunc("POST /api/v1/auth/logout", s.logout)

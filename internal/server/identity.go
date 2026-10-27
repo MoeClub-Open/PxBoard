@@ -13,8 +13,11 @@ import (
 )
 
 func (s *Server) resetRequest(w http.ResponseWriter, r *http.Request) {
-	var b struct{ Email string }
+	var b struct{ Email, ChallengeToken string }
 	if bad(w, plugin.Decode(r, &b)) {
+		return
+	}
+	if !s.verifyChallenge(w, r, "reset", b.ChallengeToken) {
 		return
 	}
 	var id string
@@ -227,8 +230,11 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	plugin.JSON(w, plugin.Record{"initialized": true})
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
-	var b struct{ Email, Password, Code string }
+	var b struct{ Email, Password, Code, ChallengeToken string }
 	if bad(w, plugin.Decode(r, &b)) {
+		return
+	}
+	if !s.verifyChallenge(w, r, "login", b.ChallengeToken) {
 		return
 	}
 	var a plugin.Actor

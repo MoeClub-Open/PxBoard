@@ -12,7 +12,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 | 资源 | 主要请求 |
 | --- | --- |
-| 初始化 / 身份 | `GET/POST /setup`，`POST /auth/login`，`POST /auth/logout`，`GET /me` |
+| 初始化 / 身份 | `GET/POST /setup`，`GET /auth/challenge`，`POST /auth/login`，`POST /auth/logout`，`GET /me` |
 | 第三方登录完成 | `POST /auth/external/complete`，消费插件签发的一次性登录凭证，必要时验证动态验证码后设置核心会话 |
 | 密码 | `POST /me/password`，`POST /auth/reset-request`，`POST /auth/reset` |
 | API 密钥 | `GET/POST /tokens`，`DELETE /tokens/{id}` |
@@ -137,3 +137,7 @@ NodeRS 原生机器接口以 `/extensions/nodes/machines/{machineId}` 为前缀�
 导入插件为 `import-sspanel`、`import-v2board`、`import-xboard`，在各自前缀下通过 `GET/POST /jobs` 查看或创建任务，通过 `POST /jobs/{id}/preview`、`POST /jobs/{id}/apply`、`POST /jobs/{id}/report` 预览、提交或读取报告。默认转换用户、套餐、余额与订阅，可选节点和推广关系及佣金；源用户可用佣金非零但未选择推广导入时会阻断。核心导入运行接口要求显式 `import:*` 权限，暂存完整性、用户凭据、冲突检查和最终写入在提交事务中验证，原始数据保留在插件状态目录和归档集合。
 
 源面板的原邀请码和兑换码只归档；第三方客户端与 OAuth 数据不经通用导入插件转换，OAuth 绑定使用独立人工搬入工具。使用流程、升级工具与字段范围见 [迁移文档](../../PxBoard-Plugins/docs/migration.md)。
+
+## 人机验证
+
+`GET /auth/challenge` 返回公开服务类型、站点密钥和受保护场景；没有启用验证插件时返回 `enabled=false`。受保护的 `POST /auth/login`、`POST /auth/reset-request`、插件声明的注册表单以及声明 `auth:login` 的插件的 `POST /authorize` 接受 `challengeToken`。验证失败返回 `challenge_required`；服务故障返回 `challenge_unavailable`。第三方登录在密码登录或账户注册任一项受保护时验证；账号绑定不验证。每次提交需要使用新的服务商凭证，动态验证码补交也需重新验证。验证插件停用后，这些接口恢复原行为。

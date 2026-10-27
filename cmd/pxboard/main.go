@@ -24,6 +24,7 @@ func main() {
 	web := flag.String("web", "web/dist", "界面目录")
 	public := flag.String("public-url", "", "公开访问地址，用于来源检查")
 	local := flag.String("install-local", "", "安装本地插件的 manifest.json")
+	disable := flag.String("disable-plugin", "", "停用插件；应先停止面板服务")
 	binary := flag.String("binary", "", "本地插件可执行文件")
 	pluginSource := flag.String("plugin-source", env("PX_PLUGIN_SOURCE", "https://raw.githubusercontent.com/MoeClub-Open/PxBoard-Registry/main/index.json"), "模式安装使用的官方插件源")
 	pluginKey := flag.String("plugin-public-key", os.Getenv("PX_PLUGIN_PUBLIC_KEY"), "默认插件源的发布公钥")
@@ -43,6 +44,13 @@ func main() {
 	}
 	m := plugins.New(s, filepath.Join(abs, "plugins"), base)
 	defer m.Close()
+	if *disable != "" {
+		if e = m.Disable(*disable); e != nil {
+			log.Fatal(e)
+		}
+		log.Println("已停用", *disable)
+		return
+	}
 	if *local != "" {
 		b, e := os.ReadFile(*local)
 		if e != nil {

@@ -1,3 +1,4 @@
+import { ChallengeNotice, HumanChallenge, useHumanChallenge } from '../components/HumanChallenge'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, App, Button, Form, Input, Steps } from 'antd'
@@ -15,6 +16,7 @@ export default function Auth({
   setup?: boolean
   onLogin: () => Promise<void>
 }) {
+  const challenge = useHumanChallenge()
   const { name } = useBrand()
   useBrandTitle(setup ? '初始化' : '登录')
   const { data: auth } = useData<AuthInfo>('/setup')
@@ -31,11 +33,23 @@ export default function Auth({
     : '/register'
   const navigate = useNavigate()
   async function submit(values: any) {
+    if (
+      !setup &&
+      (challenge.loading ||
+        (!challenge.policy && !!challenge.error) ||
+        (challenge.required('login') && (!!challenge.error || !challenge.token)))
+    ) {
+      setError(challenge.error || '请先完成人机验证')
+      return
+    }
     setBusy(true)
     setError('')
     try {
       if (setup) await api('/setup', { method: 'POST', body: { ...values, mode } })
-      await api('/auth/login', { method: 'POST', body: values })
+      await api('/auth/login', {
+        method: 'POST',
+        body: { ...values, challengeToken: challenge.token },
+      })
       if (setup) {
         try {
           await api('/mode', { method: 'POST', body: { mode } })
@@ -45,14 +59,18 @@ export default function Auth({
       }
       await onLogin()
       const redirect = query.get('redirect') || ''
-      navigate(setup ? '/admin/mode' : /^\/(?:user|admin)(?:\/|\?|$)/.test(redirect) ? redirect : '/user', {
-        replace: true,
-      })
+      navigate(
+        setup ? '/admin/mode' : /^\/(?:user|admin)(?:\/|\?|$)/.test(redirect) ? redirect : '/user',
+        {
+          replace: true,
+        },
+      )
       if (setup) message.success('管理员账户已创建')
     } catch (e) {
       if (e instanceof ApiError && e.code === 'mfa_required') setMfa(true)
       setError(errorText(e))
     } finally {
+      if (!setup) challenge.reset()
       setBusy(false)
     }
   }
@@ -145,7 +163,25 @@ export default function Auth({
                 />
               </Form.Item>
             )}
-            <Button type="primary" htmlType="submit" size="large" block loading={busy}>
+            {!setup && <ChallengeNotice loading={challenge.loading} error={challenge.error} />}
+            {!setup &&
+              challenge.policy &&
+              (challenge.required('login') || challenge.required('oauth')) && (
+                <HumanChallenge
+                  policy={challenge.policy}
+                  generation={challenge.generation}
+                  onToken={challenge.setToken}
+                  onError={challenge.setError}
+                />
+              )}
+            <Button
+              type="primary"
+              htmlType="submit"
+              size="large"
+              block
+              loading={busy}
+              disabled={!setup && challenge.loading}
+            >
               {setup ? '创建账户并安装功能' : '登录'}
             </Button>
             {setup ? (
@@ -160,7 +196,12 @@ export default function Auth({
             )}
           </Form>
         )}
-        {!setup && <OAuthButtons redirectPath={/^\/(?:user|admin)(?:\/|\?|$)/.test(next) ? next : '/user'} />}
+        {!setup && (
+          <OAuthButtons
+            redirectPath={/^\/(?:user|admin)(?:\/|\?|$)/.test(next) ? next : '/user'}
+            challenge={challenge}
+          />
+        )}
       </div>
       <footer className="auth-footer">
         {name} <span>© {new Date().getFullYear()}</span>
@@ -172,6 +213,7 @@ export default function Auth({
 export { default as Register } from './Register'
 export function Reset({ request = false }: { request?: boolean }) {
   useBrandTitle(request ? '找回密码' : '设置新密码')
+  const challenge = useHumanChallenge()
   const [query] = useSearchParams()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -194,17 +236,27 @@ export function Reset({ request = false }: { request?: boolean }) {
           <Form
             layout="vertical"
             onFinish={async (values) => {
+              if (
+                request &&
+                (challenge.loading ||
+                  (!challenge.policy && !!challenge.error) ||
+                  (challenge.required('reset') && (!!challenge.error || !challenge.token)))
+              ) {
+                setError(challenge.error || '请先完成人机验证')
+                return
+              }
               setBusy(true)
               setError('')
               try {
                 await api(`/auth/${request ? 'reset-request' : 'reset'}`, {
                   method: 'POST',
-                  body: { ...values, token: query.get('token') },
+                  body: { ...values, token: query.get('token'), challengeToken: challenge.token },
                 })
                 setDone(true)
               } catch (e) {
                 setError(errorText(e))
               } finally {
+                if (request) challenge.reset()
                 setBusy(false)
               }
             }}
@@ -226,7 +278,23 @@ export function Reset({ request = false }: { request?: boolean }) {
                 <Input.Password size="large" autoComplete="new-password" />
               </Form.Item>
             )}
-            <Button type="primary" block size="large" htmlType="submit" loading={busy}>
+            {request && <ChallengeNotice loading={challenge.loading} error={challenge.error} />}
+            {request && challenge.policy && challenge.required('reset') && (
+              <HumanChallenge
+                policy={challenge.policy}
+                generation={challenge.generation}
+                onToken={challenge.setToken}
+                onError={challenge.setError}
+              />
+            )}
+            <Button
+              type="primary"
+              block
+              size="large"
+              htmlType="submit"
+              loading={busy}
+              disabled={request && challenge.loading}
+            >
               {request ? '发送重置邮件' : '更新密码'}
             </Button>
           </Form>
