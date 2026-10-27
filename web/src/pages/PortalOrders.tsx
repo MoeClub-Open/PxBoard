@@ -11,7 +11,7 @@ import { date, money, OrderStatus } from './PortalShared'
 export function PortalOrders() {
   const { me } = useSession()
   const { message, modal } = App.useApp()
-  const orders = useData<Row[]>('/extensions/commerce/orders', 10)
+  const orders = useData<Row[]>('/extensions/commerce/orders?mine=1', 10)
   const [selected, setSelected] = useState<Row>()
   async function cancel(row: Row) {
     try {

@@ -29,7 +29,7 @@ export function OrderStatus({ value }: { value: string }) {
 }
 export function useWallet(enabled = true) {
   const { me } = useSession()
-  const data = useData<Row[]>(enabled ? '/extensions/commerce/ledger' : null)
+  const data = useData<Row[]>(enabled ? '/extensions/commerce/ledger?mine=1' : null)
   const rows = (data.data || []).filter((row) => row.userId === me.id)
   return {
     ...data,

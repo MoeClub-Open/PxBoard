@@ -23,7 +23,7 @@ import { date } from './PortalShared'
 export function PortalSupport() {
   const { me } = useSession()
   const { message, modal } = App.useApp()
-  const tickets = useData<Row[]>('/extensions/support/tickets', 10)
+  const tickets = useData<Row[]>('/extensions/support/tickets?mine=1', 10)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<string>()
   const [busy, setBusy] = useState(false)

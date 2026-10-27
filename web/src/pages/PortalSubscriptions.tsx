@@ -10,8 +10,8 @@ import { date } from './PortalShared'
 export function PortalSubscriptions() {
   const { me } = useSession()
   const { message, modal } = App.useApp()
-  const links = useData<Row[]>('/extensions/subscriptions/links')
-  const accounts = useData<Row[]>('/extensions/access/accounts', 5)
+  const links = useData<Row[]>('/extensions/subscriptions/links?mine=1')
+  const accounts = useData<Row[]>('/extensions/access/accounts?mine=1', 5)
   const [busy, setBusy] = useState(false)
   const [qr, setQr] = useState<{ label: string; url: string }>()
   const ownLinks = (links.data || []).filter((row) => row.userId === me.id)

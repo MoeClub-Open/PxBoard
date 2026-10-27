@@ -57,7 +57,7 @@ import { useBrandTitle } from '../branding'
 function ServiceOverview() {
   const { me, plugins } = useSession()
   const accounts = useData<Row[]>(
-    plugins.some((p) => p.id === 'access' && p.enabled) ? '/extensions/access/accounts' : null,
+    plugins.some((p) => p.id === 'access' && p.enabled) ? '/extensions/access/accounts?mine=1' : null,
     5,
   )
   const business = me.mode === 'business' && plugins.some((p) => p.id === 'commerce' && p.enabled)

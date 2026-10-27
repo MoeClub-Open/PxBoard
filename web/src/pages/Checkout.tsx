@@ -62,7 +62,7 @@ export default function Checkout({
     const controller = new AbortController()
     const timer = setInterval(() => {
       if (document.hidden) return
-      void api<Row[]>('/extensions/commerce/orders', { signal: controller.signal })
+      void api<Row[]>('/extensions/commerce/orders?mine=1', { signal: controller.signal })
         .then((orders) => {
           if (controller.signal.aborted) return
           const current = orders.find((row) => row.id === order.id && row.userId === me.id)
@@ -98,7 +98,7 @@ export default function Checkout({
           }),
         )
       } else if (redirect) {
-        const orders = await api<Row[]>('/extensions/commerce/orders')
+        const orders = await api<Row[]>('/extensions/commerce/orders?mine=1')
         const current = orders.find((row) => row.id === order.id && row.userId === me.id)
         if (current?.status === 'fulfilled') {
           complete()
