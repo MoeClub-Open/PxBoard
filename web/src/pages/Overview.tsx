@@ -95,7 +95,7 @@ export default function Overview() {
           </div>
           <h2>添加需要的功能</h2>
           <p>连接插件源后，选择适合自己的功能组合。</p>
-          <Link to="/plugins?tab=sources">
+          <Link to="/admin/plugins?tab=sources">
             <Button type="primary" icon={<LinkOutlined />}>
               连接插件源
             </Button>
@@ -147,7 +147,7 @@ export default function Overview() {
           <section className="workspace-section">
             <div className="section-heading">
               <h2>最近活动</h2>
-              <Link to="/activity">
+              <Link to="/admin/activity">
                 查看全部 <ArrowRightOutlined />
               </Link>
             </div>

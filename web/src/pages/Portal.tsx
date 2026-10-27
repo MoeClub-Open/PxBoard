@@ -307,7 +307,7 @@ export default function Portal({
           </Space>
           <Space size={8}>
             {me.role === 'admin' && (
-              <Button href="/" icon={<SettingOutlined />}>
+              <Button onClick={() => navigate('/admin')} icon={<SettingOutlined />}>
                 管理后台
               </Button>
             )}

@@ -209,7 +209,7 @@ export function Settings() {
                   String(data?.mode)
                 ] || data?.mode}
               </span>
-              <Link to="/mode">切换使用方式</Link>
+              <Link to="/admin/mode">切换使用方式</Link>
             </Space>
           </Form.Item>
           <Form.Item name="publicUrl" label="公开访问地址">

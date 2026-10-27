@@ -283,12 +283,10 @@ export default function ModeSetup({
       )}
       {ready && (
         <Space wrap style={{ marginTop: 24 }}>
-          <Button type="primary" loading={busy} onClick={() => void enter('/')}>
-            进入管理后台
+          <Button type="primary" loading={busy} onClick={() => void enter('/user')}>
+            进入用户前台
           </Button>
-          {state.mode !== 'personal' && (
-            <Button onClick={() => void enter('/user')}>查看用户前台</Button>
-          )}
+          <Button onClick={() => void enter('/admin')}>配置站点</Button>
         </Space>
       )}
     </div>

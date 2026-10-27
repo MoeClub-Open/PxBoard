@@ -45,7 +45,7 @@ export default function Auth({
       }
       await onLogin()
       const redirect = query.get('redirect') || ''
-      navigate(setup ? '/mode' : /^\/user(?:\/|\?|$)/.test(redirect) ? redirect : '/', {
+      navigate(setup ? '/admin/mode' : /^\/(?:user|admin)(?:\/|\?|$)/.test(redirect) ? redirect : '/user', {
         replace: true,
       })
       if (setup) message.success('管理员账户已创建')
@@ -64,7 +64,6 @@ export default function Auth({
         </Link>
       </div>
       <div className="auth-form">
-        <div className="eyebrow">{setup ? '欢迎使用' : '控制台'}</div>
         <h1>{setup ? '创建你的工作空间' : `登录 ${name}`}</h1>
         {setup && (
           <Steps
@@ -161,7 +160,7 @@ export default function Auth({
             )}
           </Form>
         )}
-        {!setup && <OAuthButtons redirectPath={/^\/user(?:\/|\?|$)/.test(next) ? next : '/user'} />}
+        {!setup && <OAuthButtons redirectPath={/^\/(?:user|admin)(?:\/|\?|$)/.test(next) ? next : '/user'} />}
       </div>
       <footer className="auth-footer">
         {name} <span>© {new Date().getFullYear()}</span>

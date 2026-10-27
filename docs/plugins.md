@@ -98,7 +98,7 @@ func main() {
 
 核心 `0.4.0` 支持页面声明 `capability`，例如节点用户页设置 `"capability": "portal.status"`。核心向插件内部 `GET /_capabilities` 查询该布尔值，并从普通用户的插件列表中移除关闭的页面，同时拒绝直接访问对应 `/ui/{pageId}`。管理员保留声明给管理员的管理与监控页面。插件还应在业务接口检查开关；导航展示不能代替接口权限。
 
-页面的 `surface` 指定展示位置：`admin` 为管理后台，`portal` 为用户前台，省略则两边均可展示。导航和前端直接路由都遵循此声明；访问权限仍由 `roles`、`capability` 和插件业务接口共同检查。例如兑换码管理页使用 `surface: "admin"`，用户兑换页使用 `surface: "portal"`，管理员可在用户前台预览兑换功能，后台不重复展示兑换入口。
+页面的 `surface` 指定展示位置：`admin` 为管理后台，`portal` 为用户前台，省略则两边均可展示。后台插件页面位于 `/admin/p/{pluginId}/{pageId}`，前台扩展页面位于 `/user/extensions/{pluginId}/{pageId}`。导航和前端直接路由都遵循此声明；访问权限仍由 `roles`、`capability` 和插件业务接口共同检查。例如兑换码管理页使用 `surface: "admin"`，用户兑换页使用 `surface: "portal"`，管理员可在用户前台预览兑换功能，后台不重复展示兑换入口。
 
 | 操作     | 默认请求                    |
 | -------- | --------------------------- |
@@ -180,7 +180,7 @@ OAuth 等身份插件负责验证外部身份、维护登录绑定和处理授�
 grant, err := client.CreateLoginGrant(userID, proofDigest, "/user")
 ```
 
-SDK 对应 `POST /api/v1/runtime/auth/grants`，请求字段为 `userId`、`proofDigest` 和 `redirectPath`，返回 `ticket` 与 `expiresAt`。凭证三分钟内有效，只能成功使用一次。`redirectPath` 默认 `/user`，只允许 `/user`、`/account` 及其子路径；核心拒绝外部地址和跳出这些路径的目录跳转。
+SDK 对应 `POST /api/v1/runtime/auth/grants`，请求字段为 `userId`、`proofDigest` 和 `redirectPath`，返回 `ticket` 与 `expiresAt`。凭证三分钟内有效，只能成功使用一次。`redirectPath` 默认 `/user`，允许 `/user`、`/admin`、`/account` 及其子路径；核心拒绝外部地址和跳出这些路径的目录跳转。管理页面仍检查管理员身份，登录插件不能通过回跳地址提升权限。账户页面使用 `/user/account`。
 
 插件把登录凭证返回当前浏览器后，由浏览器调用核心：
 

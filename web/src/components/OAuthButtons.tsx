@@ -224,7 +224,7 @@ export function OAuthBindings() {
       )}
       <OAuthButtons
         purpose="bind"
-        redirectPath={window.location.pathname.startsWith('/user/') ? '/user/account' : '/account'}
+        redirectPath="/user/account"
         exclude={bindings.map((binding) => binding.providerId)}
       />
     </div>

@@ -95,14 +95,14 @@ export default function Shell({
     setMobile(false)
   }, [location.pathname])
   const entries = [
-    { key: '/', label: '总览', icon: <DashboardOutlined />, group: '工作空间' },
+    { key: '/admin', label: '总览', icon: <DashboardOutlined />, group: '工作空间' },
     ...plugins
       .filter((p) => p.enabled)
       .flatMap((p) =>
         p.pages
           .filter((page) => page.roles.includes(me.role) && page.surface !== 'portal')
           .map((page) => ({
-            key: `/p/${p.id}/${page.id}`,
+            key: `/admin/p/${p.id}/${page.id}`,
             label: page.title,
             icon: icons[page.icon] || <AppstoreOutlined />,
             group: page.group,
@@ -110,15 +110,15 @@ export default function Shell({
       ),
     ...(me.role === 'admin'
       ? [
-          { key: '/users', label: '用户', icon: <TeamOutlined />, group: '管理' },
-          { key: '/plugins', label: '插件中心', icon: <AppstoreOutlined />, group: '管理' },
-          { key: '/jobs', label: '后台任务', icon: <ApiOutlined />, group: '管理' },
-          { key: '/activity', label: '操作记录', icon: <AuditOutlined />, group: '管理' },
-          { key: '/settings', label: '系统设置', icon: <SettingOutlined />, group: '管理' },
+          { key: '/admin/users', label: '用户', icon: <TeamOutlined />, group: '管理' },
+          { key: '/admin/plugins', label: '插件中心', icon: <AppstoreOutlined />, group: '管理' },
+          { key: '/admin/jobs', label: '后台任务', icon: <ApiOutlined />, group: '管理' },
+          { key: '/admin/activity', label: '操作记录', icon: <AuditOutlined />, group: '管理' },
+          { key: '/admin/settings', label: '系统设置', icon: <SettingOutlined />, group: '管理' },
         ]
       : []),
   ]
-  entries.push({ key: '/account', label: '我的账户', icon: <SettingOutlined />, group: '账户' })
+  entries.push({ key: '/admin/account', label: '我的账户', icon: <SettingOutlined />, group: '账户' })
   const groups = new Map<string, typeof entries>()
   entries.forEach((e) => groups.set(e.group, [...(groups.get(e.group) || []), e]))
   const items = collapsed
@@ -159,7 +159,7 @@ export default function Shell({
           className="desktop-sider"
           theme={dark ? 'dark' : 'light'}
         >
-          <Link to="/" className="sidebar-brand" aria-label={brand.name}>
+          <Link to="/admin" className="sidebar-brand" aria-label={brand.name}>
             <Brand compact={collapsed} />
           </Link>
           <div className="sidebar-menu">{menu}</div>
@@ -205,7 +205,7 @@ export default function Shell({
               </span>
             </Space>
             <Space size={12}>
-              {me.role === 'admin' && me.mode !== 'personal' && (
+              {me.role === 'admin' && (
                 <Button icon={<ExportOutlined />} onClick={() => navigate('/user')}>
                   用户前台
                 </Button>

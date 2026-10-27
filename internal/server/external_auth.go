@@ -33,7 +33,7 @@ func loginRedirect(value string) (string, bool) {
 	}
 	u.Path = path.Clean(u.Path)
 	u.RawPath = ""
-	for _, root := range []string{"/user", "/account"} {
+	for _, root := range []string{"/user", "/admin", "/account"} {
 		if u.Path == root || strings.HasPrefix(u.Path, root+"/") {
 			return u.String(), true
 		}

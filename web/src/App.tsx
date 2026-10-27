@@ -135,23 +135,33 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
             />
           }
         />
+        <Route
+          path="/admin/*"
+          element={
+            <Navigate
+              to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
+              replace
+            />
+          }
+        />
         <Route path="*" element={<Auth onLogin={refresh} />} />
       </Routes>
     )
   const admin = me.role === 'admin'
-  const customerPath = location.pathname === '/user' || location.pathname.startsWith('/user/')
+  const adminPath = location.pathname === '/admin' || location.pathname.startsWith('/admin/')
   return (
     <SessionContext.Provider value={{ me, plugins, refresh }}>
-      {customerPath ? (
+      {!adminPath ? (
         <Routes>
           <Route
             path="/user/*"
             element={<Portal dark={dark} toggleTheme={toggleTheme} onLogout={() => setMe(null)} />}
           />
+          <Route path="*" element={<Navigate to="/user" replace />} />
         </Routes>
       ) : !admin ? (
         <Navigate to="/user" replace />
-      ) : location.pathname === '/mode' ? (
+      ) : location.pathname === '/admin/mode' ? (
         <ModeSetup
           onReady={async () => {
             await refresh()
@@ -159,24 +169,24 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
           }}
           initialMode={site?.requestedMode || me.mode}
         />
-      ) : location.pathname === '/' && site?.needsModeSetup ? (
-        <Navigate to="/mode" replace />
+      ) : /^\/admin\/?$/.test(location.pathname) && site?.needsModeSetup ? (
+        <Navigate to="/admin/mode" replace />
       ) : (
         <Shell dark={dark} toggleTheme={toggleTheme} onLogout={() => setMe(null)}>
           <Routes>
-            <Route path="/" element={<Overview />} />
-            <Route path="/account" element={<Account />} />
-            <Route path="/p/:pluginId/:pageId" element={<ResourcePage key={location.pathname} />} />
+            <Route path="/admin" element={<Overview />} />
+            <Route path="/admin/account" element={<Account />} />
+            <Route path="/admin/p/:pluginId/:pageId" element={<ResourcePage key={location.pathname} />} />
             {admin && (
               <>
-                <Route path="/users" element={<Users />} />
-                <Route path="/plugins" element={<Plugins key={location.search} />} />
-                <Route path="/jobs" element={<Jobs />} />
-                <Route path="/activity" element={<Activity />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/admin/users" element={<Users />} />
+                <Route path="/admin/plugins" element={<Plugins key={location.search} />} />
+                <Route path="/admin/jobs" element={<Jobs />} />
+                <Route path="/admin/activity" element={<Activity />} />
+                <Route path="/admin/settings" element={<Settings />} />
               </>
             )}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </Shell>
       )}

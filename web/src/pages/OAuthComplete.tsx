@@ -76,11 +76,8 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
       }
       if (callback.mode !== 'bind') await onLogin()
       sessionStorage.removeItem(oauthFlowKey)
-      const redirect = completed.current?.redirectPath || '/user'
-      navigate(
-        /^\/user(?:\/|\?|$)/.test(redirect) || redirect === '/account' ? redirect : '/user',
-        { replace: true },
-      )
+      const redirect = callback.mode === 'bind' ? '/user/account' : completed.current?.redirectPath || '/user'
+      navigate(/^\/(?:user|admin)(?:\/|\?|$)/.test(redirect) ? redirect : '/user', { replace: true })
     } catch (e) {
       if (e instanceof ApiError && e.code === 'mfa_required') setMfa(true)
       setError(errorText(e))
@@ -117,7 +114,6 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
     window.history.replaceState(window.history.state, '', window.location.pathname)
     void complete()
   }, [])
-  const accountPath = callback.flow?.redirectPath === '/user/account' ? '/user/account' : '/account'
   return (
     <div className="auth-page">
       <div className="auth-brand">
@@ -189,7 +185,7 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
         )}
         {!busy && (
           <div className="auth-links">
-            <Link to={callback.mode === 'bind' ? accountPath : '/login'}>
+            <Link to={callback.mode === 'bind' ? '/user/account' : '/login'}>
               {callback.mode === 'bind' ? '返回我的账户' : '返回登录'}
             </Link>
           </div>
