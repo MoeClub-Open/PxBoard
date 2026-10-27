@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import {
@@ -85,15 +86,18 @@ const labels: Record<string, string> = {
   protocol: '协议',
 }
 
-function Cell({ field, value }: { field: Field; value: any }) {
+function Cell({ field, value, row }: { field: Field; value: any; row: Row }) {
+  const { money } = useCurrency()
   const { message } = App.useApp()
   const [open, setOpen] = useState(false)
   if (value === null || value === undefined || value === '') return <span className="muted">—</span>
   const text = String(value)
+  if (field.type === 'discount')
+    return <span>{row.type === 'fixed' ? money(Number(value)) : `${value}%`}</span>
   if (field.type === 'money')
     return (
       <span className={Number(value) < 0 ? 'amount-negative' : 'amount'}>
-        {(Number(value) / 100).toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })}
+        {money(Number(value))}
       </span>
     )
   if (field.type === 'gib')
@@ -399,7 +403,7 @@ function ResourceTable({
               key: f.key,
               dataIndex: f.key,
               title: f.label,
-              render: (v: any) => <Cell field={f} value={v} />,
+              render: (v: any, row: Row) => <Cell field={f} value={v} row={row} />,
               sorter: (a: Row, b: Row) =>
                 typeof a[f.key] === 'number'
                   ? a[f.key] - b[f.key]
@@ -496,6 +500,7 @@ function ResourceTable({
 }
 
 export default function ResourcePage() {
+  const { currencyName } = useCurrency()
   const { pluginId, pageId } = useParams()
   const location = useLocation()
   const { me, plugins } = useSession()
@@ -542,7 +547,7 @@ export default function ResourcePage() {
               <span>{m.label}</span>
               <strong>
                 {m.value}
-                <small>{m.unit}</small>
+                <small>{m.unit === '元' ? currencyName : m.unit}</small>
               </strong>
             </div>
           ))}

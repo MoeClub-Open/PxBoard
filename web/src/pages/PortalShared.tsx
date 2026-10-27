@@ -3,8 +3,6 @@ import { useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 
-export const money = (amount: number) =>
-  (Number(amount || 0) / 100).toLocaleString('zh-CN', { style: 'currency', currency: 'CNY' })
 export const date = (value?: string) =>
   value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '长期有效'
 export const duration = (plan: Row) =>

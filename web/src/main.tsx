@@ -5,11 +5,14 @@ import './bundles.css'
 import './theme.css'
 import App from './App.tsx'
 import { BrandingProvider } from './branding'
+import { CurrencyProvider } from './currency'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrandingProvider>
-      <App />
+      <CurrencyProvider>
+        <App />
+      </CurrencyProvider>
     </BrandingProvider>
   </StrictMode>,
 )

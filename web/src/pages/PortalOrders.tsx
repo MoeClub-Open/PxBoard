@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { useState } from 'react'
 import { Alert, App, Button, Empty, Space, Table, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
@@ -6,9 +7,10 @@ import { api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import Checkout from './Checkout'
-import { date, money, OrderStatus } from './PortalShared'
+import { date, OrderStatus } from './PortalShared'
 
 export function PortalOrders() {
+  const { money } = useCurrency()
   const { me } = useSession()
   const { message, modal } = App.useApp()
   const orders = useData<Row[]>('/extensions/commerce/orders?mine=1', 10)

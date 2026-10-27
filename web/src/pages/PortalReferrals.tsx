@@ -1,10 +1,11 @@
+import { useCurrency } from '../currency'
 import { useState } from 'react'
 import { Alert, App, Button, Empty, Input, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { CopyOutlined, ReloadOutlined } from '@ant-design/icons'
 import { absoluteURL, api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
-import { date, money } from './PortalCommerce'
+import { date } from './PortalCommerce'
 import AffiliateWithdrawal from './AffiliateWithdrawal'
 import type { Method } from './AffiliateWithdrawal'
 import '../affiliate.css'
@@ -42,12 +43,19 @@ function WithdrawalStatus({ row }: { row: Row }) {
   return <Tag color={state?.[1]}>{state?.[0] || row.status}</Tag>
 }
 export default function PortalReferrals() {
+  const { money } = useCurrency()
   const { me, plugins } = useSession()
   const { message, modal } = App.useApp()
   const enabled = plugins.some((plugin) => plugin.id === 'affiliate' && plugin.enabled)
   const summary = useData<Summary>(enabled ? '/extensions/affiliate/summary' : null, 15)
-  const commissions = useData<Row[]>(enabled ? '/extensions/affiliate/commissions?mine=1' : null, 15)
-  const withdrawals = useData<Row[]>(enabled ? '/extensions/affiliate/withdrawals?mine=1' : null, 15)
+  const commissions = useData<Row[]>(
+    enabled ? '/extensions/affiliate/commissions?mine=1' : null,
+    15,
+  )
+  const withdrawals = useData<Row[]>(
+    enabled ? '/extensions/affiliate/withdrawals?mine=1' : null,
+    15,
+  )
   const [method, setMethod] = useState<Method>()
   const [canceling, setCanceling] = useState('')
   const available = Number(summary.data?.availableAmount || 0)

@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, App, Button, Empty, Form, Input, Space, Table, Tag, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
@@ -18,6 +19,7 @@ type Claim = {
 type Result = { id: string; status: 'pending' | 'redeemed'; message: string }
 
 export default function PortalRedeem() {
+  const { currencyName } = useCurrency()
   const { plugins } = useSession()
   const { message } = App.useApp()
   const enabled = plugins.some((plugin) => plugin.id === 'redeem' && plugin.enabled)
@@ -151,7 +153,11 @@ export default function PortalRedeem() {
         }}
         columns={[
           { title: '名称', dataIndex: 'name' },
-          { title: '兑换内容', dataIndex: 'summary' },
+          {
+            title: '兑换内容',
+            dataIndex: 'summary',
+            render: (value, row) => (row.kind === 'balance' ? `${value} ${currencyName}` : value),
+          },
           {
             title: '状态',
             render: (_, claim) => (

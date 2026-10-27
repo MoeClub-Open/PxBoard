@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -40,7 +41,7 @@ import type { Row } from '../api'
 import { useSession } from '../context'
 import Account from './Account'
 import ResourcePage from '../components/ResourcePage'
-import { date, money, PortalOrders, PortalPlans, PortalWallet, useWallet } from './PortalCommerce'
+import { date, PortalOrders, PortalPlans, PortalWallet, useWallet } from './PortalCommerce'
 import {
   PortalAnnouncements,
   PortalHelp,
@@ -55,9 +56,12 @@ import { Brand } from '../components/Brand'
 import { useBrandTitle } from '../branding'
 
 function ServiceOverview() {
+  const { money } = useCurrency()
   const { me, plugins } = useSession()
   const accounts = useData<Row[]>(
-    plugins.some((p) => p.id === 'access' && p.enabled) ? '/extensions/access/accounts?mine=1' : null,
+    plugins.some((p) => p.id === 'access' && p.enabled)
+      ? '/extensions/access/accounts?mine=1'
+      : null,
     5,
   )
   const business = me.mode === 'business' && plugins.some((p) => p.id === 'commerce' && p.enabled)

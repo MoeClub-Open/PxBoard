@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd'
 import dayjs from 'dayjs'
 import { useData, type Field, type Row } from '../api'
@@ -41,7 +42,7 @@ function fieldValue(row: Row | undefined, key: string) {
   return key.split('.').reduce<any>((value, part) => value?.[part], row)
 }
 
-function fieldItem(f: Field) {
+function fieldItem(f: Field, symbol: string) {
   if (f.type === 'hidden')
     return (
       <Form.Item key={f.key} name={f.key} hidden>
@@ -57,7 +58,7 @@ function fieldItem(f: Field) {
       <InputNumber
         style={{ width: '100%' }}
         precision={f.type === 'money' ? 2 : undefined}
-        prefix={f.type === 'money' ? '¥' : undefined}
+        prefix={f.type === 'money' ? symbol : undefined}
         step={f.type === 'money' ? 0.01 : 1}
       />
     )
@@ -91,8 +92,26 @@ function fieldItem(f: Field) {
 }
 
 export function Fields({ fields }: { fields: Field[] }) {
+  const { currencySymbol } = useCurrency()
   return fields.map((field) =>
-    field.when ? (
+    field.type === 'discount' ? (
+      <Form.Item
+        key={field.key}
+        noStyle
+        shouldUpdate={(previous, current) => previous.type !== current.type}
+      >
+        {({ getFieldValue }) =>
+          fieldItem(
+            {
+              ...field,
+              type: getFieldValue('type') === 'fixed' ? 'money' : 'number',
+              label: getFieldValue('type') === 'fixed' ? '优惠金额' : '优惠比例（%）',
+            },
+            currencySymbol,
+          )
+        }
+      </Form.Item>
+    ) : field.when ? (
       <Form.Item
         key={field.key}
         noStyle
@@ -100,10 +119,12 @@ export function Fields({ fields }: { fields: Field[] }) {
           Object.keys(field.when!).some((key) => previous[key] !== current[key])
         }
       >
-        {({ getFieldsValue }) => (visible(field, getFieldsValue(true)) ? fieldItem(field) : null)}
+        {({ getFieldsValue }) =>
+          visible(field, getFieldsValue(true)) ? fieldItem(field, currencySymbol) : null
+        }
       </Form.Item>
     ) : (
-      fieldItem(field)
+      fieldItem(field, currencySymbol)
     ),
   )
 }
@@ -116,7 +137,8 @@ export function formValues(fields: Field[], row?: Row) {
         f.key,
         f.type === 'datetime' && value
           ? dayjs(value)
-          : f.type === 'money' && typeof value === 'number'
+          : (f.type === 'money' || (f.type === 'discount' && row?.type === 'fixed')) &&
+              typeof value === 'number'
             ? value / 100
             : value,
       ]
@@ -135,7 +157,8 @@ export function serialize(fields: Field[], values: Row) {
     parent[key] =
       field.type === 'datetime'
         ? value?.toISOString() || ''
-        : field.type === 'money' && typeof value === 'number'
+        : (field.type === 'money' || (field.type === 'discount' && values.type === 'fixed')) &&
+            typeof value === 'number'
           ? Math.round(value * 100)
           : (value ?? (field.type === 'boolean' ? false : ''))
   }

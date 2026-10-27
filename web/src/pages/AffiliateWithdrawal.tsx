@@ -1,7 +1,7 @@
+import { useCurrency } from '../currency'
 import { useRef, useState } from 'react'
 import { Alert, App, Button, Descriptions, Form, Input, InputNumber, Modal, Space } from 'antd'
 import { api, errorText } from '../api'
-import { money } from './PortalCommerce'
 
 export type Method = 'wallet' | 'cash'
 function cents(value: string) {
@@ -21,6 +21,7 @@ export default function AffiliateWithdrawal({
   onClose: () => void
   onSubmitted: () => void
 }) {
+  const { money, currencyName, currencySymbol } = useCurrency()
   const { message } = App.useApp()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -38,7 +39,11 @@ export default function AffiliateWithdrawal({
       return
     }
     if (amount < minimum || amount > available) {
-      setError(wallet ? '转入金额需在 0.01 元至可用佣金之间' : '申请金额需在 1 元至可用佣金之间')
+      setError(
+        wallet
+          ? `转入金额需在 0.01 ${currencyName}至可用佣金之间`
+          : `申请金额需在 1 ${currencyName}至可用佣金之间`,
+      )
       return
     }
     sending.current = true
@@ -101,7 +106,7 @@ export default function AffiliateWithdrawal({
       >
         <Form.Item
           name="amount"
-          label={wallet ? '转入金额（元）' : '申请金额（元）'}
+          label={`${wallet ? '转入金额' : '申请金额'}（${currencyName}）`}
           rules={[{ required: true, message: wallet ? '请输入转入金额' : '请输入申请金额' }]}
         >
           <InputNumber<string>
@@ -109,7 +114,7 @@ export default function AffiliateWithdrawal({
             precision={2}
             min={wallet ? '0.01' : '1'}
             max={(available / 100).toFixed(2)}
-            prefix="¥"
+            prefix={currencySymbol}
             style={{ width: '100%' }}
           />
         </Form.Item>

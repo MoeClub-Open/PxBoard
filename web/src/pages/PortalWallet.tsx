@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { useState } from 'react'
 import { Alert, Button, InputNumber, Table, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
@@ -5,9 +6,10 @@ import { useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import Checkout from './Checkout'
-import { date, money, useWallet } from './PortalShared'
+import { date, useWallet } from './PortalShared'
 
 export function PortalWallet() {
+  const { money, currencyName, currencySymbol } = useCurrency()
   const { plugins } = useSession()
   const wallet = useWallet()
   const channels = useData<Row[]>(
@@ -36,8 +38,8 @@ export function PortalWallet() {
         </div>
         <div className="portal-recharge">
           <InputNumber
-            aria-label="充值金额（元）"
-            prefix="¥"
+            aria-label={`充值金额（${currencyName}）`}
+            prefix={currencySymbol}
             min={1}
             precision={2}
             value={amount}

@@ -1,6 +1,6 @@
 # API
 
-本文对应核心 `0.4.0`，插件接口版本 `1.0`。基础路径为 `/api/v1`，业务插件路径为 `/api/v1/extensions/{pluginId}`。JSON 字段使用 camelCase，时间使用 UTC RFC 3339，流量上报使用字节，商品与账本金额使用整数分。
+本文对应核心 `0.4.0`，插件接口版本 `1.0`。基础路径为 `/api/v1`，业务插件路径为 `/api/v1/extensions/{pluginId}`。JSON 字段使用 camelCase，时间使用 UTC RFC 3339，流量上报使用字节，商品与账本金额使用百分之一单位的整数。
 
 JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message":"..."}}`。HTTP 状态表达成功、认证、权限与处理失败，请勿以 HTTP 200 携带业务错误。订阅导出等下载接口返回对应文件格式。每个响应带 `X-Request-ID`，核心 OpenAPI 入口为 `/api/v1/openapi.json`。
 
@@ -82,7 +82,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 | `support` | `/tickets`、`POST /tickets/{id}/reply`、`POST /tickets/{id}/close`、`/announcements`、`/articles`、`/mail`、`/notifications` |
 | `oauth` | 公开 `GET /providers`、`POST /authorize` 与授权回调；当前用户 `/bindings`；管理员 `/settings/providers`、`POST /bindings/import` |
 
-用户前台读取访问账户、订阅、订单、账本、工单和推广记录时使用 `?mine=1`，管理员也只获取自己的记录；省略该参数时管理员可在后台管理全部记录。交易和账本只开放对应业务操作，用户只读取自己的订单、账本、订阅、工单和兑换记录。已登录用户的套餐列表按购买或续费资格筛选，公开套餐只展示已上架内容。支付渠道对普通用户只展示名称、标识和提供方，服务端密钥不会返回。
+用户前台读取访问账户、订阅、订单、账本、工单和推广记录时使用 `?mine=1`，管理员也只获取自己的记录；省略该参数时管理员可在后台管理全部记录。金额显示设置由商业插件的公开 `GET /extensions/commerce/public/currency` 和管理员 `GET/PATCH /extensions/commerce/currency` 提供；它只改变显示，不进行汇率换算或更改支付渠道结算币种。交易和账本只开放对应业务操作，用户只读取自己的订单、账本、订阅、工单和兑换记录。已登录用户的套餐列表按购买或续费资格筛选，公开套餐只展示已上架内容。支付渠道对普通用户只展示名称、标识和提供方，服务端密钥不会返回。
 
 当前配置与业务列表返回完整集合，界面进行分页与筛选；操作记录和后台任务各返回最近 200 条。高数据量外部集成应增加面向所需资源的服务端分页，不能把界面分页误解为数据库分页。
 

@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, App, Button, Empty, Table } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
@@ -5,13 +6,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useData } from '../api'
 import type { Row } from '../api'
 import Checkout from './Checkout'
-import { duration, money } from './PortalShared'
+import { duration } from './PortalShared'
 
-export { date, duration, money, OrderStatus, useWallet } from './PortalShared'
+export { date, duration, OrderStatus, useWallet } from './PortalShared'
 export { PortalOrders } from './PortalOrders'
 export { PortalWallet } from './PortalWallet'
 
 export function PortalPlans() {
+  const { money } = useCurrency()
   const navigate = useNavigate()
   const { message } = App.useApp()
   const [query, setQuery] = useSearchParams()

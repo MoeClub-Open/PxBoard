@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
@@ -14,7 +15,7 @@ import {
 import { api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
-import { duration, money, OrderStatus, useWallet } from './PortalShared'
+import { duration, OrderStatus, useWallet } from './PortalShared'
 
 type Intent = { plan?: Row; order?: Row; rechargeAmount?: number }
 export default function Checkout({
@@ -47,6 +48,7 @@ export default function Checkout({
   onCompleteRef.current = onComplete
   const requestId = useRef(crypto.randomUUID())
   const recharge = intent.rechargeAmount !== undefined || order?.kind === 'recharge'
+  const { money } = useCurrency()
   const amount = Number(order?.amount ?? intent.rechargeAmount ?? intent.plan?.price ?? 0)
   useEffect(() => {
     if (!method && enabledChannels.length) setMethod(String(enabledChannels[0].id))

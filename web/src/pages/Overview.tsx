@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import { Alert, Button, Empty, List, Tag } from 'antd'
 import {
   AppstoreOutlined,
@@ -17,6 +18,7 @@ const modeLabels: Record<string, string> = {
   business: '商业运营',
 }
 function Summary({ plugin }: { plugin: Plugin }) {
+  const { currencyName } = useCurrency()
   const { data, loading, error, reload } = useData<Row[]>(`/extensions/${plugin.id}/summary`)
   return (
     <div className="summary-row">
@@ -37,7 +39,7 @@ function Summary({ plugin }: { plugin: Plugin }) {
               <span>{m.label}</span>
               <strong>
                 {m.value}
-                <small>{m.unit}</small>
+                <small>{m.unit === '元' ? currencyName : m.unit}</small>
               </strong>
             </div>
           ))}

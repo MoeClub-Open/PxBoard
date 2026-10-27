@@ -1,3 +1,4 @@
+import { useCurrency } from '../currency'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, Button, Empty, Space, Table, Tag, Typography, theme } from 'antd'
@@ -32,6 +33,7 @@ function duration(plan: PublicPlan) {
 
 export default function Storefront({ auth }: { auth?: StoreAuth }) {
   useBrandTitle()
+  const { money } = useCurrency()
   const { token } = theme.useToken()
   const {
     data: site,
@@ -133,12 +135,9 @@ export default function Storefront({ auth }: { auth?: StoreAuth }) {
             {
               title: '价格',
               dataIndex: 'price',
-              render: (value: number, plan) => (
+              render: (value: number) => (
                 <Typography.Text strong className="storefront-price">
-                  {(value / 100).toLocaleString('zh-CN', {
-                    style: 'currency',
-                    currency: plan.currency || 'CNY',
-                  })}
+                  {money(value)}
                 </Typography.Text>
               ),
             },
