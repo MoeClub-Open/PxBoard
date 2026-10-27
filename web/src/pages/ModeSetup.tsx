@@ -52,6 +52,7 @@ const pluginNames: Record<string, string> = {
   payments: '支付',
   audit: '流量审计',
   support: '用户服务',
+  notifications: '邮件通知',
 }
 const statusLabels = {
   installing: ['安装中', 'processing'],

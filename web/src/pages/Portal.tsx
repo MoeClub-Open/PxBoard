@@ -64,6 +64,14 @@ function ServiceOverview() {
     5,
   )
   const business = me.mode === 'business' && plugins.some((p) => p.id === 'commerce' && p.enabled)
+  const redeem = plugins.some(
+    (p) =>
+      p.id === 'redeem' &&
+      p.enabled &&
+      p.pages.some(
+        (page) => page.id === 'redeem' && page.roles.includes('member') && page.surface !== 'admin',
+      ),
+  )
   const wallet = useWallet(business)
   const account = accounts.data?.find((row) => row.userId === me.id)
   const expired = account?.expiresAt && new Date(account.expiresAt).getTime() < Date.now()
@@ -103,7 +111,7 @@ function ServiceOverview() {
         <div className="page-loading">
           <Spin />
         </div>
-      ) : account ? (
+      ) : accounts.error ? null : account ? (
         <>
           <div className="portal-statistics">
             <div>
@@ -151,13 +159,25 @@ function ServiceOverview() {
                   ? '请联系工作人员处理账户状态。'
                   : business
                     ? '购买或续费后，可在“我的订阅”获取连接。'
-                    : '请联系工作人员检查访问权限。'
+                    : redeem
+                      ? '可使用兑换码获取访问权限，或联系管理员。'
+                      : me.role === 'admin'
+                        ? '请在管理后台检查访问账户。'
+                        : '请联系管理员检查访问权限。'
               }
               className="portal-notice"
               action={
                 business && account.status !== 'suspended' ? (
                   <Link to="/user/plans">
                     <Button>选购套餐</Button>
+                  </Link>
+                ) : !business && redeem && account.status !== 'suspended' ? (
+                  <Link to="/user/redeem">
+                    <Button>兑换码</Button>
+                  </Link>
+                ) : me.role === 'admin' ? (
+                  <Link to="/admin/p/access/accounts">
+                    <Button>管理访问账户</Button>
                   </Link>
                 ) : undefined
               }
@@ -167,11 +187,27 @@ function ServiceOverview() {
       ) : (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={business ? '还没有开通服务' : '尚未分配访问权限'}
+          description={
+            business
+              ? '还没有开通服务'
+              : redeem
+                ? '输入兑换码后即可获取访问权限'
+                : '尚未分配访问权限'
+          }
         >
           {business && (
             <Link to="/user/plans">
               <Button type="primary">选购套餐</Button>
+            </Link>
+          )}
+          {!business && redeem && (
+            <Link to="/user/redeem">
+              <Button type="primary">兑换码</Button>
+            </Link>
+          )}
+          {!business && !redeem && me.role === 'admin' && (
+            <Link to="/admin/p/access/accounts">
+              <Button>管理访问账户</Button>
             </Link>
           )}
         </Empty>

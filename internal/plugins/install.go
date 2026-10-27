@@ -20,6 +20,11 @@ func (m *Manager) installBinary(manifest plugin.Manifest, source string, binary 
 		}
 	}
 	old, _ := m.Get(manifest.ID)
+	if old.ID != "" && manifest.MigrationGuard != nil {
+		if err = m.checkMigration(manifest); err != nil {
+			return err
+		}
+	}
 	dest := m.binary(manifest.ID, manifest.Version)
 	if err = os.MkdirAll(filepath.Dir(dest), 0700); err != nil {
 		return err

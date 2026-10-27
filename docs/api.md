@@ -79,7 +79,8 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 | `affiliate` | `GET /summary`、`GET /commissions`、`GET/POST /withdrawals`、`POST /withdrawals/{id}/{action}`；管理员 `/profiles`、`GET/PATCH /settings` |
 | `payments` | `/channels`、`POST /checkout`、`GET /transactions`、`POST /transactions/{id}/resolve`；公开 `GET/POST /webhooks/{channelId}` |
 | `audit` | `/rules`、`/logs` |
-| `support` | `/tickets`、`POST /tickets/{id}/reply`、`POST /tickets/{id}/close`、`/announcements`、`/articles`、`/mail`、`/notifications` |
+| `support` | `/tickets`、`POST /tickets/{id}/reply`、`POST /tickets/{id}/close`、`/announcements`、`/articles` |
+| `notifications` | `/mail`、`/notifications` |
 | `oauth` | 公开 `GET /providers`、`POST /authorize` 与授权回调；当前用户 `/bindings`；管理员 `/settings/providers`、`POST /bindings/import` |
 
 用户前台读取访问账户、订阅、订单、账本、工单和推广记录时使用 `?mine=1`，管理员也只获取自己的记录；省略该参数时管理员可在后台管理全部记录。金额显示设置由商业插件的公开 `GET /extensions/commerce/public/currency` 和管理员 `GET/PATCH /extensions/commerce/currency` 提供；它只改变显示，不进行汇率换算或更改支付渠道结算币种。交易和账本只开放对应业务操作，用户只读取自己的订单、账本、订阅、工单和兑换记录。已登录用户的套餐列表按购买或续费资格筛选，公开套餐只展示已上架内容。支付渠道对普通用户只展示名称、标识和提供方，服务端密钥不会返回。

@@ -87,12 +87,34 @@ const labels: Record<string, string> = {
   protocol: '协议',
 }
 
-function Cell({ field, value, row }: { field: Field; value: any; row: Row }) {
+function Cell({
+  field,
+  value,
+  row,
+  groupNames,
+}: {
+  field: Field
+  value: any
+  row: Row
+  groupNames: Map<string, string>
+}) {
   const { money } = useCurrency()
   const { message } = App.useApp()
   const [open, setOpen] = useState(false)
   if (value === null || value === undefined || value === '') return <span className="muted">—</span>
   const text = String(value)
+  if (field.type === 'groups')
+    return (
+      <Space size={[4, 4]} wrap>
+        {text
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+          .map((id) => (
+            <Tag key={id}>{groupNames.get(id) || id}</Tag>
+          ))}
+      </Space>
+    )
   if (field.type === 'periods' && Array.isArray(value))
     return (
       <>
@@ -181,7 +203,7 @@ function Cell({ field, value, row }: { field: Field; value: any; row: Row }) {
   return <span title={text}>{text}</span>
 }
 
-function exportCSV(title: string, columns: Field[], rows: Row[]) {
+function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map<string, string>) {
   const escape = (value: any) => {
     let v = String(value ?? '')
     if (/^[=+\-@]/.test(v)) v = `'${v}`
@@ -191,7 +213,20 @@ function exportCSV(title: string, columns: Field[], rows: Row[]) {
     '\ufeff' +
     [
       columns.map((c) => escape(c.label)).join(','),
-      ...rows.map((row) => columns.map((c) => escape(row[c.key])).join(',')),
+      ...rows.map((row) =>
+        columns
+          .map((c) =>
+            escape(
+              c.type === 'groups'
+                ? String(row[c.key] || '')
+                    .split(',')
+                    .map((id) => groupNames.get(id.trim()) || id.trim())
+                    .join(', ')
+                : row[c.key],
+            ),
+          )
+          .join(','),
+      ),
     ].join('\r\n')
   const href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
   const a = document.createElement('a')
@@ -218,6 +253,9 @@ function ResourceTable({
     resource.columns.length ? endpoint : null,
     resource.pollIntervalSeconds,
   )
+  const groupEndpoint = resource.columns.find((field) => field.type === 'groups')?.optionsEndpoint
+  const { data: groups } = useData<Row[]>(groupEndpoint || null)
+  const groupNames = new Map((groups || []).map((group) => [String(group.id), String(group.name)]))
   const [search, setSearch] = useState('')
   const [editor, setEditor] = useState<{ row?: Row; action?: Action } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -364,7 +402,7 @@ function ResourceTable({
                 aria-label="导出记录"
                 icon={<DownloadOutlined />}
                 disabled={!rows.length}
-                onClick={() => exportCSV(resource.title, resource.columns, rows)}
+                onClick={() => exportCSV(resource.title, resource.columns, rows, groupNames)}
               />
             </>
           )}
@@ -409,7 +447,9 @@ function ResourceTable({
               key: f.key,
               dataIndex: f.key,
               title: f.label,
-              render: (v: any, row: Row) => <Cell field={f} value={v} row={row} />,
+              render: (v: any, row: Row) => (
+                <Cell field={f} value={v} row={row} groupNames={groupNames} />
+              ),
               sorter: (a: Row, b: Row) =>
                 typeof a[f.key] === 'number'
                   ? a[f.key] - b[f.key]

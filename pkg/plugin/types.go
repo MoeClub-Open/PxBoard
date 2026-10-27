@@ -1,7 +1,7 @@
 package plugin
 
 const APIVersion = "1.0"
-const CoreVersion = "0.4.10"
+const CoreVersion = "0.4.11"
 
 type Manifest struct {
 	ID             string            `json:"id"`
@@ -22,6 +22,16 @@ type Manifest struct {
 	Auth           []AuthForm        `json:"auth,omitempty"`
 	Capabilities   []string          `json:"capabilities,omitempty"`
 	Artifacts      map[string]string `json:"artifacts,omitempty"`
+	MigrationGuard *MigrationGuard   `json:"migrationGuard,omitempty"`
+}
+type MigrationGuard struct {
+	BeforeVersion    string   `json:"beforeVersion,omitempty"`
+	Required         bool     `json:"required,omitempty"`
+	Collections      []string `json:"collections"`
+	PendingEvents    []string `json:"pendingEvents,omitempty"`
+	MarkerCollection string   `json:"markerCollection"`
+	MarkerID         string   `json:"markerId"`
+	Message          string   `json:"message"`
 }
 type AuthForm struct {
 	Modes      []string          `json:"modes,omitempty"`

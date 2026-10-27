@@ -30,6 +30,41 @@ function RemoteSelect({
   )
 }
 
+function GroupSelect({
+  field,
+  value = [],
+  onChange,
+}: {
+  field: Field
+  value?: string[]
+  onChange?: (value: string[]) => void
+}) {
+  const { data, loading, error } = useData<Row[]>(field.optionsEndpoint || null)
+  const options = (data || []).map((row) => ({
+    label: row.name,
+    value: row.id,
+    disabled: row.enabled === false && !value.includes(String(row.id)),
+  }))
+  const known = new Set(options.map((item) => item.value))
+  for (const id of value) {
+    if (!known.has(id)) options.push({ label: id, value: id, disabled: false })
+  }
+  return (
+    <Select
+      mode="multiple"
+      value={value}
+      onChange={onChange}
+      disabled={field.readOnly}
+      loading={loading}
+      showSearch
+      optionFilterProp="label"
+      options={options}
+      notFoundContent={error || (loading ? '加载中' : '暂无分组，请先在节点管理中添加')}
+      status={error ? 'error' : undefined}
+    />
+  )
+}
+
 function visible(field: Field, values: Row) {
   return (
     !field.when ||
@@ -65,6 +100,7 @@ function fieldItem(f: Field, symbol: string) {
     )
   else if (f.type === 'boolean') control = <Switch />
   else if (f.type === 'periods') control = <PlanPeriods />
+  else if (f.type === 'groups') control = <GroupSelect field={f} />
   else if (f.type === 'select' && f.optionsEndpoint) control = <RemoteSelect field={f} />
   else if (f.type === 'select')
     control = (
@@ -146,12 +182,17 @@ export function formValues(fields: Field[], row?: Row) {
       const value = stored ?? (row && f.key.includes('.') ? undefined : f.default)
       return [
         f.key,
-        f.type === 'datetime' && value
-          ? dayjs(value)
-          : (f.type === 'money' || (f.type === 'discount' && row?.type === 'fixed')) &&
-              typeof value === 'number'
-            ? value / 100
-            : value,
+        f.type === 'groups'
+          ? String(value || '')
+              .split(',')
+              .map((id) => id.trim())
+              .filter(Boolean)
+          : f.type === 'datetime' && value
+            ? dayjs(value)
+            : (f.type === 'money' || (f.type === 'discount' && row?.type === 'fixed')) &&
+                typeof value === 'number'
+              ? value / 100
+              : value,
       ]
     }),
   )
@@ -166,12 +207,16 @@ export function serialize(fields: Field[], values: Row) {
     const key = path.pop()!
     const parent = path.reduce<Row>((row, part) => (row[part] ??= {}), result)
     parent[key] =
-      field.type === 'datetime'
-        ? value?.toISOString() || ''
-        : (field.type === 'money' || (field.type === 'discount' && values.type === 'fixed')) &&
-            typeof value === 'number'
-          ? Math.round(value * 100)
-          : (value ?? (field.type === 'boolean' ? false : ''))
+      field.type === 'groups'
+        ? Array.isArray(value)
+          ? value.join(',')
+          : ''
+        : field.type === 'datetime'
+          ? value?.toISOString() || ''
+          : (field.type === 'money' || (field.type === 'discount' && values.type === 'fixed')) &&
+              typeof value === 'number'
+            ? Math.round(value * 100)
+            : (value ?? (field.type === 'boolean' ? false : ''))
   }
   return result
 }
