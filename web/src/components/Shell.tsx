@@ -21,6 +21,7 @@ import {
   CloudServerOutlined,
   CreditCardOutlined,
   DashboardOutlined,
+  DatabaseOutlined,
   GiftOutlined,
   LinkOutlined,
   LogoutOutlined,
@@ -59,6 +60,7 @@ const icons: Record<string, ReactNode> = {
   message: <MessageOutlined />,
   book: <BookOutlined />,
   mail: <MailOutlined />,
+  database: <DatabaseOutlined />,
 }
 export default function Shell({
   dark,
@@ -94,20 +96,34 @@ export default function Shell({
   useEffect(() => {
     setMobile(false)
   }, [location.pathname])
-  const entries = [
-    { key: '/admin', label: '总览', icon: <DashboardOutlined />, group: '工作空间' },
-    ...plugins
-      .filter((p) => p.enabled)
-      .flatMap((p) =>
-        p.pages
-          .filter((page) => page.roles.includes(me.role) && page.surface !== 'portal')
-          .map((page) => ({
-            key: `/admin/p/${p.id}/${page.id}`,
+  const sharedSeen = new Set<string>()
+  const pluginEntries = plugins
+    .filter((plugin) => plugin.enabled)
+    .flatMap((plugin) =>
+      plugin.pages
+        .filter((page) => page.roles.includes(me.role) && page.surface !== 'portal')
+        .flatMap((page) => {
+          if (page.shared) {
+            if (sharedSeen.has(page.shared.id)) return []
+            sharedSeen.add(page.shared.id)
+            return [{
+              key: `/admin/shared/${encodeURIComponent(page.shared.id)}`,
+              label: page.shared.title,
+              icon: icons[page.icon] || <AppstoreOutlined />,
+              group: page.group,
+            }]
+          }
+          return [{
+            key: `/admin/p/${plugin.id}/${page.id}`,
             label: page.title,
             icon: icons[page.icon] || <AppstoreOutlined />,
             group: page.group,
-          })),
-      ),
+          }]
+        }),
+    )
+  const entries = [
+    { key: '/admin', label: '总览', icon: <DashboardOutlined />, group: '工作空间' },
+    ...pluginEntries,
     ...(me.role === 'admin'
       ? [
           { key: '/admin/users', label: '用户', icon: <TeamOutlined />, group: '管理' },

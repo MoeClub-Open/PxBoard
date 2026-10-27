@@ -249,6 +249,9 @@ kbd {
   margin-bottom: 28px;
   min-height: 38px;
 }
+.shared-page-heading {
+  flex-wrap: wrap;
+}
 .page-notice {
   margin-bottom: 20px;
 }

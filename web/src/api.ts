@@ -17,6 +17,7 @@ export interface Page {
   roles: string[]
   surface?: 'admin' | 'portal'
   capability?: string
+  shared?: { id: string; title: string; selectorLabel?: string }
 }
 export interface Plugin {
   id: string

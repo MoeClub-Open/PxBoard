@@ -5,7 +5,7 @@ import zhCN from 'antd/locale/zh_CN'
 import type { Plugin, User } from './api'
 import { api, configurationChanged } from './api'
 import { SessionContext } from './context'
-import ResourcePage from './components/ResourcePage'
+import SharedPluginPage, { PluginPageRoute } from './components/SharedPluginPage'
 import Shell from './components/Shell'
 import Auth, { Register, Reset } from './pages/Auth'
 import Overview from './pages/Overview'
@@ -194,8 +194,9 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
             />
             <Route
               path="/admin/p/:pluginId/:pageId"
-              element={<ResourcePage key={location.pathname} />}
+              element={<PluginPageRoute key={location.pathname} />}
             />
+            <Route path="/admin/shared/:sharedId" element={<SharedPluginPage />} />
             {admin && (
               <>
                 <Route path="/admin/users" element={<Users />} />

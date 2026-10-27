@@ -492,7 +492,7 @@ function ResourceTable({
         onCancel={() => setEditor(null)}
         onOk={submit}
         confirmLoading={busy}
-        okText="确定"
+        okText={editor?.action?.label || (editor?.row ? '保存' : resource.createLabel || '确定')}
         cancelText="取消"
         destroyOnHidden
         width={560}
@@ -505,9 +505,15 @@ function ResourceTable({
   )
 }
 
-export default function ResourcePage() {
+export default function ResourcePage({
+  pluginId: pluginOverride,
+  pageId: pageOverride,
+  hideHeading = false,
+}: { pluginId?: string; pageId?: string; hideHeading?: boolean } = {}) {
   const { currencyName } = useCurrency()
-  const { pluginId, pageId } = useParams()
+  const params = useParams()
+  const pluginId = pluginOverride || params.pluginId
+  const pageId = pageOverride || params.pageId
   const location = useLocation()
   const { me, plugins } = useSession()
   const selected = plugins.find((plugin) => plugin.id === pluginId && plugin.enabled)
@@ -539,12 +545,14 @@ export default function ResourcePage() {
     )
   return (
     <>
-      <div className="page-heading">
-        <h1>{data.title}</h1>
-        <Button icon={<ReloadOutlined />} onClick={reload}>
-          刷新
-        </Button>
-      </div>
+      {!hideHeading && (
+        <div className="page-heading">
+          <h1>{data.title}</h1>
+          <Button icon={<ReloadOutlined />} onClick={reload}>
+            刷新
+          </Button>
+        </div>
+      )}
       {data.notice && <Alert type="info" title={data.notice} showIcon className="page-notice" />}
       {!!data.metrics?.length && (
         <div className="metric-strip">

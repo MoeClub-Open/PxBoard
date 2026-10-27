@@ -1,7 +1,7 @@
 package plugin
 
 const APIVersion = "1.0"
-const CoreVersion = "0.4.9"
+const CoreVersion = "0.4.10"
 
 type Manifest struct {
 	ID             string            `json:"id"`
@@ -33,13 +33,19 @@ type AuthForm struct {
 	Capability string            `json:"capability,omitempty"`
 }
 type Page struct {
-	ID         string   `json:"id"`
-	Title      string   `json:"title"`
-	Icon       string   `json:"icon"`
-	Group      string   `json:"group"`
-	Roles      []string `json:"roles"`
-	Surface    string   `json:"surface,omitempty"`
-	Capability string   `json:"capability,omitempty"`
+	ID         string      `json:"id"`
+	Title      string      `json:"title"`
+	Icon       string      `json:"icon"`
+	Group      string      `json:"group"`
+	Roles      []string    `json:"roles"`
+	Surface    string      `json:"surface,omitempty"`
+	Capability string      `json:"capability,omitempty"`
+	Shared     *SharedPage `json:"shared,omitempty"`
+}
+type SharedPage struct {
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	SelectorLabel string `json:"selectorLabel,omitempty"`
 }
 type Actor struct {
 	ID     string `json:"id"`

@@ -110,6 +110,7 @@ export function Sources() {
             dataIndex: 'enabled',
             render: (v: boolean, row: Row) => (
               <Switch
+                aria-label={`${row.name}插件源`}
                 checked={v}
                 onChange={async (enabled) => {
                   try {
@@ -247,6 +248,7 @@ function Installed() {
           width: 80,
           render: (v: boolean, p: Plugin) => (
             <Switch
+              aria-label={`${p.name}插件`}
               checked={v}
               loading={busy === p.id}
               onChange={(next) => action(p.id, next ? 'enable' : 'disable')}
