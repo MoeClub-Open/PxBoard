@@ -23,6 +23,8 @@ export interface Plugin {
   id: string
   name: string
   version: string
+  versionEpoch?: number
+  buildRevision?: number
   description: string
   category: string
   author: string

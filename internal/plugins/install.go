@@ -15,7 +15,7 @@ func (m *Manager) installBinary(manifest plugin.Manifest, source string, binary 
 		return err
 	}
 	for _, dependent := range all {
-		if minimum, needs := dependent.Dependencies[manifest.ID]; needs && !compatible(manifest.Version, minimum) {
+		if minimum, needs := dependent.Dependencies[manifest.ID]; needs && !compatible(versionWithEpoch(manifest), minimum) {
 			return fmt.Errorf("%s 需要 %s %s，不能安装 %s", dependent.Name, manifest.ID, minimum, manifest.Version)
 		}
 	}
@@ -25,7 +25,7 @@ func (m *Manager) installBinary(manifest plugin.Manifest, source string, binary 
 			return err
 		}
 	}
-	dest := m.binary(manifest.ID, manifest.Version)
+	dest := m.binary(manifest.ID, manifest.Version, manifest.VersionEpoch)
 	if err = os.MkdirAll(filepath.Dir(dest), 0700); err != nil {
 		return err
 	}

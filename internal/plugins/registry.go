@@ -59,6 +59,32 @@ func version(v string) ([3]int, bool) {
 	return out, true
 }
 func validVersion(v string) bool { _, ok := version(v); return ok }
+
+// An epoch permits a published version series to be reset without being treated as a downgrade.
+func versionWithEpoch(manifest plugin.Manifest) string {
+	return strconv.Itoa(manifest.VersionEpoch) + "!" + manifest.Version
+}
+
+func orderedVersion(value string) ([4]int, bool) {
+	var out [4]int
+	parts := strings.Split(value, "!")
+	if len(parts) > 2 {
+		return out, false
+	}
+	if len(parts) == 2 {
+		epoch, err := strconv.Atoi(parts[0])
+		if err != nil || epoch < 0 {
+			return out, false
+		}
+		out[0], value = epoch, parts[1]
+	}
+	v, ok := version(value)
+	if !ok {
+		return out, false
+	}
+	copy(out[1:], v[:])
+	return out, true
+}
 func checkCoreVersion(manifest plugin.Manifest) error {
 	if manifest.MinCoreVersion == "" {
 		return nil
@@ -72,11 +98,11 @@ func checkCoreVersion(manifest plugin.Manifest) error {
 	return nil
 }
 func compatible(installed, minimum string) bool {
-	a, ok := version(installed)
+	a, ok := orderedVersion(installed)
 	if !ok {
 		return false
 	}
-	b, ok := version(strings.TrimPrefix(minimum, ">="))
+	b, ok := orderedVersion(strings.TrimPrefix(minimum, ">="))
 	if !ok {
 		return false
 	}
@@ -188,7 +214,7 @@ func (m *Manager) Catalog() ([]Entry, []Source) {
 			continue
 		}
 		for _, p := range idx.Plugins {
-			if !validID(p.ID) || !validVersion(p.Version) || p.APIVersion != plugin.APIVersion {
+			if !validID(p.ID) || !validVersion(p.Version) || p.VersionEpoch < 0 || p.BuildRevision < 0 || p.APIVersion != plugin.APIVersion {
 				continue
 			}
 			p.SourceID = s.ID
@@ -246,7 +272,12 @@ func (m *Manager) install(id, source string, catalog []Entry, sources []Source, 
 		return err
 	}
 	old, _ := m.Get(id)
-	if old.ID != "" && old.Version == p.Version && old.SourceID == source {
+	if old.ID != "" && old.SourceID == source {
+		if !compatible(versionWithEpoch(p.Manifest), versionWithEpoch(old.Manifest)) || (old.Version == p.Version && old.VersionEpoch == p.VersionEpoch && old.BuildRevision > p.BuildRevision) {
+			return fmt.Errorf("插件源中的版本或发布批次早于已安装版本")
+		}
+	}
+	if old.ID != "" && old.Version == p.Version && old.VersionEpoch == p.VersionEpoch && old.BuildRevision == p.BuildRevision && old.SourceID == source {
 		if old.Enabled && old.Error == "" {
 			return nil
 		}
@@ -254,7 +285,7 @@ func (m *Manager) install(id, source string, catalog []Entry, sources []Source, 
 	}
 	for dep, min := range p.Dependencies {
 		installed, e := m.Get(dep)
-		if e == nil && compatible(installed.Version, min) {
+		if e == nil && compatible(versionWithEpoch(installed.Manifest), min) {
 			if !installed.Enabled || installed.Error != "" {
 				if e = m.enable(dep); e != nil {
 					return e
@@ -266,7 +297,7 @@ func (m *Manager) install(id, source string, catalog []Entry, sources []Source, 
 			return e
 		}
 		installed, e = m.Get(dep)
-		if e != nil || !compatible(installed.Version, min) {
+		if e != nil || !compatible(versionWithEpoch(installed.Manifest), min) {
 			return fmt.Errorf("依赖版本不满足：%s %s", dep, min)
 		}
 	}

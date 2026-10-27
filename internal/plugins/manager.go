@@ -75,10 +75,13 @@ func (m *Manager) Get(id string) (Installed, error) {
 	}
 	return Installed{}, fmt.Errorf("插件未安装")
 }
-func (m *Manager) binary(id, version string) string {
+func (m *Manager) binary(id, version string, epoch int) string {
 	n := "plugin"
 	if runtime.GOOS == "windows" {
 		n += ".exe"
+	}
+	if epoch > 0 {
+		version = fmt.Sprintf("%d!%s", epoch, version)
 	}
 	return filepath.Join(m.Dir, id, version, n)
 }
@@ -97,11 +100,11 @@ func (m *Manager) enable(id string) error {
 	}
 	for dep, min := range p.Dependencies {
 		d, err := m.Get(dep)
-		if err != nil || !d.Enabled || d.Error != "" || !compatible(d.Version, min) {
+		if err != nil || !d.Enabled || d.Error != "" || !compatible(versionWithEpoch(d.Manifest), min) {
 			return fmt.Errorf("请先启用 %s (%s)", dep, min)
 		}
 	}
-	proc, err := start(m.binary(id, p.Version), id, m.BaseURL)
+	proc, err := start(m.binary(id, p.Version, p.VersionEpoch), id, m.BaseURL)
 	if err != nil {
 		return err
 	}
@@ -230,7 +233,7 @@ func (m *Manager) Call(ctx context.Context, id string, req plugin.Request) (plug
 func (m *Manager) LocalInstall(manifest plugin.Manifest, binary string) error {
 	m.mutation.Lock()
 	defer m.mutation.Unlock()
-	if !validID(manifest.ID) || manifest.APIVersion != plugin.APIVersion || !validVersion(manifest.Version) {
+	if !validID(manifest.ID) || manifest.APIVersion != plugin.APIVersion || !validVersion(manifest.Version) || manifest.VersionEpoch < 0 || manifest.BuildRevision < 0 {
 		return fmt.Errorf("插件标识或版本无效")
 	}
 	if err := checkCoreVersion(manifest); err != nil {

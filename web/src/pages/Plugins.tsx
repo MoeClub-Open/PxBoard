@@ -37,6 +37,20 @@ interface Catalog {
   platform: string
   bundles?: Row[]
 }
+function installedRelease(installed: Plugin | undefined, candidate: Plugin | undefined) {
+  if (
+    !installed ||
+    !candidate ||
+    installed.version !== candidate.version ||
+    (installed.versionEpoch || 0) !== (candidate.versionEpoch || 0)
+  )
+    return false
+  const installedBuild = installed.buildRevision || 0
+  const candidateBuild = candidate.buildRevision || 0
+  return installed.sourceId === candidate.sourceId
+    ? installedBuild >= candidateBuild
+    : installedBuild === candidateBuild
+}
 const permissionLabel = (p: string) =>
   ({
     'storage:own': '读写插件自己的数据',
@@ -447,7 +461,7 @@ function Marketplace() {
                     )}
                   </span>
                 </div>
-                {installed?.version === p.version ? (
+                {installedRelease(installed, p) ? (
                   <Button
                     icon={<CheckCircleOutlined />}
                     onClick={() => {
@@ -484,7 +498,8 @@ function Marketplace() {
             type="primary"
             block
             disabled={
-              !trusted || plugins.some((p) => p.id === detail?.id && p.version === detail?.version)
+              !trusted ||
+              plugins.some((p) => p.id === detail?.id && installedRelease(p, detail || undefined))
             }
             loading={busy}
             onClick={install}
@@ -510,7 +525,7 @@ function Marketplace() {
             {Object.keys(detail.dependencies || {}).length ? (
               Object.entries(detail.dependencies).map(([id, version]) => (
                 <p key={id}>
-                  <LinkOutlined /> {id} <code>{version}</code>
+                  <LinkOutlined /> {id} <code>{version.replace(/^>=\d+!/, '>=')}</code>
                 </p>
               ))
             ) : (

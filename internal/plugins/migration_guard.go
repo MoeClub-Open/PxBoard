@@ -14,7 +14,7 @@ func (m *Manager) checkMigration(manifest plugin.Manifest) error {
 		if err != nil {
 			return err
 		}
-		if compatible(old.Version, guard.BeforeVersion) {
+		if compatible(versionWithEpoch(old.Manifest), guard.BeforeVersion) {
 			return nil
 		}
 	}

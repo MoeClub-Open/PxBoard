@@ -61,7 +61,7 @@ func (m *Manager) BundlePlan(id, sourceID string) ([]Entry, error) {
 		if !ok {
 			return fmt.Errorf("插件源缺少 %s", name)
 		}
-		if !validID(entry.ID) || !validVersion(entry.Version) || entry.APIVersion != plugin.APIVersion {
+		if !validID(entry.ID) || !validVersion(entry.Version) || entry.VersionEpoch < 0 || entry.BuildRevision < 0 || entry.APIVersion != plugin.APIVersion {
 			return fmt.Errorf("插件声明无效：%s", name)
 		}
 		if e := checkCoreVersion(entry.Manifest); e != nil {
@@ -81,7 +81,7 @@ func (m *Manager) BundlePlan(id, sourceID string) ([]Entry, error) {
 			if e := visit(dependency); e != nil {
 				return e
 			}
-			if !compatible(entries[dependency].Version, entry.Dependencies[dependency]) {
+			if !compatible(versionWithEpoch(entries[dependency].Manifest), entry.Dependencies[dependency]) {
 				return fmt.Errorf("源中 %s 的依赖版本不满足 %s", name, dependency)
 			}
 		}
@@ -108,7 +108,8 @@ func (m *Manager) InstallPlan(plan []Entry, sourceID string, progress func(strin
 	for _, entry := range plan {
 		progress(entry.ID, "installing", nil)
 		old, e := m.Get(entry.ID)
-		if e == nil && compatible(old.Version, entry.Version) {
+		sameVersion := old.Version == entry.Version && old.VersionEpoch == entry.VersionEpoch
+		if e == nil && compatible(versionWithEpoch(old.Manifest), versionWithEpoch(entry.Manifest)) && (!sameVersion || old.SourceID != sourceID || old.BuildRevision >= entry.BuildRevision) {
 			if !old.Enabled || old.Error != "" {
 				e = m.enable(old.ID)
 			}

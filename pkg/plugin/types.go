@@ -1,12 +1,14 @@
 package plugin
 
 const APIVersion = "1.0"
-const CoreVersion = "0.4.12"
+const CoreVersion = "0.4.13"
 
 type Manifest struct {
 	ID             string            `json:"id"`
 	Name           string            `json:"name"`
 	Version        string            `json:"version"`
+	VersionEpoch   int               `json:"versionEpoch,omitempty"`
+	BuildRevision  int               `json:"buildRevision,omitempty"`
 	APIVersion     string            `json:"apiVersion"`
 	MinCoreVersion string            `json:"minCoreVersion,omitempty"`
 	Description    string            `json:"description"`
