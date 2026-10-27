@@ -147,6 +147,7 @@ code {
   height: calc(100vh - 150px);
   overflow-y: auto;
   scrollbar-width: thin;
+  scrollbar-color: #b5b2c0 transparent;
 }
 .sidebar-menu .ant-menu {
   border-inline-end: 0 !important;
@@ -669,6 +670,10 @@ kbd {
 .dark .workspace-header {
   border-color: #303039;
 }
+.dark .sidebar-menu {
+  color-scheme: dark;
+  scrollbar-color: #666370 transparent;
+}
 .dark .workspace-section,
 .dark .metric-strip,
 .dark .getting-started,
@@ -683,7 +688,8 @@ kbd {
 .dark .sidebar-bottom {
   border-color: #303039;
 }
-.dark .ant-table-wrapper {
+.theme-dark .ant-table-wrapper {
+  background: #141414;
   border-color: #303039;
 }
 .dark .command-results button:hover {
