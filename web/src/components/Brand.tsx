@@ -1,9 +1,11 @@
+import { theme } from 'antd'
 import { useBrand } from '../branding'
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   const { name, logoUrl } = useBrand()
+  const { token } = theme.useToken()
   return (
-    <div className="brand">
+    <div className="brand" style={{ color: token.colorText }}>
       {logoUrl ? (
         <img className="brand-logo" src={logoUrl} alt="" />
       ) : (

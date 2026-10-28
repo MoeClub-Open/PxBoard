@@ -82,7 +82,6 @@ code {
   font-weight: 750;
   font-size: 24px;
   letter-spacing: -1px;
-  color: #242233;
 }
 .brand-dot {
   color: #805cdc;
@@ -646,7 +645,6 @@ kbd {
 .mobile-menu {
   display: none !important;
 }
-.dark .brand,
 .dark .header-path strong {
   color: #e1dbeb;
 }
