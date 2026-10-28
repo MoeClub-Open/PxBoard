@@ -17,6 +17,7 @@ const orderStates: Record<string, [string, string]> = {
   pending: ['待支付', 'warning'],
   paid: ['开通中', 'processing'],
   fulfilled: ['已完成', 'success'],
+  credited: ['已折抵', 'default'],
   canceled: ['已取消', 'default'],
   refunded: ['已退款', 'default'],
   refunding: ['退款中', 'processing'],
