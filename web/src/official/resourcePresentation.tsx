@@ -3,6 +3,7 @@ import { Button } from 'antd'
 import type { Field, Resource, Row } from '../api'
 import NodeAddresses from '../components/NodeAddresses'
 import MailTemplateEditor from '../components/MailTemplateEditor'
+import MailCampaignEditor from '../components/MailCampaignEditor'
 
 // Official business presentations are selected by the resource declaration.
 export function useResourcePresentation(
@@ -15,12 +16,13 @@ export function useResourcePresentation(
   const [parent, setParent] = useState<Row | null>(null)
   const addresses = resource.renderer === 'node-connections'
   const mailTemplates = resource.renderer === 'mail-templates'
+  const campaigns = resource.renderer === 'mail-campaigns'
   const grouped = addresses || resource.renderer === 'node-status'
   const ids = new Set(data.map((row) => row.id))
   return {
-    openEditor: (row: Row) => {
-      if (!mailTemplates) return false
-      setParent(row)
+    openEditor: (row?: Row) => {
+      if (!campaigns && (!mailTemplates || !row)) return false
+      setParent(row || {})
       return true
     },
     rows: data.filter(
@@ -69,7 +71,14 @@ export function useResourcePresentation(
       }
     },
     overlay:
-      mailTemplates && parent ? (
+      campaigns && parent ? (
+        <MailCampaignEditor
+          campaign={parent}
+          endpoint={endpoint}
+          onClose={() => setParent(null)}
+          onSaved={reload}
+        />
+      ) : mailTemplates && parent ? (
         <MailTemplateEditor
           template={parent}
           endpoint={endpoint}

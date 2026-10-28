@@ -39,6 +39,12 @@ import { useResourcePresentation } from '../official/resourcePresentation'
 const statuses: Record<string, [string, string]> = {
   active: ['正常', 'success'],
   suspended: ['已暂停', 'error'],
+  draft: ['草稿', 'default'],
+  running: ['发送中', 'processing'],
+  paused: ['已暂停', 'warning'],
+  completed: ['已完成', 'success'],
+  skipped: ['已跳过', 'default'],
+  expired: ['已过期', 'default'],
   pending: ['待处理', 'warning'],
   paid: ['已支付', 'processing'],
   fulfilled: ['已完成', 'success'],
@@ -369,7 +375,7 @@ function ResourceTable({
   )
   const total = Array.isArray(data) ? rows.length : data?.total || 0
   function openEditor(row?: Row, action?: Action) {
-    if (row && !action && presentation.openEditor(row)) return
+    if (!action && presentation.openEditor(row)) return
     const fs = action?.fields || resource.fields || []
     form.resetFields()
     form.setFieldsValue(formValues(fs, action ? undefined : row))

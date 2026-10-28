@@ -19,6 +19,20 @@ type QueryResult struct {
 	Total int      `json:"total"`
 }
 
+type UserQuery struct {
+	Search string `json:"search,omitempty"`
+	Status string `json:"status,omitempty"`
+	Role   string `json:"role,omitempty"`
+	Offset int    `json:"offset"`
+	Limit  int    `json:"limit"`
+}
+
+func (c *Client) SearchUsers(query UserQuery) (QueryResult, error) {
+	var result QueryResult
+	err := c.Request("POST", "/api/v1/runtime/users/search", query, &result)
+	return result, err
+}
+
 func (c *Client) Query(query Query) (QueryResult, error) {
 	var result QueryResult
 	err := c.Request("POST", "/api/v1/runtime/query", query, &result)

@@ -45,6 +45,9 @@ export default function Checkout({
   const period = periods.find((item) => item.id === periodId)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [quote, setQuote] = useState<Row>()
+  const [quoteError, setQuoteError] = useState('')
+  const [quoting, setQuoting] = useState(false)
   const working = useRef(false)
   const completed = useRef(false)
   const onCompleteRef = useRef(onComplete)
@@ -52,7 +55,36 @@ export default function Checkout({
   const requestId = useRef(crypto.randomUUID())
   const recharge = intent.rechargeAmount !== undefined || order?.kind === 'recharge'
   const { money } = useCurrency()
-  const amount = Number(order?.amount ?? intent.rechargeAmount ?? period?.price ?? 0)
+  const breakdown = order || quote
+  const amount = Number(
+    order?.amount ?? intent.rechargeAmount ?? quote?.amount ?? period?.price ?? 0,
+  )
+  useEffect(() => {
+    if (order || recharge || !intent.plan?.id || !periodId) return
+    let current = true
+    setQuoting(true)
+    setQuote(undefined)
+    setQuoteError('')
+    const timer = window.setTimeout(() => {
+      api<Row>('/extensions/commerce/orders/quote', {
+        method: 'POST',
+        body: { planId: intent.plan?.id, periodId, coupon: coupon.trim() },
+      })
+        .then((data) => {
+          if (current) setQuote(data)
+        })
+        .catch((e) => {
+          if (current) setQuoteError(errorText(e))
+        })
+        .finally(() => {
+          if (current) setQuoting(false)
+        })
+    }, 300)
+    return () => {
+      current = false
+      window.clearTimeout(timer)
+    }
+  }, [order, recharge, intent.plan?.id, periodId, coupon])
   useEffect(() => {
     if (!method && enabledChannels.length) setMethod(String(enabledChannels[0].id))
   }, [enabledChannels, method])
@@ -78,7 +110,7 @@ export default function Checkout({
             body: { ...body, requestId: requestId.current },
           }),
         )
-      } else if (method === 'wallet') {
+      } else if (method === 'wallet' || (!recharge && Number(order.amount) === 0)) {
         const result = await api<Row>(`/extensions/commerce/orders/${order.id}/pay`, {
           method: 'POST',
           body: {},
@@ -103,7 +135,8 @@ export default function Checkout({
       setBusy(false)
     }
   }
-  const insufficient = method === 'wallet' && wallet.balance < amount
+  const zeroDue = !!order && !recharge && amount === 0
+  const insufficient = !zeroDue && method === 'wallet' && wallet.balance < amount
   const settled = order && order.status !== 'pending'
   return (
     <Modal
@@ -124,18 +157,28 @@ export default function Checkout({
               type="primary"
               loading={busy}
               disabled={
-                (!order && !recharge && !period) ||
-                (!!order && (insufficient || !method || (method === 'wallet' && wallet.loading)))
+                (!order && !recharge && (!period || quoting || !quote || !!quoteError)) ||
+                (!!order &&
+                  (insufficient ||
+                    (!method && !zeroDue) ||
+                    (!zeroDue && method === 'wallet' && wallet.loading)))
               }
               onClick={() => void proceed()}
             >
-              {!order ? '创建订单' : method === 'wallet' ? '余额支付' : '立即支付'}
+              {!order
+                ? '创建订单'
+                : zeroDue
+                  ? '确认开通'
+                  : method === 'wallet'
+                    ? '余额支付'
+                    : '立即支付'}
             </Button>
           </Space>
         )
       }
     >
       {error && <Alert type="error" title={error} showIcon className="portal-notice" />}
+      {quoteError && <Alert type="error" title={quoteError} showIcon className="portal-notice" />}
       <Descriptions
         column={1}
         size="small"
@@ -146,9 +189,41 @@ export default function Checkout({
             children: order?.planName || intent.plan?.name || '余额充值',
           },
           {
+            key: 'original',
+            label: '套餐原价',
+            children: money(Number(breakdown?.originalAmount ?? period?.price ?? amount)),
+          },
+          ...(Number(breakdown?.discount) > 0
+            ? [
+                {
+                  key: 'discount',
+                  label: '优惠减免',
+                  children: `−${money(Number(breakdown?.discount))}`,
+                },
+              ]
+            : []),
+          ...(Number(breakdown?.surplusAmount) > 0
+            ? [
+                {
+                  key: 'surplus',
+                  label: '原套餐剩余价值折抵',
+                  children: `−${money(Number(breakdown?.surplusAmount))}`,
+                },
+              ]
+            : []),
+          ...(Number(breakdown?.surplusCredit) > 0
+            ? [
+                {
+                  key: 'surplusCredit',
+                  label: '折抵余款转入余额',
+                  children: money(Number(breakdown?.surplusCredit)),
+                },
+              ]
+            : []),
+          {
             key: 'amount',
-            label: order ? '订单金额' : '金额',
-            children: <strong>{money(amount)}</strong>,
+            label: '应付金额',
+            children: <strong>{quoting && !order ? '计算中…' : money(amount)}</strong>,
           },
           ...(order
             ? [
@@ -165,6 +240,14 @@ export default function Checkout({
             : []),
         ]}
       />
+      {breakdown?.purchaseType === 'change' && (
+        <Alert
+          type="info"
+          showIcon
+          title="新套餐将在支付完成后立即生效，并重新计算期限和流量周期。"
+          className="portal-notice"
+        />
+      )}
       {!order && !recharge && (
         <Form layout="vertical" className="portal-checkout-form">
           <Form.Item label="购买选项">
@@ -195,7 +278,7 @@ export default function Checkout({
           </Form.Item>
         </Form>
       )}
-      {order && !settled && (
+      {order && !settled && !zeroDue && (
         <div className="portal-payment-methods">
           <h3>支付方式</h3>
           {channels.error && (

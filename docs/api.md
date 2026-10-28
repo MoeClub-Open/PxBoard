@@ -157,3 +157,5 @@ NodeRS 原生机器接口以 `/extensions/nodes/machines/{machineId}` 为前缀�
 ## 工单附件
 
 工单支持 Markdown 文本；用户通过 `POST /extensions/support/attachments` 上传单张 PNG、JPEG、GIF 或 WebP 图片，JSON 的 `data` 字段是图片内容的 Base64，大小上限 2 MiB。响应包含受权限保护的 `url`，可插入工单内容。`GET` 图片地址需要登录，只有上传者、工单发起人或管理员可读取。站内图片引用在提交工单或回复时校验权限。已有旧文本对话保留，新消息按条存储。插件状态目录与数据库须一起备份。
+
+插件运行时 `POST /api/v1/runtime/users/search` 需要 `users:read`，接收 `search/status/role/offset/limit`，返回标准 `items/total` 分页结构；每页最多 1000 人，按用户 ID 固定排序，只返回用户公开管理信息，不返回密码或登录凭据。原按 ID/邮箱查询接口继续用于明确用户查找。

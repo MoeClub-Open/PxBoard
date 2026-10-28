@@ -18,6 +18,7 @@ import { api, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { OAuthBindings } from '../components/OAuthButtons'
+import ReminderPreferences from '../components/ReminderPreferences'
 function Tokens() {
   const { data, error, loading, reload } = useData<Row[]>('/tokens')
   const { message, modal } = App.useApp()
@@ -161,6 +162,9 @@ export default function Account() {
       <Tabs
         items={[
           { key: 'tokens', label: 'API 密钥', children: <Tokens /> },
+          ...(plugins.some((plugin) => plugin.id === 'access' && plugin.enabled)
+            ? [{ key: 'reminders', label: '邮件提醒', children: <ReminderPreferences /> }]
+            : []),
           {
             key: 'password',
             label: '登录密码',

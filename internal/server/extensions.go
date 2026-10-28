@@ -153,6 +153,8 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 		respond(w, e, out)
 	case path == "users/query" && r.Method == "POST":
 		s.queryUsers(w, r, a)
+	case path == "users/search" && r.Method == "POST":
+		s.searchUsers(w, r, a)
 	case path == "users" && r.Method == "POST":
 		if !s.Plugins.Permission(a.Plugin, "users:create") {
 			forbidden(w, "未获用户创建权限")
