@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, App, Button, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { api, errorText, useData } from '../api'
+import { api, configurationChanged, errorText, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { activityLabel } from './Overview'
 import ResourcePage from '../components/ResourcePage'
 import { settingsDestinations } from '../settingsDestinations'
+import { adminURL } from '../adminPath'
 
 export function Users() {
   const { message } = App.useApp()
@@ -177,7 +178,7 @@ export function Users() {
 
 export function Settings() {
   const { message } = App.useApp()
-  const { refresh, plugins } = useSession()
+  const { refresh, plugins, me } = useSession()
   const { data, loading, error } = useData<Row>('/settings')
   const [busy, setBusy] = useState(false)
   if (loading) return null
@@ -196,6 +197,11 @@ export function Settings() {
             setBusy(true)
             try {
               await api('/settings', { method: 'PATCH', body })
+              configurationChanged()
+              if (body.adminPath && body.adminPath !== data?.adminPath) {
+                window.location.replace(`${body.adminPath}/settings`)
+                return
+              }
               await refresh()
               message.success('已保存')
             } catch (e) {
@@ -210,12 +216,27 @@ export function Settings() {
               <span>
                 {{ personal: '自用', business: '商业运营' }[String(data?.mode)] || data?.mode}
               </span>
-              <Link to="/admin/mode">切换使用方式</Link>
+              <Link to={adminURL('/admin/mode', me)}>切换使用方式</Link>
             </Space>
           </Form.Item>
           <Form.Item name="publicUrl" label="公开访问地址">
             <Input type="url" placeholder="https://panel.example.com" />
           </Form.Item>
+          {me.mode === 'business' && (
+            <Form.Item
+              name="adminPath"
+              label="后台入口路径"
+              rules={[
+                {
+                  required: true,
+                  pattern: /^\/[a-zA-Z0-9_-]{3,64}$/,
+                  message: '请输入单级路径，例如 /manage',
+                },
+              ]}
+            >
+              <Input placeholder="/admin" autoComplete="off" />
+            </Form.Item>
+          )}
           <Button type="primary" htmlType="submit" loading={busy}>
             保存设置
           </Button>

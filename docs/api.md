@@ -99,6 +99,8 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 ## 模式安装
 
+商业模式的管理员可通过 `GET/PATCH /settings` 读取或设置 `adminPath`，默认值为 `/admin`。修改后前端应跳转到新路径；自用模式固定使用默认入口。普通用户的 `/me` 响应不包含此字段，管理员响应包含当前生效的 `adminPath`。公开 `/setup` 不返回后台路径；可用 `entry` 参数检查当前请求路径是否为后台入口，结果在 `adminEntry` 字段中。
+
 管理员向 `POST /mode` 提交 `{"mode":"business","sourceUrl":"https://plugins.example.com/index.json"}`；已注册源也可用 `sourceId`，省略源时使用当前或默认源。返回 HTTP 202，后台解析组合、安装依赖并启用。`GET /mode` 返回 `mode`（当前生效）、`requestedMode`、`phase`、`plugins`、`sourceId`、`sourceUrl`、`error` 与 `updatedAt`。`phase` 为 `needs_install`、`installing`、`ready` 或 `failed`，插件状态为 `pending`、`installing`、`ready` 或 `failed`。失败可再次提交同一请求；功能全部就绪后才更新当前模式。
 
 模式值为 `personal` 和 `business`。旧公益 / 分享模式在升级时自动归入自用，保留已安装插件和数据。模式决定默认安装组合与使用入口，切换不自动卸载额外插件或清空数据。推广和 OAuth 均不随任何官方模式默认安装。各功能通过其插件启停或独立设置控制，默认组合见 [使用模式](modes.md)。

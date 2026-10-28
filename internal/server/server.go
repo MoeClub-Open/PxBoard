@@ -81,6 +81,10 @@ func (s *Server) Handler() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
+		if s.adminPath() != "/admin" && (r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/")) {
+			http.NotFound(w, r)
+			return
+		}
 		path := filepath.Join(s.Web, filepath.Clean("/"+r.URL.Path))
 		if stat, e := os.Stat(path); e == nil && !stat.IsDir() {
 			http.ServeFile(w, r, path)

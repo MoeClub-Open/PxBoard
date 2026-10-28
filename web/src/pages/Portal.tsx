@@ -39,6 +39,7 @@ import {
 import { api, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
+import { adminRoot, adminURL } from '../adminPath'
 import Account from './Account'
 import ResourcePage from '../components/ResourcePage'
 import { date, PortalOrders, PortalPlans, PortalWallet, useWallet } from './PortalCommerce'
@@ -176,7 +177,7 @@ function ServiceOverview() {
                     <Button>兑换码</Button>
                   </Link>
                 ) : me.role === 'admin' ? (
-                  <Link to="/admin/p/access/accounts">
+                  <Link to={adminURL('/admin/p/access/accounts', me)}>
                     <Button>管理访问账户</Button>
                   </Link>
                 ) : undefined
@@ -206,7 +207,7 @@ function ServiceOverview() {
             </Link>
           )}
           {!business && !redeem && me.role === 'admin' && (
-            <Link to="/admin/p/access/accounts">
+            <Link to={adminURL('/admin/p/access/accounts', me)}>
               <Button>管理访问账户</Button>
             </Link>
           )}
@@ -346,7 +347,7 @@ export default function Portal({
           </Space>
           <Space size={8}>
             {me.role === 'admin' && (
-              <Button onClick={() => navigate('/admin')} icon={<SettingOutlined />}>
+              <Button onClick={() => navigate(adminRoot(me))} icon={<SettingOutlined />}>
                 管理后台
               </Button>
             )}

@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom'
 import { useData } from '../api'
 import type { Plugin, Row } from '../api'
 import { useSession } from '../context'
+import { adminURL } from '../adminPath'
 
 const modeLabels: Record<string, string> = {
   personal: '自用',
@@ -96,7 +97,7 @@ export default function Overview() {
           </div>
           <h2>添加需要的功能</h2>
           <p>连接插件源后，选择适合自己的功能组合。</p>
-          <Link to="/admin/plugins?tab=sources">
+          <Link to={adminURL('/admin/plugins?tab=sources', me)}>
             <Button type="primary" icon={<LinkOutlined />}>
               连接插件源
             </Button>
@@ -148,7 +149,7 @@ export default function Overview() {
           <section className="workspace-section">
             <div className="section-heading">
               <h2>最近活动</h2>
-              <Link to="/admin/activity">
+              <Link to={adminURL('/admin/activity', me)}>
                 查看全部 <ArrowRightOutlined />
               </Link>
             </div>

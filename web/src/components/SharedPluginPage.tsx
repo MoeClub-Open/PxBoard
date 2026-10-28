@@ -3,6 +3,7 @@ import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useSession } from '../context'
 import ResourcePage from './ResourcePage'
 import { settingsDestinations } from '../settingsDestinations'
+import { adminURL } from '../adminPath'
 
 export function PluginPageRoute() {
   const { pluginId, pageId } = useParams()
@@ -13,7 +14,7 @@ export function PluginPageRoute() {
       (item) => item.id === pageId && item.roles.includes(me.role) && item.surface !== 'portal',
     )
   const destination = settingsDestinations[`${pluginId}/${pageId}`]
-  if (page && destination) return <Navigate to={destination} replace />
+  if (page && destination) return <Navigate to={adminURL(destination, me)} replace />
   if (page && pluginId === 'nodes' && pageId === 'status') {
     const settings = plugins
       .find((plugin) => plugin.id === 'nodes' && plugin.enabled)
@@ -31,7 +32,10 @@ export function PluginPageRoute() {
   if (page?.shared) {
     return (
       <Navigate
-        to={`/admin/shared/${encodeURIComponent(page.shared.id)}?page=${encodeURIComponent(`${pluginId}/${pageId}`)}`}
+        to={adminURL(
+          `/admin/shared/${encodeURIComponent(page.shared.id)}?page=${encodeURIComponent(`${pluginId}/${pageId}`)}`,
+          me,
+        )}
         replace
       />
     )

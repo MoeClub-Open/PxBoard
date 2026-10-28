@@ -26,6 +26,7 @@ export interface AuthInfo {
   extensions: string[]
   registration: AuthProvider[]
   passwordReset: boolean
+  adminEntry?: boolean
 }
 export default function Register() {
   useBrandTitle('注册')

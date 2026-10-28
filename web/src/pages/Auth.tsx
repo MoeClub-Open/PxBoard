@@ -5,6 +5,8 @@ import { Alert, App, Button, Form, Input, Steps } from 'antd'
 import { ArrowLeftOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
 import { api, ApiError, errorText, useData } from '../api'
 import type { AuthInfo } from './Register'
+import type { User } from '../api'
+import { loginDestination } from '../adminPath'
 
 import { Brand } from '../components/Brand'
 import { OAuthButtons } from '../components/OAuthButtons'
@@ -59,12 +61,10 @@ export default function Auth({
       }
       await onLogin()
       const redirect = query.get('redirect') || ''
-      navigate(
-        setup ? '/admin/mode' : /^\/(?:user|admin)(?:\/|\?|$)/.test(redirect) ? redirect : '/user',
-        {
-          replace: true,
-        },
-      )
+      const user = await api<User>('/me')
+      navigate(setup ? `${user.adminPath || '/admin'}/mode` : loginDestination(redirect, user), {
+        replace: true,
+      })
       if (setup) message.success('管理员账户已创建')
     } catch (e) {
       if (e instanceof ApiError && e.code === 'mfa_required') setMfa(true)
@@ -195,12 +195,7 @@ export default function Auth({
             )}
           </Form>
         )}
-        {!setup && (
-          <OAuthButtons
-            redirectPath={/^\/(?:user|admin)(?:\/|\?|$)/.test(next) ? next : '/user'}
-            challenge={challenge}
-          />
-        )}
+        {!setup && <OAuthButtons redirectPath={next || '/user'} challenge={challenge} />}
       </div>
       <footer className="auth-footer">
         {name} <span>© {new Date().getFullYear()}</span>

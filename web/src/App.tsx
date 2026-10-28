@@ -17,6 +17,7 @@ import Portal from './pages/Portal'
 import Storefront from './pages/Storefront'
 import type { AuthInfo } from './pages/Register'
 import OAuthComplete from './pages/OAuthComplete'
+import { adminRoot } from './adminPath'
 
 const PortalSupport = lazy(() =>
   import('./pages/PortalSupport').then((module) => ({ default: module.PortalSupport })),
@@ -29,7 +30,22 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
   const [site, setSite] = useState<AuthInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [guestAdminPath, setGuestAdminPath] = useState('')
   const location = useLocation()
+  useEffect(() => {
+    if (me || !initialized) return
+    const path = location.pathname
+    let active = true
+    setGuestAdminPath('')
+    api<AuthInfo>(`/setup?entry=${encodeURIComponent(path)}`)
+      .then((info) => {
+        if (active && info.adminEntry) setGuestAdminPath(path)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [me, initialized, location.pathname])
   const refresh = useCallback(async () => {
     const [user, installed, setup] = await Promise.all([
       api<User>('/me'),
@@ -140,19 +156,23 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
           }
         />
         <Route
-          path="/admin/*"
+          path="*"
           element={
-            <Navigate
-              to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
-              replace
-            />
+            guestAdminPath === location.pathname ? (
+              <Navigate
+                to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
+                replace
+              />
+            ) : (
+              <Auth onLogin={refresh} />
+            )
           }
         />
-        <Route path="*" element={<Auth onLogin={refresh} />} />
       </Routes>
     )
   const admin = me.role === 'admin'
-  const adminPath = location.pathname === '/admin' || location.pathname.startsWith('/admin/')
+  const base = adminRoot(me)
+  const adminPath = location.pathname === base || location.pathname.startsWith(base + '/')
   return (
     <SessionContext.Provider value={{ me, plugins, refresh }}>
       {!adminPath ? (
@@ -165,7 +185,7 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
         </Routes>
       ) : !admin ? (
         <Navigate to="/user" replace />
-      ) : location.pathname === '/admin/mode' ? (
+      ) : location.pathname === `${base}/mode` ? (
         <ModeSetup
           onReady={async () => {
             await refresh()
@@ -173,40 +193,41 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
           }}
           initialMode={site?.requestedMode || me.mode}
         />
-      ) : /^\/admin\/?$/.test(location.pathname) && site?.needsModeSetup ? (
-        <Navigate to="/admin/mode" replace />
+      ) : (location.pathname === base || location.pathname === base + '/') &&
+        site?.needsModeSetup ? (
+        <Navigate to={`${base}/mode`} replace />
       ) : (
         <Shell dark={dark} toggleTheme={toggleTheme} onLogout={() => setMe(null)}>
           <Routes>
-            <Route path="/admin" element={<Overview />} />
-            <Route path="/admin/account" element={<Account />} />
+            <Route path={base} element={<Overview />} />
+            <Route path={`${base}/account`} element={<Account />} />
             <Route
-              path="/admin/p/support/tickets"
+              path={`${base}/p/support/tickets`}
               element={
                 plugins.some((p) => p.id === 'support' && p.enabled) ? (
                   <Suspense fallback={<Spin />}>
                     <PortalSupport admin />
                   </Suspense>
                 ) : (
-                  <Navigate to="/admin" replace />
+                  <Navigate to={base} replace />
                 )
               }
             />
             <Route
-              path="/admin/p/:pluginId/:pageId"
+              path={`${base}/p/:pluginId/:pageId`}
               element={<PluginPageRoute key={location.pathname} />}
             />
-            <Route path="/admin/shared/:sharedId" element={<SharedPluginPage />} />
+            <Route path={`${base}/shared/:sharedId`} element={<SharedPluginPage />} />
             {admin && (
               <>
-                <Route path="/admin/users" element={<Users />} />
-                <Route path="/admin/plugins" element={<Plugins key={location.search} />} />
-                <Route path="/admin/jobs" element={<Jobs />} />
-                <Route path="/admin/activity" element={<Activity />} />
-                <Route path="/admin/settings" element={<Settings />} />
+                <Route path={`${base}/users`} element={<Users />} />
+                <Route path={`${base}/plugins`} element={<Plugins key={location.search} />} />
+                <Route path={`${base}/jobs`} element={<Jobs />} />
+                <Route path={`${base}/activity`} element={<Activity />} />
+                <Route path={`${base}/settings`} element={<Settings />} />
               </>
             )}
-            <Route path="*" element={<Navigate to="/admin" replace />} />
+            <Route path="*" element={<Navigate to={base} replace />} />
           </Routes>
         </Shell>
       )}
@@ -235,7 +256,11 @@ export default function App() {
             itemHeight: 36,
             itemMarginInline: 12,
           },
-          Table: { headerBg: dark ? '#24242b' : '#f8f9fc', cellPaddingBlockMD: 10, cellPaddingInlineMD: 12 },
+          Table: {
+            headerBg: dark ? '#24242b' : '#f8f9fc',
+            cellPaddingBlockMD: 10,
+            cellPaddingInlineMD: 12,
+          },
         },
       }}
     >

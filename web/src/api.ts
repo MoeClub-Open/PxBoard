@@ -8,6 +8,7 @@ export interface User {
   role: 'admin' | 'member'
   siteName: string
   mode: string
+  adminPath?: string
 }
 export interface Page {
   id: string

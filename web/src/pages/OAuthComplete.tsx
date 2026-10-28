@@ -5,6 +5,8 @@ import { Brand } from '../components/Brand'
 import { oauthFlowKey } from '../components/OAuthButtons'
 import type { OAuthFlow } from '../components/OAuthButtons'
 import { api, ApiError, errorText } from '../api'
+import type { User } from '../api'
+import { loginDestination } from '../adminPath'
 
 export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void> }) {
   const navigate = useNavigate()
@@ -76,8 +78,12 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
       }
       if (callback.mode !== 'bind') await onLogin()
       sessionStorage.removeItem(oauthFlowKey)
-      const redirect = callback.mode === 'bind' ? '/user/account' : completed.current?.redirectPath || '/user'
-      navigate(/^\/(?:user|admin)(?:\/|\?|$)/.test(redirect) ? redirect : '/user', { replace: true })
+      const user = await api<User>('/me')
+      const redirect =
+        callback.mode === 'bind'
+          ? '/user/account'
+          : flow.redirectPath || completed.current?.redirectPath || '/user'
+      navigate(loginDestination(redirect, user), { replace: true })
     } catch (e) {
       if (e instanceof ApiError && e.code === 'mfa_required') setMfa(true)
       setError(errorText(e))

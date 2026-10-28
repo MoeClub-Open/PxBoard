@@ -46,6 +46,7 @@ import { useSession } from '../context'
 import { Brand } from './Brand'
 import { useBrand, useBrandTitle } from '../branding'
 import { settingsDestinations } from '../settingsDestinations'
+import { adminRoot, adminURL } from '../adminPath'
 
 const icons: Record<string, ReactNode> = {
   server: <CloudServerOutlined />,
@@ -149,10 +150,11 @@ export default function Shell({
     icon: <SettingOutlined />,
     group: '账户',
   })
+  const mappedEntries = entries.map((entry) => ({ ...entry, key: adminURL(entry.key, me) }))
   const groups = new Map<string, typeof entries>()
-  entries.forEach((e) => groups.set(e.group, [...(groups.get(e.group) || []), e]))
+  mappedEntries.forEach((e) => groups.set(e.group, [...(groups.get(e.group) || []), e]))
   const items = collapsed
-    ? entries
+    ? mappedEntries
     : [...groups.entries()].map(([label, children]) => ({
         key: label,
         type: 'group' as const,
@@ -167,7 +169,7 @@ export default function Shell({
       onClick={({ key }) => navigate(key)}
     />
   )
-  const current = entries.find((e) => e.key === location.pathname)
+  const current = mappedEntries.find((e) => e.key === location.pathname)
   useBrandTitle(current?.label || '管理后台')
   const logout = async () => {
     try {
@@ -178,7 +180,7 @@ export default function Shell({
       message.error('退出失败，请重试')
     }
   }
-  const results = entries.filter((e) => e.label.toLowerCase().includes(search.toLowerCase()))
+  const results = mappedEntries.filter((e) => e.label.toLowerCase().includes(search.toLowerCase()))
   return (
     <>
       <Layout className={dark ? 'workspace dark' : 'workspace'}>
@@ -189,7 +191,7 @@ export default function Shell({
           className="desktop-sider"
           theme={dark ? 'dark' : 'light'}
         >
-          <Link to="/admin" className="sidebar-brand" aria-label={brand.name}>
+          <Link to={adminRoot(me)} className="sidebar-brand" aria-label={brand.name}>
             <Brand compact={collapsed} />
           </Link>
           <div className="sidebar-menu">{menu}</div>

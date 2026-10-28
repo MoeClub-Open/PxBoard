@@ -80,7 +80,7 @@ export function OAuthButtons({
           providerId: provider.id,
           purpose,
           proof,
-          redirectPath,
+          redirectPath: /^\/user(?:\/|\?|$)/.test(redirectPath) ? redirectPath : '/user',
           challengeToken: challenge?.token,
           ...(purpose === 'login'
             ? { referral: new URLSearchParams(window.location.search).get('ref') || undefined }

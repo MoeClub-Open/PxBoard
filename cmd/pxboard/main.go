@@ -29,6 +29,7 @@ func main() {
 	binary := flag.String("binary", "", "本地插件可执行文件")
 	pluginSource := flag.String("plugin-source", env("PX_PLUGIN_SOURCE", "https://raw.githubusercontent.com/MoeClub-Open/PxBoard-Registry/main/index.json"), "模式安装使用的官方插件源")
 	pluginKey := flag.String("plugin-public-key", os.Getenv("PX_PLUGIN_PUBLIC_KEY"), "默认插件源的发布公钥")
+	resetAdminPath := flag.Bool("reset-admin-path", false, "将后台入口恢复为 /admin")
 	flag.Parse()
 	abs, e := filepath.Abs(*data)
 	if e != nil {
@@ -39,6 +40,13 @@ func main() {
 		log.Fatal(e)
 	}
 	defer s.DB.Close()
+	if *resetAdminPath {
+		if e = s.Set("adminPath", "/admin"); e != nil {
+			log.Fatal(e)
+		}
+		log.Println("后台入口已恢复为 /admin")
+		return
+	}
 	base := "http://" + *listen
 	if strings.HasPrefix(*listen, "0.0.0.0:") {
 		base = "http://127.0.0.1:" + strings.TrimPrefix(*listen, "0.0.0.0:")

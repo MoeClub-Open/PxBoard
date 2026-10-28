@@ -32,10 +32,14 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 	plugin.JSON(w, plugin.Record{"plugins": len(all), "enabled": enabled, "failed": failed, "users": users, "jobs": jobs, "uptime": int(time.Since(started).Seconds()), "platform": runtime.GOOS + "/" + runtime.GOARCH, "mode": s.Store.Setting("mode", "personal"), "version": Version})
 }
 func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
-	keys := []string{"name", "publicUrl"}
+	keys := []string{"name", "publicUrl", "adminPath"}
 	if r.Method == "PATCH" {
 		var b map[string]string
 		if bad(w, plugin.Decode(r, &b)) {
+			return
+		}
+		if value, ok := b["adminPath"]; ok && (s.Store.Setting("mode", "personal") != "business" || !validAdminPath(value)) {
+			plugin.Fail(w, 400, "后台入口需为单级路径，例如 /manage，不能与现有页面冲突")
 			return
 		}
 		for k, v := range b {
@@ -51,6 +55,7 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
 	for _, k := range keys {
 		out[k] = s.Store.Setting(k, "")
 	}
+	out["adminPath"] = s.adminPath()
 	out["mode"] = s.Store.Setting("mode", "personal")
 	plugin.JSON(w, out)
 }

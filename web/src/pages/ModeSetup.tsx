@@ -17,7 +17,8 @@ import {
 } from 'antd'
 import { CheckCircleOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons'
 import { api, errorText } from '../api'
-import type { Row } from '../api'
+import type { Row, User } from '../api'
+import { adminRoot } from '../adminPath'
 
 interface ModeState {
   mode: string
@@ -144,7 +145,8 @@ export default function ModeSetup({
     setBusy(true)
     try {
       await onReady()
-      navigate(path, { replace: true })
+      const target = path === 'admin' ? adminRoot(await api<User>('/me')) : path
+      navigate(target, { replace: true })
     } catch (e) {
       message.error(errorText(e))
     } finally {
@@ -286,7 +288,7 @@ export default function ModeSetup({
           <Button type="primary" loading={busy} onClick={() => void enter('/user')}>
             进入用户前台
           </Button>
-          <Button onClick={() => void enter('/admin')}>配置站点</Button>
+          <Button onClick={() => void enter('admin')}>配置站点</Button>
         </Space>
       )}
     </div>

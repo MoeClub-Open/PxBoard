@@ -178,7 +178,8 @@ func (s *Server) setupStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	state := s.modeState()
-	plugin.JSON(w, plugin.Record{"initialized": s.initialized(), "name": s.Store.Setting("name", "PxBoard"), "mode": mode, "requestedMode": state.RequestedMode, "needsModeSetup": state.Phase != "ready", "extensions": extensions, "registration": forms, "passwordReset": passwordReset})
+	w.Header().Set("Cache-Control", "no-store")
+	plugin.JSON(w, plugin.Record{"initialized": s.initialized(), "name": s.Store.Setting("name", "PxBoard"), "mode": mode, "requestedMode": state.RequestedMode, "needsModeSetup": state.Phase != "ready", "extensions": extensions, "registration": forms, "passwordReset": passwordReset, "adminEntry": s.isAdminEntry(r.URL.Query().Get("entry"))})
 }
 func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	if s.initialized() {
@@ -272,7 +273,12 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	a := actor(r)
 	var name string
 	_ = s.Store.DB.QueryRow("SELECT name FROM users WHERE id=?", a.ID).Scan(&name)
-	plugin.JSON(w, plugin.Record{"id": a.ID, "email": a.Email, "role": a.Role, "name": name, "siteName": s.Store.Setting("name", "PxBoard"), "mode": s.Store.Setting("mode", "personal")})
+	result := plugin.Record{"id": a.ID, "email": a.Email, "role": a.Role, "name": name, "siteName": s.Store.Setting("name", "PxBoard"), "mode": s.Store.Setting("mode", "personal")}
+	if a.Role == "admin" {
+		result["adminPath"] = s.adminPath()
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	plugin.JSON(w, result)
 }
 func (s *Server) userList() ([]plugin.Record, error) {
 	rows, e := s.Store.DB.Query("SELECT id,email,name,role,status,created_at FROM users ORDER BY created_at DESC")
