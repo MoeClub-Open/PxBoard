@@ -105,12 +105,12 @@ func TestUserSearchKeepsRecordScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, id := range []string{"allowed", "other"} {
-		if err := db.Put("reader", "things", id, p.Record{"userId": "user", "scope": id}); err != nil {
+		if err := db.Put("reader", "things", id, p.Record{"userId": "user", "scope": id, "createdAt": "2026-10-28T12:00:00Z"}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	server := &Server{Store: db, Plugins: plugins.New(db, t.TempDir(), "")}
-	body := `{"collection":"things","limit":12,"search":"find@","searchFields":["name"],"searchUserField":"userId","filters":[{"field":"scope","value":"allowed"}]}`
+	body := `{"collection":"things","limit":12,"search":"find@","searchFields":["name"],"searchUserField":"userId","filters":[{"field":"scope","value":"allowed"},{"field":"createdAt","op":"gte","value":"2026-10-28T00:00:00Z"},{"field":"createdAt","op":"lte","value":"2026-10-28T23:59:59Z"}]}`
 	response := httptest.NewRecorder()
 	server.queryRuntime(response, httptest.NewRequest("POST", "/", strings.NewReader(body)), p.Actor{Role: "service", Plugin: "reader"})
 	var result struct {

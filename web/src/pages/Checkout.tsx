@@ -15,7 +15,7 @@ import {
 import { api, errorText, redirectToPayment, useData } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
-import { OrderStatus, useWallet } from './PortalShared'
+import { date, OrderStatus, useWallet } from './PortalShared'
 import { availablePeriods, periodLabel } from '../planPeriods'
 
 type Intent = { plan?: Row; order?: Row; rechargeAmount?: number }
@@ -158,6 +158,9 @@ export default function Checkout({
                   children: <Typography.Text copyable>{order.number}</Typography.Text>,
                 },
                 { key: 'status', label: '状态', children: <OrderStatus value={order.status} /> },
+                ...(order.status === 'pending' && order.expiresAt
+                  ? [{ key: 'expiresAt', label: '支付截止', children: date(order.expiresAt) }]
+                  : []),
               ]
             : []),
         ]}

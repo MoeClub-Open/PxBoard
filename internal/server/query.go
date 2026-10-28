@@ -47,6 +47,9 @@ func (s *Server) queryRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 		} else if f.Op == "" || f.Op == "eq" {
 			where += " AND " + field + " IS ?"
 			args = append(args, f.Value)
+		} else if operator := map[string]string{"gt": ">", "gte": ">=", "lt": "<", "lte": "<="}[f.Op]; operator != "" {
+			where += " AND " + field + " " + operator + " ?"
+			args = append(args, f.Value)
 		} else {
 			p.Fail(w, 400, "不支持的查询条件")
 			return

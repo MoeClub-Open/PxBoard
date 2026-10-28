@@ -136,6 +136,8 @@ function fieldItem(f: Field, symbol: string) {
     )
   else if (f.type === 'datetime')
     control = <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm" />
+  else if (f.type === 'daterange')
+    control = <DatePicker.RangePicker showTime format="YYYY-MM-DD HH:mm" />
   else if (f.type === 'email') control = <Input type="email" autoComplete="email" />
   else if (f.type === 'url') control = <Input type="url" placeholder="https://" />
   control = officialControl(f) || control
@@ -211,12 +213,14 @@ export function formValues(fields: Field[], row?: Row) {
               .split(',')
               .map((id) => id.trim())
               .filter(Boolean)
-          : f.type === 'datetime' && value
-            ? dayjs(value)
-            : (f.type === 'money' || (f.type === 'discount' && row?.type === 'fixed')) &&
-                typeof value === 'number'
-              ? value / 100
-              : value,
+          : f.type === 'daterange' && value
+            ? value.map((item: string) => dayjs(item))
+            : f.type === 'datetime' && value
+              ? dayjs(value)
+              : (f.type === 'money' || (f.type === 'discount' && row?.type === 'fixed')) &&
+                  typeof value === 'number'
+                ? value / 100
+                : value,
       ]
     }),
   )
@@ -239,12 +243,15 @@ export function serialize(fields: Field[], values: Row) {
           ? Array.isArray(value)
             ? value
             : []
-          : field.type === 'datetime'
-            ? value?.toISOString() || ''
-            : (field.type === 'money' || (field.type === 'discount' && values.type === 'fixed')) &&
-                typeof value === 'number'
-              ? Math.round(value * 100)
-              : (value ?? (field.type === 'boolean' ? false : ''))
+          : field.type === 'daterange'
+            ? value?.map((item: dayjs.Dayjs) => item.toISOString()) || []
+            : field.type === 'datetime'
+              ? value?.toISOString() || ''
+              : (field.type === 'money' ||
+                    (field.type === 'discount' && values.type === 'fixed')) &&
+                  typeof value === 'number'
+                ? Math.round(value * 100)
+                : (value ?? (field.type === 'boolean' ? false : ''))
   }
   return result
 }

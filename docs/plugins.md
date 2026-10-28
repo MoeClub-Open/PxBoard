@@ -49,7 +49,7 @@ func main() {
 - 资源设置 `paginated: true` 时，前端以 `limit`、`offset`、`q` 读取 `{items,total}`。插件负责限定查询范围及可搜索字段；普通用户的所有权筛选必须在分页前完成。导出按钮明确导出当前页。
 - 官方业务资源可以设置 `renderer`，由主项目 `web/src/official/` 中的本地界面注册实现。第三方插件仍可使用通用资源和字段，不在线执行远程界面代码。
 
-SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等值及 `in` 过滤，`UsersByID` / `UsersByEmail` 只读取相关用户。`searchUserField` 指定记录关联用户的字段，让搜索同时匹配该用户的邮箱和姓名，需要 `users:read` 权限，仍与原记录范围筛选共同生效。用户选择框可声明 `optionsSearch: true`，用 `q` 搜索，并通过 `id` 保留当前选择。通用业务查询不应先读取全部用户或记录再筛选。
+SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等值、`in` 及 `gt/gte/lt/lte` 范围过滤，`UsersByID` / `UsersByEmail` 只读取相关用户。`searchUserField` 指定记录关联用户的字段，让搜索同时匹配该用户的邮箱和姓名，需要 `users:read` 权限，仍与原记录范围筛选共同生效。用户选择框可声明 `optionsSearch: true`，用 `q` 搜索，并通过 `id` 保留当前选择。通用业务查询不应先读取全部用户或记录再筛选。
 
 `Client.Commit(operationId,writes,events...)` 在同一事务中保存调用插件自己的记录并登记事件。每条写入指定 `collection` 和包含 `id` 的 `record`；每条事件指定 `type` 和 `data`。需要 `storage:own` 与各项 `emit:<type>` 权限，重复的操作编号不会重放写入或事件。跨插件写入不在此接口的授权范围内，消费者仍须防止重复处理。
 
@@ -126,6 +126,11 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 | 记录操作 | `POST /items/{id}/{action}` |
 
 单例配置资源设置 `"singleton": true`，读取仍返回一条记录的数组，编辑直接请求 `PATCH <endpoint>`，不附加记录 ID。例如设置资源的读写路径都为 `/settings`。普通列表资源继续使用表中的记录路径。
+
+列表资源可用 `filters: Field[]` 声明筛选项。界面把已选值写为同名查询参数，清空时移除，并将分页重置到第一页。`daterange` 字段传递 RFC3339 格式的 `<key>From` / `<key>To`；筛选字段必须由插件接口显式处理，并与用户归属条件一起执行，不能依赖前端限制访问范围。
+
+少量列表设置可声明 `settings: {title, endpoint, fields}`，在列表工具栏显示设置按钮，使用弹窗读取、编辑。`GET <endpoint>` 返回单条配置对象，`PATCH <endpoint>` 保存表单。它不增加单独选项卡；接口权限仍由插件检查。需要完整设置页时继续使用单例资源。
+
 
 `Action.endpoint` 可以覆盖默认操作路径。`bind: {"orderId": "id"}` 将当前记录字段映射到操作请求，`when: {"status": ["pending"]}` 控制操作展示。调用其他插件的页面动作使用完整的 `/api/v1/extensions/...` 路径，目标接口仍须检查权限。
 
@@ -237,7 +242,7 @@ SDK 提供 `List`、`Put`、`Delete`、`Increment`、`Call`、`Users`、`Emit` �
 
 `Increment(collection, id, field, amount, operationId)` 在事务中累计并去重，适合流量计数。同一业务操作重试时保持 `operationId` 不变，不能每次重新生成标识。普通记录集合用于配置与业务文档，避免按每个网络连接写入高频记录。
 
-需要分页读取自己的集合时，可调用 `POST /api/v1/runtime/query`，传入 `collection`、等值 `filters`、`offset`、`limit`，返回 `items` 与 `total`。命名空间仍由运行身份确定，不能在请求中切换到其他插件。
+需要分页读取自己的集合时，可调用 `POST /api/v1/runtime/query`，传入 `collection`、`filters`、`offset`、`limit`；过滤操作支持 `eq`（默认）、`in`、`gt`、`gte`、`lt`、`lte`，返回 `items` 与 `total`。命名空间仍由运行身份确定，不能在请求中切换到其他插件。
 
 事件投递到内部 `POST /_events`。接收者应验证 `p.Service(r, "core")` 和 `Event.Source`，并按业务标识去重。跨插件操作使用 `Client.Call`，避免同步调用环。
 

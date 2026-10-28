@@ -114,20 +114,27 @@ type Action struct {
 	When     map[string][]string `json:"when,omitempty"`
 }
 type Resource struct {
-	Paginated           bool     `json:"paginated,omitempty"`
-	Singleton           bool     `json:"singleton,omitempty"`
-	PollIntervalSeconds int      `json:"pollIntervalSeconds,omitempty"`
-	Key                 string   `json:"key"`
-	Title               string   `json:"title"`
-	Endpoint            string   `json:"endpoint"`
-	Columns             []Field  `json:"columns"`
-	Fields              []Field  `json:"fields,omitempty"`
-	CreateLabel         string   `json:"createLabel,omitempty"`
-	Editable            bool     `json:"editable,omitempty"`
-	Deletable           bool     `json:"deletable,omitempty"`
-	Actions             []Action `json:"actions,omitempty"`
-	Empty               string   `json:"empty,omitempty"`
-	Renderer            string   `json:"renderer,omitempty"`
+	Filters             []Field           `json:"filters,omitempty"`
+	Settings            *ResourceSettings `json:"settings,omitempty"`
+	Paginated           bool              `json:"paginated,omitempty"`
+	Singleton           bool              `json:"singleton,omitempty"`
+	PollIntervalSeconds int               `json:"pollIntervalSeconds,omitempty"`
+	Key                 string            `json:"key"`
+	Title               string            `json:"title"`
+	Endpoint            string            `json:"endpoint"`
+	Columns             []Field           `json:"columns"`
+	Fields              []Field           `json:"fields,omitempty"`
+	CreateLabel         string            `json:"createLabel,omitempty"`
+	Editable            bool              `json:"editable,omitempty"`
+	Deletable           bool              `json:"deletable,omitempty"`
+	Actions             []Action          `json:"actions,omitempty"`
+	Empty               string            `json:"empty,omitempty"`
+	Renderer            string            `json:"renderer,omitempty"`
+}
+type ResourceSettings struct {
+	Title    string  `json:"title"`
+	Endpoint string  `json:"endpoint"`
+	Fields   []Field `json:"fields"`
 }
 type Metric struct {
 	Label string `json:"label"`

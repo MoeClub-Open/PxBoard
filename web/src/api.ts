@@ -64,6 +64,8 @@ export interface Action {
   when?: Record<string, string[]>
 }
 export interface Resource {
+  filters?: Field[]
+  settings?: { title: string; endpoint: string; fields: Field[] }
   paginated?: boolean
   renderer?: string
   singleton?: boolean

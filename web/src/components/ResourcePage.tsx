@@ -29,6 +29,7 @@ import {
 import type { Action, Field, Resource, Row, View } from '../api'
 import { absoluteURL, api, errorText, redirectToPayment, useData } from '../api'
 import { Fields, formValues, serialize } from './Fields'
+import { ResourceSettings } from './ResourceSettings'
 import { useSession } from '../context'
 import { useBrandTitle } from '../branding'
 import { configurationChanged } from '../api'
@@ -314,6 +315,8 @@ function ResourceTable({
   const [pageSize, setPageSize] = useState(12)
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
+  const [filterForm] = Form.useForm()
+  const [filterValues, setFilterValues] = useState<Row>({})
   useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(search)
@@ -321,8 +324,23 @@ function ResourceTable({
     }, 250)
     return () => clearTimeout(timer)
   }, [search])
-  const listURL = resource.paginated
-    ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}limit=${pageSize}&offset=${(page - 1) * pageSize}&q=${encodeURIComponent(query)}`
+  const params = new URLSearchParams()
+  if (resource.paginated) {
+    params.set('limit', String(pageSize))
+    params.set('offset', String((page - 1) * pageSize))
+    params.set('q', query)
+  }
+  for (const field of resource.filters || []) {
+    const value = filterValues[field.key]
+    if (field.type === 'daterange') {
+      if (value?.[0]) params.set(`${field.key}From`, value[0])
+      if (value?.[1]) params.set(`${field.key}To`, value[1])
+    } else if (value !== undefined && value !== null && value !== '') {
+      params.set(field.key, String(value))
+    }
+  }
+  const listURL = params.size
+    ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}${params}`
     : endpoint
   const { data, loading, error, reload } = useData<Row[] | { items: Row[]; total: number }>(
     resource.columns.length ? listURL : null,
@@ -468,6 +486,9 @@ function ResourceTable({
           {resource.columns.length > 0 && <span className="muted">{total} 条记录</span>}
         </div>
         <Space wrap>
+          {resource.settings && (
+            <ResourceSettings settings={resource.settings} base={base} onSaved={reload} />
+          )}
           {resource.columns.length > 0 && (
             <>
               <Input.Search
@@ -497,6 +518,28 @@ function ResourceTable({
           )}
         </Space>
       </div>
+      {!!resource.filters?.length && (
+        <Form
+          form={filterForm}
+          layout="inline"
+          className="resource-filters"
+          onValuesChange={(_, values) => {
+            setFilterValues(serialize(resource.filters!, values))
+            setPage(1)
+          }}
+        >
+          <Fields fields={resource.filters} />
+          <Button
+            onClick={() => {
+              filterForm.resetFields()
+              setFilterValues({})
+              setPage(1)
+            }}
+          >
+            清空筛选
+          </Button>
+        </Form>
+      )}
       {error && (
         <Alert
           type="error"

@@ -61,6 +61,9 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 `singleton=true` 表示单例配置：读取仍返回一条记录的数组，编辑直接使用 `PATCH <endpoint>`，不附加记录 ID。品牌、注册、节点设置和推广设置都使用各插件自己的 `/settings`，没有统一的跨插件设置接口。
 
+资源可声明 `filters`，字段值转成同名查询参数，时间范围 `daterange` 转成 `<key>From` / `<key>To`。分页、搜索和筛选由插件接口统一处理。`settings: {title,endpoint,fields}` 在列表工具栏提供配置弹窗，使用 `GET` 读取配置对象、`PATCH` 保存；不增加设置选项卡。
+
+
 字段可用 `optionsEndpoint` 读取选择项，通过点路径表达嵌套对象，例如 `certConfig.mode`；`when` 声明条件字段。资源 `endpoint` 通常相对当前插件，完整 `/api/...` 地址可指向另一插件，目标仍独立校验权限。结构和示例见 [插件文档](plugins.md#声明式页面)。
 
 能力由核心内部读取插件 `GET /_capabilities`，响应为 `{"data":{"能力名":true}}`。这些 `/_...` 路径禁止从公开扩展入口调用，不能当作访客查询接口。插件停用后，扩展入口返回不可用，已有业务数据保留。
