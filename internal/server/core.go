@@ -42,6 +42,22 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
 			plugin.Fail(w, 400, "后台入口需为单级路径，例如 /manage，不能与现有页面冲突")
 			return
 		}
+		if value, ok := b["adminPath"]; ok {
+			routes, err := s.Store.List("subscriptions", "public_routes")
+			if bad(w, err) {
+				return
+			}
+			for _, route := range routes {
+				if !plugin.Bool(route, "enabled") {
+					continue
+				}
+				paths, err := plugin.PublicRoutePaths(route)
+				if err != nil || routeConflictsAdmin(paths, value) {
+					plugin.Fail(w, 400, "后台入口与订阅路径冲突")
+					return
+				}
+			}
+		}
 		for k, v := range b {
 			if slices.Contains(keys, k) {
 				if bad(w, s.Store.Set(k, v)) {

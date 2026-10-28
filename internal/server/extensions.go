@@ -187,6 +187,13 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 			if bad(w, plugin.Decode(r, &b)) {
 				return
 			}
+			if a.Plugin == "subscriptions" && collection == "public_routes" && plugin.Bool(b, "enabled") {
+				paths, err := plugin.PublicRoutePaths(b)
+				if err != nil || routeConflictsAdmin(paths, s.adminPath()) {
+					plugin.Fail(w, 400, "订阅地址无效或与后台入口冲突")
+					return
+				}
+			}
 			respond(w, s.Store.Put(a.Plugin, collection, parts[1], b), b)
 		case "DELETE":
 			if len(parts) != 2 {

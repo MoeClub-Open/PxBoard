@@ -77,6 +77,9 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/openapi.json", s.openapi)
 	m.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { plugin.Fail(w, 404, "接口不存在") })
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if s.publicRoute(w, r) {
+			return
+		}
 		if r.Method != "GET" {
 			http.NotFound(w, r)
 			return

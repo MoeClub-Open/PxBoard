@@ -69,6 +69,8 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 			namespace := row.Namespace
 			if row.Kind == "user" {
 				namespace = "users"
+			} else if row.Kind == "setting" && row.ID == "adminPath" && row.Namespace == "" && row.Collection == "" {
+				namespace = "settings"
 			} else if row.Kind != "document" {
 				p.Fail(w, 400, "导入记录类型无效")
 				return
@@ -159,6 +161,10 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 			if e == nil {
 				_, e = credentials.Exec(user.ID, user.PasswordAlgorithm, user.PasswordSalt, user.MFASecret)
 			}
+		} else if kind == "setting" {
+			var value string
+			_ = json.Unmarshal([]byte(raw), &value)
+			_, e = tx.Exec("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", recordID, value)
 		} else {
 			var record p.Record
 			decoder := json.NewDecoder(strings.NewReader(raw))
@@ -213,6 +219,30 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 	emails := map[string]bool{}
 	numericIDs := map[string]bool{}
 	uniqueValues := map[string]bool{}
+	adminPath := "/admin"
+	_ = tx.QueryRow("SELECT value FROM settings WHERE key='adminPath'").Scan(&adminPath)
+	if adminPath == "" {
+		adminPath = "/admin"
+	}
+	var stagedAdmin string
+	var stagedRaw string
+	if tx.QueryRow("SELECT data FROM import_rows WHERE run_id=? AND kind='setting' AND id='adminPath'", id).Scan(&stagedRaw) == nil {
+		_ = json.Unmarshal([]byte(stagedRaw), &stagedAdmin)
+	}
+	effectiveAdmin := adminPath
+	if stagedAdmin != "" {
+		effectiveAdmin = stagedAdmin
+	}
+	var existingRoute string
+	if tx.QueryRow("SELECT data FROM documents WHERE namespace='subscriptions' AND collection='public_routes' AND id='primary'").Scan(&existingRoute) == nil {
+		var route p.Record
+		if json.Unmarshal([]byte(existingRoute), &route) == nil && p.Bool(route, "enabled") {
+			paths, err := p.PublicRoutePaths(route)
+			if err != nil || routeConflictsAdmin(paths, effectiveAdmin) {
+				report.Errors = append(report.Errors, "后台入口与现有订阅路径冲突")
+			}
+		}
+	}
 	for rows.Next() {
 		report.Rows++
 		var kind, namespace, collection, key, raw string
@@ -239,6 +269,13 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 			if conflicts.userIDs[u.ID] || conflicts.emails[email] {
 				report.Errors = append(report.Errors, "目标已有相同用户标识或邮箱："+email)
 			}
+		} else if kind == "setting" {
+			var value string
+			if !has("settings") || key != "adminPath" || namespace != "" || collection != "" || json.Unmarshal([]byte(raw), &value) != nil || !validAdminPath(value) {
+				report.Errors = append(report.Errors, "后台入口设置无效或没有导入权限")
+			} else if adminPath != "/admin" && adminPath != value {
+				report.Errors = append(report.Errors, "目标已有不同的后台入口，未覆盖")
+			}
 		} else {
 			report.Documents++
 			if !has(namespace) || !enabled[namespace] {
@@ -246,6 +283,16 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 			}
 			if conflicts.documents[importDocumentKey{namespace, collection, key}] {
 				report.Errors = append(report.Errors, "目标记录已存在："+namespace+"/"+collection+"/"+key)
+			}
+			if namespace == "subscriptions" && collection == "public_routes" {
+				var route p.Record
+				if json.Unmarshal([]byte(raw), &route) != nil {
+					return report, fmt.Errorf("订阅路由格式无效")
+				}
+				paths, err := p.PublicRoutePaths(route)
+				if err != nil || routeConflictsAdmin(paths, effectiveAdmin) {
+					report.Errors = append(report.Errors, "订阅地址无效或与后台入口冲突")
+				}
 			}
 			if namespace == "access" && collection == "accounts" || namespace == "subscriptions" && collection == "links" {
 				var record p.Record
