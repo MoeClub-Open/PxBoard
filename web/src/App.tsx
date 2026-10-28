@@ -13,11 +13,13 @@ import Plugins from './pages/Plugins'
 import { Activity, Jobs, Settings, Users } from './pages/Core'
 import Account from './pages/Account'
 import ModeSetup from './pages/ModeSetup'
-import Portal from './pages/Portal'
 import Storefront from './pages/Storefront'
 import type { AuthInfo } from './pages/Register'
 import OAuthComplete from './pages/OAuthComplete'
 import { adminRoot } from './adminPath'
+
+const PersonalPortal = lazy(() => import('./pages/PersonalPortal'))
+const BusinessPortal = lazy(() => import('./pages/BusinessPortal'))
 
 const PortalSupport = lazy(() =>
   import('./pages/PortalSupport').then((module) => ({ default: module.PortalSupport })),
@@ -179,7 +181,29 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
         <Routes>
           <Route
             path="/user/*"
-            element={<Portal dark={dark} toggleTheme={toggleTheme} onLogout={() => setMe(null)} />}
+            element={
+              <Suspense
+                fallback={
+                  <div className="page-loading">
+                    <Spin />
+                  </div>
+                }
+              >
+                {me.mode === 'business' ? (
+                  <BusinessPortal
+                    dark={dark}
+                    toggleTheme={toggleTheme}
+                    onLogout={() => setMe(null)}
+                  />
+                ) : (
+                  <PersonalPortal
+                    dark={dark}
+                    toggleTheme={toggleTheme}
+                    onLogout={() => setMe(null)}
+                  />
+                )}
+              </Suspense>
+            }
           />
           <Route path="*" element={<Navigate to="/user" replace />} />
         </Routes>

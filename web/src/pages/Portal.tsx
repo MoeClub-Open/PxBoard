@@ -1,223 +1,42 @@
-import { useCurrency } from '../currency'
-import { lazy, Suspense, useEffect, useState } from 'react'
-import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import {
-  Alert,
-  App,
-  Avatar,
-  Button,
-  Drawer,
-  Dropdown,
-  Empty,
-  Layout,
-  Menu,
-  Progress,
-  Space,
-  Spin,
-  Tag,
-  Typography,
-} from 'antd'
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
+import { App, Avatar, Button, Drawer, Dropdown, Empty, Layout, Menu, Space, Spin } from 'antd'
 import {
   AppstoreOutlined,
+  CloudServerOutlined,
   CustomerServiceOutlined,
-  DashboardOutlined,
   FileTextOutlined,
+  GiftOutlined,
   LinkOutlined,
   LogoutOutlined,
   MenuOutlined,
   MoonOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-  ShopOutlined,
   SunOutlined,
   UserOutlined,
-  WalletOutlined,
-  ShareAltOutlined,
-  CloudServerOutlined,
-  GiftOutlined,
 } from '@ant-design/icons'
-import { api, useData } from '../api'
-import type { Row } from '../api'
+import { api } from '../api'
 import { useSession } from '../context'
-import { adminRoot, adminURL } from '../adminPath'
-import Account from './Account'
+import { Brand } from '../components/Brand'
 import ResourcePage from '../components/ResourcePage'
-import { date, PortalOrders, PortalPlans, PortalWallet, useWallet } from './PortalCommerce'
-import { PortalAnnouncements, PortalHelp, PortalSubscriptions } from './PortalServices'
-import '../portal.css'
-import PortalReferrals from './PortalReferrals'
+import { useBrandTitle } from '../branding'
+import Account from './Account'
+import { PortalSubscriptions } from './PortalSubscriptions'
+import { PortalHelp } from './PortalHelp'
 import PortalStatus from './PortalStatus'
 import PortalRedeem from './PortalRedeem'
-import { Brand } from '../components/Brand'
-import { useBrandTitle } from '../branding'
+import '../portal.css'
 
 const PortalSupport = lazy(() =>
   import('./PortalSupport').then((module) => ({ default: module.PortalSupport })),
 )
-
-function ServiceOverview() {
-  const { money } = useCurrency()
-  const { me, plugins } = useSession()
-  const accounts = useData<Row[]>(
-    plugins.some((p) => p.id === 'access' && p.enabled)
-      ? '/extensions/access/accounts?mine=1'
-      : null,
-    5,
-  )
-  const business = me.mode === 'business' && plugins.some((p) => p.id === 'commerce' && p.enabled)
-  const redeem = plugins.some(
-    (p) =>
-      p.id === 'redeem' &&
-      p.enabled &&
-      p.pages.some(
-        (page) => page.id === 'redeem' && page.roles.includes('member') && page.surface !== 'admin',
-      ),
-  )
-  const wallet = useWallet(business)
-  const account = accounts.data?.find((row) => row.userId === me.id)
-  const expired = account?.expiresAt && new Date(account.expiresAt).getTime() < Date.now()
-  const exhausted =
-    account && !account.unlimited && Number(account.usedGiB) >= Number(account.quotaGiB)
-  const state = !account
-    ? '未开通'
-    : account.status === 'suspended'
-      ? '已暂停'
-      : expired
-        ? '已到期'
-        : exhausted
-          ? '流量已用完'
-          : account.effective
-            ? '可用'
-            : '暂不可用'
-  const quota = Number(account?.quotaGiB || 0),
-    used = Number(account?.usedGiB || 0)
-  return (
-    <>
-      <div className="page-heading">
-        <h1>我的服务</h1>
-        <Space>
-          {account && <Tag color={account.effective ? 'success' : 'warning'}>{state}</Tag>}
-          <Button icon={<ReloadOutlined />} onClick={accounts.reload} aria-label="刷新服务" />
-        </Space>
-      </div>
-      {accounts.error && (
-        <Alert
-          type="error"
-          title={accounts.error}
-          action={<Button onClick={accounts.reload}>重试</Button>}
-          className="portal-notice"
-        />
-      )}
-      {accounts.loading ? (
-        <div className="page-loading">
-          <Spin />
-        </div>
-      ) : accounts.error ? null : account ? (
-        <>
-          <div className="portal-statistics">
-            <div>
-              <span>到期时间</span>
-              <strong>{date(account.expiresAt)}</strong>
-            </div>
-            <div>
-              <span>剩余流量</span>
-              <strong>
-                {account.unlimited
-                  ? '不限量'
-                  : `${Math.max(0, quota - used).toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB`}
-              </strong>
-            </div>
-            {business && (
-              <div>
-                <span>账户余额</span>
-                <strong>
-                  {wallet.loading ? '—' : wallet.error ? '读取失败' : money(wallet.balance)}
-                </strong>
-              </div>
-            )}
-          </div>
-          <section className="portal-usage">
-            <div>
-              <h2>本周期流量</h2>
-              <Typography.Text type="secondary">
-                已使用 {used.toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB
-                {!account.unlimited && ` / ${quota.toLocaleString()} GB`}
-              </Typography.Text>
-            </div>
-            {!account.unlimited && (
-              <Progress
-                percent={quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 100}
-                status={exhausted ? 'exception' : 'normal'}
-              />
-            )}
-          </section>
-          {!account.effective && (
-            <Alert
-              type="warning"
-              title={state}
-              description={
-                account.status === 'suspended'
-                  ? '请联系工作人员处理账户状态。'
-                  : business
-                    ? '购买或续费后，可在“我的订阅”获取连接。'
-                    : redeem
-                      ? '可使用兑换码获取访问权限，或联系管理员。'
-                      : me.role === 'admin'
-                        ? '请在管理后台检查访问账户。'
-                        : '请联系管理员检查访问权限。'
-              }
-              className="portal-notice"
-              action={
-                business && account.status !== 'suspended' ? (
-                  <Link to="/user/plans">
-                    <Button>选购套餐</Button>
-                  </Link>
-                ) : !business && redeem && account.status !== 'suspended' ? (
-                  <Link to="/user/redeem">
-                    <Button>兑换码</Button>
-                  </Link>
-                ) : me.role === 'admin' ? (
-                  <Link to={adminURL('/admin/p/access/accounts', me)}>
-                    <Button>管理访问账户</Button>
-                  </Link>
-                ) : undefined
-              }
-            />
-          )}
-        </>
-      ) : (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            business
-              ? '还没有开通服务'
-              : redeem
-                ? '输入兑换码后即可获取访问权限'
-                : '尚未分配访问权限'
-          }
-        >
-          {business && (
-            <Link to="/user/plans">
-              <Button type="primary">选购套餐</Button>
-            </Link>
-          )}
-          {!business && redeem && (
-            <Link to="/user/redeem">
-              <Button type="primary">兑换码</Button>
-            </Link>
-          )}
-          {!business && !redeem && me.role === 'admin' && (
-            <Link to={adminURL('/admin/p/access/accounts', me)}>
-              <Button>管理访问账户</Button>
-            </Link>
-          )}
-        </Empty>
-      )}
-      {plugins.some((p) => p.id === 'support' && p.enabled) && <PortalAnnouncements />}
-    </>
-  )
-}
-
 const coveredPages = new Set([
   'access/accounts',
   'subscriptions/subscriptions',
@@ -231,20 +50,11 @@ const coveredPages = new Set([
   'support/notifications',
   'nodes/status',
 ])
-export default function Portal({
-  dark,
-  toggleTheme,
-  onLogout,
-}: {
-  dark: boolean
-  toggleTheme: () => void
-  onLogout: () => void
-}) {
-  const { me, plugins } = useSession()
-  const { message } = App.useApp()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [mobile, setMobile] = useState(false)
+export type PortalProps = { dark: boolean; toggleTheme: () => void; onLogout: () => void }
+export type NavigationItem = { key: string; label: string; icon: ReactNode }
+
+export function usePortalFeatures() {
+  const { plugins } = useSession()
   const enabled = (id: string) => plugins.some((plugin) => plugin.id === id && plugin.enabled)
   const hasPage = (id: string, pageId: string) =>
     plugins.some(
@@ -255,36 +65,94 @@ export default function Portal({
           (page) => page.id === pageId && page.roles.includes('member') && page.surface !== 'admin',
         ),
     )
-  const business = me.mode === 'business' && enabled('commerce')
-  const affiliate = hasPage('affiliate', 'referrals')
-  const redeem = hasPage('redeem', 'redeem')
-  const nodeStatus = hasPage('nodes', 'status')
-  const navigation = [
-    { key: '/user', label: '我的服务', icon: <DashboardOutlined /> },
-    ...(business ? [{ key: '/user/plans', label: '选购套餐', icon: <ShopOutlined /> }] : []),
-    ...(enabled('subscriptions')
-      ? [{ key: '/user/subscriptions', label: '我的订阅', icon: <LinkOutlined /> }]
-      : []),
-    ...(business
-      ? [
-          { key: '/user/orders', label: '我的订单', icon: <FileTextOutlined /> },
-          { key: '/user/wallet', label: '账户余额', icon: <WalletOutlined /> },
-        ]
-      : []),
-    ...(affiliate
-      ? [{ key: '/user/referrals', label: '推广返佣', icon: <ShareAltOutlined /> }]
-      : []),
-    ...(redeem ? [{ key: '/user/redeem', label: '兑换码', icon: <GiftOutlined /> }] : []),
-    ...(nodeStatus
+  return {
+    subscriptions: enabled('subscriptions'),
+    commerce: enabled('commerce'),
+    affiliate: hasPage('affiliate', 'referrals'),
+    redeem: hasPage('redeem', 'redeem'),
+    nodeStatus: hasPage('nodes', 'status'),
+    support: enabled('support'),
+  }
+}
+type Features = ReturnType<typeof usePortalFeatures>
+export const unavailable = (
+  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
+)
+
+export function subscriptionNavigation(features: Features): NavigationItem[] {
+  return features.subscriptions
+    ? [{ key: '/user/subscriptions', label: '我的订阅', icon: <LinkOutlined /> }]
+    : []
+}
+export function serviceNavigation(features: Features): NavigationItem[] {
+  return [
+    ...(features.redeem ? [{ key: '/user/redeem', label: '兑换码', icon: <GiftOutlined /> }] : []),
+    ...(features.nodeStatus
       ? [{ key: '/user/status', label: '节点状态', icon: <CloudServerOutlined /> }]
       : []),
-    ...(enabled('support')
+    ...(features.support
       ? [
           { key: '/user/support', label: '我的工单', icon: <CustomerServiceOutlined /> },
           { key: '/user/help', label: '使用帮助', icon: <FileTextOutlined /> },
         ]
       : []),
   ]
+}
+export function serviceRoutes(features: Features) {
+  return (
+    <>
+      <Route
+        path="subscriptions"
+        element={features.subscriptions ? <PortalSubscriptions /> : unavailable}
+      />
+      <Route path="redeem" element={features.redeem ? <PortalRedeem /> : unavailable} />
+      <Route path="status" element={features.nodeStatus ? <PortalStatus /> : unavailable} />
+      <Route
+        path="support"
+        element={
+          features.support ? (
+            <Suspense fallback={<Spin />}>
+              <PortalSupport />
+            </Suspense>
+          ) : (
+            unavailable
+          )
+        }
+      />
+      <Route path="help" element={features.support ? <PortalHelp /> : unavailable} />
+    </>
+  )
+}
+
+function PortalExtension() {
+  const { pluginId, pageId } = useParams()
+  const { me, plugins } = useSession()
+  const id = `${pluginId}/${pageId}`
+  const page = plugins
+    .find((plugin) => plugin.id === pluginId && plugin.enabled)
+    ?.pages.find(
+      (item) =>
+        item.id === pageId &&
+        item.roles.includes('member') &&
+        item.roles.includes(me.role) &&
+        item.surface !== 'admin',
+    )
+  if (!page || coveredPages.has(id)) return unavailable
+  return <ResourcePage key={id} />
+}
+
+export default function PortalLayout({
+  dark,
+  toggleTheme,
+  onLogout,
+  navigation: entries,
+  children,
+}: PortalProps & { navigation: NavigationItem[]; children: ReactNode }) {
+  const { me, plugins } = useSession()
+  const { message } = App.useApp()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [mobile, setMobile] = useState(false)
   const extraPages = plugins
     .filter((plugin) => plugin.enabled)
     .flatMap((plugin) =>
@@ -302,7 +170,7 @@ export default function Portal({
           icon: <AppstoreOutlined />,
         })),
     )
-  navigation.push(...extraPages)
+  const navigation = [...entries, ...extraPages]
   const selected = location.pathname.replace(/\/$/, '')
   const current = [...navigation, { key: '/user/account', label: '我的账户' }].find(
     (item) => item.key === selected,
@@ -328,7 +196,6 @@ export default function Portal({
       onClick={({ key }) => navigate(key)}
     />
   )
-  const unavailable = <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
   return (
     <Layout className={`customer-portal${dark ? ' portal-dark' : ''}`}>
       <Layout.Header className="portal-header">
@@ -346,11 +213,6 @@ export default function Portal({
             </Link>
           </Space>
           <Space size={8}>
-            {me.role === 'admin' && (
-              <Button onClick={() => navigate(adminRoot(me))} icon={<SettingOutlined />}>
-                管理后台
-              </Button>
-            )}
             <Button
               type="text"
               aria-label={dark ? '切换浅色' : '切换深色'}
@@ -406,35 +268,9 @@ export default function Portal({
       </Drawer>
       <Layout.Content className="portal-content">
         <Routes>
-          <Route index element={<ServiceOverview />} />
-          <Route path="plans" element={business ? <PortalPlans /> : unavailable} />
-          <Route path="orders" element={business ? <PortalOrders /> : unavailable} />
-          <Route path="wallet" element={business ? <PortalWallet /> : unavailable} />
-          <Route path="referrals" element={affiliate ? <PortalReferrals /> : unavailable} />
-          <Route path="redeem" element={redeem ? <PortalRedeem /> : unavailable} />
-          <Route path="status" element={nodeStatus ? <PortalStatus /> : unavailable} />
-          <Route
-            path="subscriptions"
-            element={enabled('subscriptions') ? <PortalSubscriptions /> : unavailable}
-          />
-          <Route
-            path="support"
-            element={
-              enabled('support') ? (
-                <Suspense fallback={<Spin />}>
-                  <PortalSupport />
-                </Suspense>
-              ) : (
-                unavailable
-              )
-            }
-          />
-          <Route path="help" element={enabled('support') ? <PortalHelp /> : unavailable} />
+          {children}
           <Route path="account" element={<Account />} />
-          <Route
-            path="extensions/:pluginId/:pageId"
-            element={<ResourcePage key={location.pathname} />}
-          />
+          <Route path="extensions/:pluginId/:pageId" element={<PortalExtension />} />
           <Route path="*" element={<Navigate to="/user" replace />} />
         </Routes>
       </Layout.Content>
