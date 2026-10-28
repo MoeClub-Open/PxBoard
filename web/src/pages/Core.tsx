@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, App, Button, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
@@ -13,8 +13,20 @@ import { adminURL } from '../adminPath'
 export function Users() {
   const { message } = App.useApp()
   const { me } = useSession()
-  const { data, loading, error, reload } = useData<Row[]>('/users')
   const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(15)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery(search)
+      setPage(1)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [search])
+  const { data, loading, error, reload } = useData<{ items: Row[]; total: number }>(
+    `/users?limit=${pageSize}&offset=${(page - 1) * pageSize}&q=${encodeURIComponent(query)}`,
+  )
   const [editor, setEditor] = useState<Row | null>(null)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
@@ -69,10 +81,17 @@ export function Users() {
       <Table
         rowKey="id"
         loading={loading}
-        dataSource={data?.filter((u) =>
-          `${u.email}${u.name}`.toLowerCase().includes(search.toLowerCase()),
-        )}
-        pagination={{ pageSize: 15 }}
+        dataSource={data?.items}
+        pagination={{
+          current: page,
+          pageSize,
+          total: data?.total,
+          showSizeChanger: true,
+          onChange: (current, size) => {
+            setPage(current)
+            setPageSize(size)
+          },
+        }}
         scroll={{ x: 720 }}
         columns={[
           {

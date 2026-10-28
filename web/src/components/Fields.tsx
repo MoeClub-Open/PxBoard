@@ -1,8 +1,9 @@
 import { useCurrency } from '../currency'
 import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd'
 import dayjs from 'dayjs'
+import { useEffect, useState } from 'react'
 import { useData, type Field, type Row } from '../api'
-import { PlanPeriods } from './PlanPeriods'
+import { officialControl } from '../official/fields'
 
 function RemoteSelect({
   field,
@@ -13,7 +14,18 @@ function RemoteSelect({
   value?: string
   onChange?: (value: string) => void
 }) {
-  const { data, loading, error } = useData<Row[]>(field.optionsEndpoint || null)
+  const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search), 250)
+    return () => clearTimeout(timer)
+  }, [search])
+  const endpoint = field.optionsEndpoint
+  const url =
+    endpoint && field.optionsSearch
+      ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}q=${encodeURIComponent(query)}&id=${encodeURIComponent(value || '')}`
+      : endpoint
+  const { data, loading, error } = useData<Row[]>(url || null)
   return (
     <Select
       value={value}
@@ -22,6 +34,8 @@ function RemoteSelect({
       loading={loading}
       showSearch
       optionFilterProp="label"
+      filterOption={field.optionsSearch ? false : undefined}
+      onSearch={field.optionsSearch ? setSearch : undefined}
       allowClear={!field.required}
       options={(data || []).map((row) => ({ label: row.name, value: row.id }))}
       notFoundContent={error || (loading ? '加载中' : '暂无可用选项')}
@@ -99,7 +113,6 @@ function fieldItem(f: Field, symbol: string) {
       />
     )
   else if (f.type === 'boolean') control = <Switch />
-  else if (f.type === 'periods') control = <PlanPeriods />
   else if (f.type === 'groups') control = <GroupSelect field={f} />
   else if (f.type === 'multiselect')
     control = <Select mode="multiple" options={f.options || []} allowClear />
@@ -117,6 +130,7 @@ function fieldItem(f: Field, symbol: string) {
     control = <DatePicker showTime style={{ width: '100%' }} format="YYYY-MM-DD HH:mm" />
   else if (f.type === 'email') control = <Input type="email" autoComplete="email" />
   else if (f.type === 'url') control = <Input type="url" placeholder="https://" />
+  control = officialControl(f) || control
   return (
     <Form.Item
       key={f.key}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/MoeClub-Open/PxBoard/internal/store"
+	p "github.com/MoeClub-Open/PxBoard/pkg/plugin"
 )
 
 func TestImportRoutesConflict(t *testing.T) {
@@ -25,7 +26,7 @@ func TestImportRoutesConflict(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer tx.Rollback()
-		report, err := checkImport(tx, "run", func(string) bool { return true }, map[string]bool{"subscriptions": true})
+		report, err := checkImport(tx, "run", func(string) bool { return true }, map[string]p.Manifest{"subscriptions": {ID: "subscriptions", PublicPaths: []string{"/s"}, PublicRouteTarget: "/s"}})
 		if err != nil {
 			t.Fatal(err)
 		}

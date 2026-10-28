@@ -47,6 +47,7 @@ export interface Field {
   required?: boolean
   options?: { label: string; value: any }[]
   optionsEndpoint?: string
+  optionsSearch?: boolean
   default?: any
   hint?: string
   readOnly?: boolean
@@ -63,6 +64,8 @@ export interface Action {
   when?: Record<string, string[]>
 }
 export interface Resource {
+  paginated?: boolean
+  renderer?: string
   singleton?: boolean
   pollIntervalSeconds?: number
   key: string

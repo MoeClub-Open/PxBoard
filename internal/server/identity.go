@@ -332,6 +332,10 @@ func (s *Server) createUser(b plugin.Record, initialize ...func(*sql.Tx, string)
 }
 func (s *Server) users(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
+		if r.URL.Query().Get("limit") != "" {
+			s.userPage(w, r)
+			return
+		}
 		out, e := s.userList()
 		respond(w, e, out)
 		return

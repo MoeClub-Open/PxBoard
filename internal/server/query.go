@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	p "github.com/MoeClub-Open/PxBoard/pkg/plugin"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -12,15 +13,7 @@ func (s *Server) queryRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 		forbidden(w, "未获存储权限")
 		return
 	}
-	var b struct {
-		Collection string `json:"collection"`
-		Filters    []struct {
-			Field string `json:"field"`
-			Value any    `json:"value"`
-		} `json:"filters"`
-		Offset int `json:"offset"`
-		Limit  int `json:"limit"`
-	}
+	var b p.Query
 	if bad(w, p.Decode(r, &b)) {
 		return
 	}
@@ -31,13 +24,45 @@ func (s *Server) queryRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 	where := "namespace=? AND collection=?"
 	args := []any{actor.Plugin, b.Collection}
 	for _, f := range b.Filters {
+		if !queryField.MatchString(f.Field) {
+			p.Fail(w, 400, "查询字段无效")
+			return
+		}
+		field := "json_extract(data,'$." + f.Field + "')"
 		if f.Field == "id" {
-			where += " AND id IS ?"
+			field = "id"
+		}
+		if f.Op == "in" {
+			values, ok := f.Value.([]any)
+			if !ok {
+				p.Fail(w, 400, "查询值必须为数组")
+				return
+			}
+			if len(values) == 0 {
+				where += " AND 0"
+				continue
+			}
+			where += " AND " + field + " IN (" + strings.TrimSuffix(strings.Repeat("?,", len(values)), ",") + ")"
+			args = append(args, values...)
+		} else if f.Op == "" || f.Op == "eq" {
+			where += " AND " + field + " IS ?"
 			args = append(args, f.Value)
 		} else {
-			where += " AND json_extract(data,?) IS ?"
-			args = append(args, "$."+f.Field, f.Value)
+			p.Fail(w, 400, "不支持的查询条件")
+			return
 		}
+	}
+	if b.Search != "" && len(b.SearchFields) > 0 {
+		fields := []string{}
+		for _, field := range b.SearchFields {
+			if !queryField.MatchString(field) {
+				p.Fail(w, 400, "查询字段无效")
+				return
+			}
+			fields = append(fields, "CAST(json_extract(data,'$."+field+"') AS TEXT) LIKE ?")
+			args = append(args, "%"+b.Search+"%")
+		}
+		where += " AND (" + strings.Join(fields, " OR ") + ")"
 	}
 	var total int
 	if bad(w, s.Store.DB.QueryRow("SELECT COUNT(*) FROM documents WHERE "+where, args...).Scan(&total)) {
@@ -67,3 +92,5 @@ func (s *Server) queryRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 		p.JSON(w, p.Record{"items": items, "total": total})
 	}
 }
+
+var queryField = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.]*$`)

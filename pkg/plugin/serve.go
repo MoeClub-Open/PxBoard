@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 )
 
 type actorKey struct{}
@@ -23,6 +24,32 @@ func Service(r *http.Request, id string) bool {
 func Serve(handler http.Handler) error {
 	reader := bufio.NewReaderSize(os.Stdin, 1024*1024)
 	encoder := json.NewEncoder(os.Stdout)
+	var output sync.Mutex
+	var workers sync.WaitGroup
+	serial := make(chan Request, 64)
+	concurrent := make(chan struct{}, 16)
+	paths := map[string]bool{}
+	if provider, ok := handler.(interface{ ConcurrentPaths() []string }); ok {
+		for _, path := range provider.ConcurrentPaths() {
+			paths[path] = true
+		}
+	}
+	run := func(req Request) {
+		res := dispatch(handler, req)
+		output.Lock()
+		defer output.Unlock()
+		if err := encoder.Encode(res); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}
+	workers.Add(1)
+	go func() {
+		defer workers.Done()
+		for req := range serial {
+			run(req)
+		}
+	}()
+	defer func() { close(serial); workers.Wait() }()
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err == io.EOF {
@@ -35,8 +62,13 @@ func Serve(handler http.Handler) error {
 		if err = json.Unmarshal(line, &req); err != nil {
 			return err
 		}
-		if err = encoder.Encode(dispatch(handler, req)); err != nil {
-			return err
+		path := strings.SplitN(req.Path, "?", 2)[0]
+		if req.Path == "/_health" || paths[req.Method+" "+path] {
+			concurrent <- struct{}{}
+			workers.Add(1)
+			go func() { defer workers.Done(); defer func() { <-concurrent }(); run(req) }()
+		} else {
+			serial <- req
 		}
 	}
 }

@@ -111,16 +111,18 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 	if bad(w, e) {
 		return
 	}
-	enabled := map[string]bool{}
+	targets := map[string]p.Manifest{}
 	for _, plugin := range all {
-		enabled[plugin.ID] = plugin.Enabled && plugin.Error == ""
+		if plugin.Enabled && plugin.Error == "" {
+			targets[plugin.ID] = plugin.Manifest
+		}
 	}
 	tx, e := s.Store.DB.Begin()
 	if bad(w, e) {
 		return
 	}
 	defer tx.Rollback()
-	report, e := checkImport(tx, id, has, enabled)
+	report, e := checkImport(tx, id, has, targets)
 	if bad(w, e) {
 		return
 	}
@@ -195,10 +197,10 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 	report.Status = "committed"
 	p.JSON(w, report)
 }
-func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[string]bool) (p.ImportReport, error) {
+func checkImport(tx *sql.Tx, id string, has func(string) bool, targets map[string]p.Manifest) (p.ImportReport, error) {
 	report := p.ImportReport{ID: id, Status: "ready", Errors: []string{}}
-	var metadata string
-	if e := tx.QueryRow("SELECT metadata FROM import_runs WHERE id=?", id).Scan(&metadata); e != nil {
+	var metadata, owner string
+	if e := tx.QueryRow("SELECT metadata,owner FROM import_runs WHERE id=?", id).Scan(&metadata, &owner); e != nil {
 		return report, e
 	}
 	var expected struct {
@@ -207,7 +209,7 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 	if e := json.Unmarshal([]byte(metadata), &expected); e != nil {
 		return report, e
 	}
-	conflicts, e := loadImportConflicts(tx, id)
+	conflicts, e := loadImportConflicts(tx, id, targets)
 	if e != nil {
 		return report, e
 	}
@@ -217,8 +219,7 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 	}
 	defer rows.Close()
 	emails := map[string]bool{}
-	numericIDs := map[string]bool{}
-	uniqueValues := map[string]bool{}
+	uniqueValues := map[importFieldKey]bool{}
 	adminPath := "/admin"
 	_ = tx.QueryRow("SELECT value FROM settings WHERE key='adminPath'").Scan(&adminPath)
 	if adminPath == "" {
@@ -233,16 +234,16 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 	if stagedAdmin != "" {
 		effectiveAdmin = stagedAdmin
 	}
-	var existingRoute string
-	if tx.QueryRow("SELECT data FROM documents WHERE namespace='subscriptions' AND collection='public_routes' AND id='primary'").Scan(&existingRoute) == nil {
-		var route p.Record
-		if json.Unmarshal([]byte(existingRoute), &route) == nil && p.Bool(route, "enabled") {
-			paths, err := p.PublicRoutePaths(route)
-			if err != nil || routeConflictsAdmin(paths, effectiveAdmin) {
-				report.Errors = append(report.Errors, "后台入口与现有订阅路径冲突")
-			}
+	existingRoutes, e := registeredRoutes(tx)
+	if e != nil {
+		return report, e
+	}
+	for _, route := range existingRoutes {
+		if routeConflictsAdmin([]string{route.path}, effectiveAdmin) {
+			report.Errors = append(report.Errors, "后台入口与现有公开路由冲突")
 		}
 	}
+	stagedRoutes := []registeredRoute{}
 	for rows.Next() {
 		report.Rows++
 		var kind, namespace, collection, key, raw string
@@ -278,70 +279,67 @@ func checkImport(tx *sql.Tx, id string, has func(string) bool, enabled map[strin
 			}
 		} else {
 			report.Documents++
-			if !has(namespace) || !enabled[namespace] {
+			if !has(namespace) || targets[namespace].ID == "" {
 				report.Errors = append(report.Errors, "目标插件未启用或没有导入权限："+namespace)
 			}
 			if conflicts.documents[importDocumentKey{namespace, collection, key}] {
 				report.Errors = append(report.Errors, "目标记录已存在："+namespace+"/"+collection+"/"+key)
 			}
-			if namespace == "subscriptions" && collection == "public_routes" {
-				var route p.Record
-				if json.Unmarshal([]byte(raw), &route) != nil {
-					return report, fmt.Errorf("订阅路由格式无效")
+			var record p.Record
+			if e = json.Unmarshal([]byte(raw), &record); e != nil {
+				return report, e
+			}
+			if slices.Contains(targets[owner].RequiredImportRules[namespace], collection) {
+				declared := false
+				for _, rule := range targets[namespace].ImportRules {
+					declared = declared || rule.Collection == collection
 				}
-				paths, err := p.PublicRoutePaths(route)
-				if err != nil || routeConflictsAdmin(paths, effectiveAdmin) {
-					report.Errors = append(report.Errors, "订阅地址无效或与后台入口冲突")
+				if !declared {
+					report.Errors = append(report.Errors, "目标插件缺少所需导入校验，请更新插件："+namespace+"/"+collection)
 				}
 			}
-			if namespace == "access" && collection == "accounts" || namespace == "subscriptions" && collection == "links" {
-				var record p.Record
-				if e = json.Unmarshal([]byte(raw), &record); e != nil {
-					return report, e
+			if collection == "public_routes" && p.Bool(record, "enabled") {
+				paths, err := p.PublicRoutePaths(record)
+				if err != nil || !publicTarget(targets[namespace]) || routeConflictsAdmin(paths, effectiveAdmin) {
+					report.Errors = append(report.Errors, "公开路由无效或与后台入口冲突")
 				}
-				user := p.Text(record, "userId")
-				if conflicts.userCounts[user] != 1 {
-					report.Errors = append(report.Errors, "账户所属用户缺失："+key)
-				}
-				fields := []string{"userId", "credential"}
-				if namespace == "subscriptions" {
-					fields = []string{"token"}
-				}
-				for _, field := range fields {
-					value := p.Text(record, field)
-					uniqueKey := namespace + "/" + field + "/" + value
-					if value == "" || uniqueValues[uniqueKey] {
-						report.Errors = append(report.Errors, "连接凭据、订阅令牌或所属用户重复/缺失："+key+"/"+field)
+				for _, path := range paths {
+					for _, old := range append(existingRoutes, stagedRoutes...) {
+						if routeConflictsAdmin([]string{path}, old.path) {
+							report.Errors = append(report.Errors, "公开路由配置冲突")
+						}
 					}
-					uniqueValues[uniqueKey] = true
-					if conflicts.fields[importFieldKey{namespace, collection, field, "s:" + value}] {
-						report.Errors = append(report.Errors, "目标已有相同连接凭据、订阅令牌或访问账户："+key+"/"+field)
+					stagedRoutes = append(stagedRoutes, registeredRoute{owner: namespace, id: key, path: path})
+				}
+			}
+			for _, rule := range targets[namespace].ImportRules {
+				if rule.Collection != collection {
+					continue
+				}
+				for _, field := range rule.Required {
+					if record[field] == nil || record[field] == "" {
+						report.Errors = append(report.Errors, "必填字段缺失："+namespace+"/"+collection+"/"+key+"/"+field)
 					}
 				}
-			}
-			if (namespace == "access" && collection == "accounts") || (namespace == "nodes" && (collection == "nodes" || collection == "machines")) {
-				var record p.Record
-				_ = json.Unmarshal([]byte(raw), &record)
-				field := "wireId"
-				if collection == "accounts" {
-					field = "numericId"
-				} else if collection == "machines" {
-					field = "number"
+				if rule.UserField != "" && conflicts.userCounts[p.Text(record, rule.UserField)] != 1 {
+					report.Errors = append(report.Errors, "记录所属用户缺失或重复："+key)
 				}
-				value := record[field]
-				wireKey := fmt.Sprintf("%s/%s/%v", namespace, collection, value)
-				if value == nil || numericIDs[wireKey] {
-					report.Errors = append(report.Errors, "数字标识缺失或重复："+wireKey)
-				}
-				numericIDs[wireKey] = true
-				numericKey, e := importValueKey(value)
-				if e != nil {
-					return report, e
-				}
-				if conflicts.fields[importFieldKey{namespace, collection, field, numericKey}] {
-					report.Errors = append(report.Errors, "目标数字标识冲突："+wireKey)
+				for _, field := range rule.Unique {
+					value, err := importValueKey(record[field])
+					if err != nil {
+						return report, err
+					}
+					if value == "" {
+						continue
+					}
+					fieldKey := importFieldKey{namespace, collection, field, value}
+					if uniqueValues[fieldKey] || conflicts.fields[fieldKey] {
+						report.Errors = append(report.Errors, "唯一字段冲突："+namespace+"/"+collection+"/"+key+"/"+field)
+					}
+					uniqueValues[fieldKey] = true
 				}
 			}
+
 		}
 	}
 	if report.Rows == 0 {
@@ -388,7 +386,7 @@ func importValueKey(value any) (string, error) {
 	}
 }
 
-func loadImportConflicts(tx *sql.Tx, id string) (importConflicts, error) {
+func loadImportConflicts(tx *sql.Tx, id string, targets map[string]p.Manifest) (importConflicts, error) {
 	index := importConflicts{map[string]bool{}, map[string]bool{}, map[string]int{}, map[importDocumentKey]bool{}, map[importFieldKey]bool{}}
 	read := func(query string, visit func(*sql.Rows) error, args ...any) error {
 		rows, e := tx.Query(query, args...)
@@ -435,26 +433,31 @@ func loadImportConflicts(tx *sql.Tx, id string) (importConflicts, error) {
 	}); e != nil {
 		return index, e
 	}
-	fields := []string{"userId", "credential", "token", "numericId", "wireId", "number"}
-	e := read(`SELECT namespace,collection,json_extract(data,'$.userId'),json_extract(data,'$.credential'),json_extract(data,'$.token'),json_extract(data,'$.numericId'),json_extract(data,'$.wireId'),json_extract(data,'$.number') FROM documents WHERE (namespace='access' AND collection='accounts') OR (namespace='subscriptions' AND collection='links') OR (namespace='nodes' AND collection IN ('nodes','machines'))`, func(rows *sql.Rows) error {
-		var namespace, collection string
-		values := make([]any, len(fields))
-		dest := []any{&namespace, &collection}
-		for i := range values {
-			dest = append(dest, &values[i])
-		}
-		if e := rows.Scan(dest...); e != nil {
+	e := read("SELECT namespace,collection,data FROM documents", func(rows *sql.Rows) error {
+		var namespace, collection, raw string
+		if e := rows.Scan(&namespace, &collection, &raw); e != nil {
 			return e
 		}
-		for i, value := range values {
-			if value == nil {
-				continue
+		rules := targets[namespace].ImportRules
+		if len(rules) == 0 {
+			return nil
+		}
+		var record p.Record
+		if e := json.Unmarshal([]byte(raw), &record); e != nil {
+			return e
+		}
+		for _, rule := range rules {
+			if rule.Collection == collection {
+				for _, field := range rule.Unique {
+					value, e := importValueKey(record[field])
+					if e != nil {
+						return e
+					}
+					if value != "" {
+						index.fields[importFieldKey{namespace, collection, field, value}] = true
+					}
+				}
 			}
-			key, e := importValueKey(value)
-			if e != nil {
-				return e
-			}
-			index.fields[importFieldKey{namespace, collection, fields[i], key}] = true
 		}
 		return nil
 	})

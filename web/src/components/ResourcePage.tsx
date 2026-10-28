@@ -1,5 +1,5 @@
 import { useCurrency } from '../currency'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import {
   Alert,
@@ -32,8 +32,8 @@ import { Fields, formValues, serialize } from './Fields'
 import { useSession } from '../context'
 import { useBrandTitle } from '../branding'
 import { configurationChanged } from '../api'
-import { periodLabel } from '../planPeriods'
-import NodeAddresses from './NodeAddresses'
+import { officialCell } from '../official/fields'
+import { useResourcePresentation } from '../official/resourcePresentation'
 
 const statuses: Record<string, [string, string]> = {
   active: ['正常', 'success'],
@@ -124,17 +124,8 @@ function Cell({
           ))}
       </Space>
     )
-  if (field.type === 'periods' && Array.isArray(value))
-    return (
-      <>
-        {value.map((period: Row) => (
-          <div key={period.id}>
-            {periodLabel(period)} · {money(Number(period.price))}
-            {period.enabled === false ? '（下架）' : ''}
-          </div>
-        ))}
-      </>
-    )
+  const official = officialCell(field, value, money)
+  if (official !== undefined) return official
   if (field.type === 'discount')
     return <span>{row.type === 'fixed' ? money(Number(value)) : `${value}%`}</span>
   if (field.type === 'money')
@@ -309,54 +300,55 @@ function ResourceTable({
   resource,
   base,
   onChange,
-  nodeAddresses = false,
-  groupNodes = false,
 }: {
   resource: Resource
   base: string
   onChange: () => void
-  nodeAddresses?: boolean
-  groupNodes?: boolean
 }) {
   const { message, modal } = App.useApp()
   const endpoint = resource.endpoint.startsWith('/api/')
     ? resource.endpoint
     : base + resource.endpoint
-  const { data, loading, error, reload } = useData<Row[]>(
-    resource.columns.length ? endpoint : null,
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(12)
+  const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuery(search)
+      setPage(1)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [search])
+  const listURL = resource.paginated
+    ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}limit=${pageSize}&offset=${(page - 1) * pageSize}&q=${encodeURIComponent(query)}`
+    : endpoint
+  const { data, loading, error, reload } = useData<Row[] | { items: Row[]; total: number }>(
+    resource.columns.length ? listURL : null,
     resource.pollIntervalSeconds,
   )
   const groupEndpoint = resource.columns.find((field) => field.type === 'groups')?.optionsEndpoint
   const { data: groups } = useData<Row[]>(groupEndpoint || null)
   const groupNames = new Map((groups || []).map((group) => [String(group.id), String(group.name)]))
-  const [search, setSearch] = useState('')
   const [editor, setEditor] = useState<{ row?: Row; action?: Action } | null>(null)
-  const [addressParent, setAddressParent] = useState<Row | null>(null)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
   const fields = editor?.action?.fields || resource.fields || []
-  const allRows = data || []
-  const ids = new Set(allRows.map((row) => row.id))
-  const rows = allRows.filter((row) => {
-    if (groupNodes && row.parentId && ids.has(row.parentId) && (!nodeAddresses || !row.enabled))
-      return false
-    if (!search) return true
-    const candidates = groupNodes
-      ? [
-          row,
-          ...allRows.filter(
-            (child) => child.parentId === row.id && (!nodeAddresses || !child.enabled),
-          ),
-        ]
-      : [row]
-    return candidates.some((candidate) =>
-      resource.columns.some((column) =>
-        String(candidate[column.key] ?? '')
-          .toLowerCase()
-          .includes(search.toLowerCase()),
+  const allRows = Array.isArray(data) ? data : data?.items || []
+  const presentation = useResourcePresentation(resource, allRows, endpoint, reload, openEditor)
+  const rows = presentation.rows.filter(
+    (row) =>
+      resource.paginated ||
+      !search ||
+      presentation.searchRows(row).some((candidate) =>
+        resource.columns.some((column) =>
+          String(candidate[column.key] ?? '')
+            .toLowerCase()
+            .includes(search.toLowerCase()),
+        ),
       ),
-    )
-  })
+  )
+  const total = Array.isArray(data) ? rows.length : data?.total || 0
   function openEditor(row?: Row, action?: Action) {
     const fs = action?.fields || resource.fields || []
     form.resetFields()
@@ -472,7 +464,7 @@ function ResourceTable({
       <div className="table-toolbar">
         <div>
           <h2>{resource.title}</h2>
-          {resource.columns.length > 0 && <span className="muted">{rows.length} 条记录</span>}
+          {resource.columns.length > 0 && <span className="muted">{total} 条记录</span>}
         </div>
         <Space wrap>
           {resource.columns.length > 0 && (
@@ -486,29 +478,13 @@ function ResourceTable({
               />
               <Button aria-label="刷新记录" icon={<ReloadOutlined />} onClick={reload} />
               <Button
-                aria-label="导出记录"
+                aria-label={resource.paginated ? '导出当前页' : '导出记录'}
+                title={resource.paginated ? '导出当前页' : '导出记录'}
                 icon={<DownloadOutlined />}
                 disabled={!rows.length}
                 onClick={() => {
-                  if (!nodeAddresses)
-                    return exportCSV(resource.title, resource.columns, rows, groupNames)
-                  const selected = new Set(rows.map((row) => row.id))
-                  const exportRows = allRows
-                    .filter(
-                      (row) => selected.has(row.id) || (!row.enabled && selected.has(row.parentId)),
-                    )
-                    .map((row) => ({
-                      ...row,
-                      parentName: selected.has(row.parentId)
-                        ? allRows.find((parent) => parent.id === row.parentId)?.name
-                        : '',
-                    }))
-                  exportCSV(
-                    resource.title,
-                    [...resource.columns, { key: 'parentName', label: '所属主节点' }],
-                    exportRows,
-                    groupNames,
-                  )
+                  const result = presentation.exportRows(rows)
+                  exportCSV(resource.title, result.columns, result.rows, groupNames)
                 }}
               />
             </>
@@ -536,7 +512,13 @@ function ResourceTable({
           size="middle"
           scroll={{ x: 'max-content' }}
           pagination={{
-            pageSize: 12,
+            current: resource.paginated ? page : undefined,
+            pageSize,
+            total: resource.paginated ? total : undefined,
+            onChange: (current, size) => {
+              setPage(current)
+              setPageSize(size)
+            },
             showSizeChanger: true,
             pageSizeOptions: [12, 30, 60],
             showTotal: (total) => `共 ${total} 条`,
@@ -555,30 +537,17 @@ function ResourceTable({
               dataIndex: f.key,
               title: f.label,
               render: (v: any, row: Row) =>
-                nodeAddresses && f.key === 'name' ? (
-                  <div>
-                    <Cell field={f} value={v} row={row} groupNames={groupNames} />
-                    <div>
-                      <Button
-                        type="link"
-                        size="small"
-                        style={{ padding: 0, height: 'auto' }}
-                        onClick={() => setAddressParent(row)}
-                      >
-                        {1 +
-                          allRows.filter((child) => child.parentId === row.id && !child.enabled)
-                            .length}{' '}
-                        个地址
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Cell field={f} value={v} row={row} groupNames={groupNames} />
+                presentation.cell(
+                  f,
+                  row,
+                  <Cell field={f} value={v} row={row} groupNames={groupNames} />,
                 ),
-              sorter: (a: Row, b: Row) =>
-                typeof a[f.key] === 'number'
-                  ? a[f.key] - b[f.key]
-                  : String(a[f.key] ?? '').localeCompare(String(b[f.key] ?? '')),
+              sorter: resource.paginated
+                ? undefined
+                : (a: Row, b: Row) =>
+                    typeof a[f.key] === 'number'
+                      ? a[f.key] - b[f.key]
+                      : String(a[f.key] ?? '').localeCompare(String(b[f.key] ?? '')),
             })),
             ...(hasActions
               ? [
@@ -604,9 +573,7 @@ function ResourceTable({
                                 key: 'delete',
                                 label: '删除',
                                 danger: true,
-                                disabled:
-                                  nodeAddresses &&
-                                  allRows.some((child) => child.parentId === row.id),
+                                disabled: !presentation.canDelete(row),
                               },
                             ]
                           : []),
@@ -658,20 +625,7 @@ function ResourceTable({
           ]}
         />
       )}
-      {addressParent && (
-        <NodeAddresses
-          parent={addressParent}
-          nodes={allRows}
-          resource={resource}
-          endpoint={endpoint}
-          onClose={() => setAddressParent(null)}
-          onChange={reload}
-          onEditParent={() => {
-            setAddressParent(null)
-            openEditor(addressParent)
-          }}
-        />
-      )}
+      {presentation.overlay}
       <Modal
         open={!!editor}
         title={
@@ -764,18 +718,7 @@ export default function ResourcePage({
           resource.singleton && resource.editable ? (
             <SingletonResource key={resource.key} resource={resource} base={base} />
           ) : (
-            <ResourceTable
-              key={resource.key}
-              resource={resource}
-              base={base}
-              onChange={() => {}}
-              nodeAddresses={pluginId === 'nodes' && pageId === 'nodes' && resource.key === 'nodes'}
-              groupNodes={
-                pluginId === 'nodes' &&
-                ((pageId === 'nodes' && resource.key === 'nodes') ||
-                  (pageId === 'status' && resource.key === 'status'))
-              }
-            />
+            <ResourceTable key={resource.key} resource={resource} base={base} onChange={() => {}} />
           )
         if (data.resources.length === 1) return renderResource(data.resources[0])
         const items = lists.map((resource) => ({

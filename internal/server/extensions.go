@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"encoding/json"
 	"github.com/MoeClub-Open/PxBoard/internal/store"
 	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
@@ -122,6 +123,8 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 		s.verifyExternalCredential(w, r, a)
 	case path == "batch" && r.Method == "POST":
 		s.batchRuntime(w, r, a)
+	case path == "commit" && r.Method == "POST":
+		s.commitRuntime(w, r, a)
 	case strings.HasPrefix(path, "import/"):
 		s.importRuntime(w, r, a, strings.TrimPrefix(path, "import/"))
 	case path == "query" && r.Method == "POST":
@@ -148,6 +151,8 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 		}
 		out, e := s.userList()
 		respond(w, e, out)
+	case path == "users/query" && r.Method == "POST":
+		s.queryUsers(w, r, a)
 	case path == "users" && r.Method == "POST":
 		if !s.Plugins.Permission(a.Plugin, "users:create") {
 			forbidden(w, "未获用户创建权限")
@@ -176,6 +181,15 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 		}
 		switch r.Method {
 		case "GET":
+			if len(parts) == 2 {
+				record, e := s.Store.Get(a.Plugin, collection, parts[1])
+				if e == sql.ErrNoRows {
+					plugin.Fail(w, 404, "记录不存在")
+					return
+				}
+				respond(w, e, record)
+				return
+			}
 			records, e := s.Store.List(a.Plugin, collection)
 			respond(w, e, records)
 		case "PUT":
@@ -187,14 +201,19 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 			if bad(w, plugin.Decode(r, &b)) {
 				return
 			}
-			if a.Plugin == "subscriptions" && collection == "public_routes" && plugin.Bool(b, "enabled") {
-				paths, err := plugin.PublicRoutePaths(b)
-				if err != nil || routeConflictsAdmin(paths, s.adminPath()) {
-					plugin.Fail(w, 400, "订阅地址无效或与后台入口冲突")
-					return
-				}
+			b["id"] = parts[1]
+			tx, e := s.Store.DB.Begin()
+			if bad(w, e) {
+				return
 			}
-			respond(w, s.Store.Put(a.Plugin, collection, parts[1], b), b)
+			defer tx.Rollback()
+			if bad(w, s.validatePublicRoute(tx, a.Plugin, collection, b)) {
+				return
+			}
+			if bad(w, store.Put(tx, a.Plugin, collection, parts[1], b)) {
+				return
+			}
+			respond(w, tx.Commit(), b)
 		case "DELETE":
 			if len(parts) != 2 {
 				plugin.Fail(w, 400, "缺少记录标识")

@@ -2,6 +2,13 @@ package plugin
 
 import "encoding/json"
 
+type ImportRule struct {
+	Collection string   `json:"collection"`
+	Required   []string `json:"required,omitempty"`
+	Unique     []string `json:"unique,omitempty"`
+	UserField  string   `json:"userField,omitempty"`
+}
+
 type ImportUser struct {
 	ID                string `json:"id"`
 	Email             string `json:"email"`

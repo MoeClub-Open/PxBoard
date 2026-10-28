@@ -5,27 +5,30 @@ const CoreVersion = "0.0.1"
 const CoreVersionEpoch = 1
 
 type Manifest struct {
-	ID             string            `json:"id"`
-	Name           string            `json:"name"`
-	Version        string            `json:"version"`
-	VersionEpoch   int               `json:"versionEpoch,omitempty"`
-	BuildRevision  int               `json:"buildRevision,omitempty"`
-	APIVersion     string            `json:"apiVersion"`
-	MinCoreVersion string            `json:"minCoreVersion,omitempty"`
-	Description    string            `json:"description"`
-	Category       string            `json:"category"`
-	Author         string            `json:"author"`
-	Homepage       string            `json:"homepage,omitempty"`
-	Dependencies   map[string]string `json:"dependencies"`
-	Permissions    []string          `json:"permissions"`
-	Events         []string          `json:"events,omitempty"`
-	Pages          []Page            `json:"pages"`
-	PublicPaths    []string          `json:"publicPaths,omitempty"`
-	Summary        bool              `json:"summary,omitempty"`
-	Auth           []AuthForm        `json:"auth,omitempty"`
-	Capabilities   []string          `json:"capabilities,omitempty"`
-	Artifacts      map[string]string `json:"artifacts,omitempty"`
-	MigrationGuard *MigrationGuard   `json:"migrationGuard,omitempty"`
+	ID                  string              `json:"id"`
+	Name                string              `json:"name"`
+	Version             string              `json:"version"`
+	VersionEpoch        int                 `json:"versionEpoch,omitempty"`
+	BuildRevision       int                 `json:"buildRevision,omitempty"`
+	APIVersion          string              `json:"apiVersion"`
+	MinCoreVersion      string              `json:"minCoreVersion,omitempty"`
+	Description         string              `json:"description"`
+	Category            string              `json:"category"`
+	Author              string              `json:"author"`
+	Homepage            string              `json:"homepage,omitempty"`
+	Dependencies        map[string]string   `json:"dependencies"`
+	Permissions         []string            `json:"permissions"`
+	Events              []string            `json:"events,omitempty"`
+	Pages               []Page              `json:"pages"`
+	PublicPaths         []string            `json:"publicPaths,omitempty"`
+	PublicRouteTarget   string              `json:"publicRouteTarget,omitempty"`
+	ImportRules         []ImportRule        `json:"importRules,omitempty"`
+	RequiredImportRules map[string][]string `json:"requiredImportRules,omitempty"`
+	Summary             bool                `json:"summary,omitempty"`
+	Auth                []AuthForm          `json:"auth,omitempty"`
+	Capabilities        []string            `json:"capabilities,omitempty"`
+	Artifacts           map[string]string   `json:"artifacts,omitempty"`
+	MigrationGuard      *MigrationGuard     `json:"migrationGuard,omitempty"`
 }
 type MigrationGuard struct {
 	BeforeVersion    string   `json:"beforeVersion,omitempty"`
@@ -89,6 +92,7 @@ type Field struct {
 	Required        bool                `json:"required,omitempty"`
 	Options         []Option            `json:"options,omitempty"`
 	OptionsEndpoint string              `json:"optionsEndpoint,omitempty"`
+	OptionsSearch   bool                `json:"optionsSearch,omitempty"`
 	Default         any                 `json:"default,omitempty"`
 	Hint            string              `json:"hint,omitempty"`
 	ReadOnly        bool                `json:"readOnly,omitempty"`
@@ -109,6 +113,7 @@ type Action struct {
 	When     map[string][]string `json:"when,omitempty"`
 }
 type Resource struct {
+	Paginated           bool     `json:"paginated,omitempty"`
 	Singleton           bool     `json:"singleton,omitempty"`
 	PollIntervalSeconds int      `json:"pollIntervalSeconds,omitempty"`
 	Key                 string   `json:"key"`
@@ -121,6 +126,7 @@ type Resource struct {
 	Deletable           bool     `json:"deletable,omitempty"`
 	Actions             []Action `json:"actions,omitempty"`
 	Empty               string   `json:"empty,omitempty"`
+	Renderer            string   `json:"renderer,omitempty"`
 }
 type Metric struct {
 	Label string `json:"label"`

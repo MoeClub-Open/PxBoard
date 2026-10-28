@@ -18,6 +18,13 @@ type Client struct {
 	HTTP           *http.Client
 }
 
+type APIError struct {
+	Status  int
+	Message string
+}
+
+func (e *APIError) Error() string { return fmt.Sprintf("%s (%d)", e.Message, e.Status) }
+
 func NewClient() *Client {
 	return &Client{os.Getenv("PX_CORE_URL"), os.Getenv("PX_PLUGIN_TOKEN"), &http.Client{Timeout: 20 * time.Second}}
 }
@@ -49,7 +56,7 @@ func (c *Client) Request(method, path string, body any, out any) error {
 			} `json:"error"`
 		}
 		_ = json.Unmarshal(data, &e)
-		return fmt.Errorf("%s (%d)", e.Error.Message, res.StatusCode)
+		return &APIError{Status: res.StatusCode, Message: e.Error.Message}
 	}
 	if out != nil {
 		var wrap struct {
@@ -66,6 +73,12 @@ func (c *Client) List(collection string) ([]Record, error) {
 	var out []Record
 	err := c.Request("GET", "/api/v1/runtime/data/"+url.PathEscape(collection), nil, &out)
 	return out, err
+}
+
+func (c *Client) Get(collection, id string) (Record, error) {
+	var record Record
+	err := c.Request("GET", "/api/v1/runtime/data/"+url.PathEscape(collection)+"/"+url.PathEscape(id), nil, &record)
+	return record, err
 }
 func (c *Client) Put(collection string, record Record) error {
 	if record["id"] == nil {

@@ -36,6 +36,9 @@ func (s *Server) batchRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 	defer stmt.Close()
 	now := store.Now()
 	for _, record := range b.Records {
+		if bad(w, s.validatePublicRoute(tx, actor.Plugin, b.Collection, record)) {
+			return
+		}
 		id := p.Text(record, "id")
 		if id == "" {
 			p.Fail(w, 400, "记录缺少标识")

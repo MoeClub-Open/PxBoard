@@ -7,6 +7,7 @@ import (
 	_ "modernc.org/sqlite"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -37,6 +38,9 @@ func Open(path string) (*Store, error) {
 	CREATE TABLE IF NOT EXISTS deliveries(event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,plugin_id TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,error TEXT NOT NULL DEFAULT '',next_at TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(event_id,plugin_id));
 	CREATE TABLE IF NOT EXISTS activity(id TEXT PRIMARY KEY,actor TEXT NOT NULL,action TEXT NOT NULL,target TEXT NOT NULL,created_at TEXT NOT NULL);
 	CREATE INDEX IF NOT EXISTS documents_lookup ON documents(namespace,collection,updated_at);
+	CREATE INDEX IF NOT EXISTS documents_user ON documents(namespace,collection,json_extract(data,'$.userId'));
+	CREATE INDEX IF NOT EXISTS documents_token ON documents(namespace,collection,json_extract(data,'$.token'));
+	CREATE INDEX IF NOT EXISTS documents_status ON documents(namespace,collection,json_extract(data,'$.status'));
 	CREATE INDEX IF NOT EXISTS deliveries_pending ON deliveries(done,next_at);`)
 	if err != nil {
 		db.Close()
@@ -99,13 +103,33 @@ func (s *Store) List(namespace, collection string) ([]plugin.Record, error) {
 	return out, rows.Err()
 }
 func (s *Store) Put(namespace, collection, id string, r plugin.Record) error {
+	return Put(s.DB, namespace, collection, id, r)
+}
+
+type Executor interface {
+	Exec(string, ...any) (sql.Result, error)
+}
+
+func Put(db Executor, namespace, collection, id string, r plugin.Record) error {
 	r["id"] = id
 	b, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
-	_, err = s.DB.Exec("INSERT INTO documents(namespace,collection,id,data,updated_at)VALUES(?,?,?,?,?) ON CONFLICT(namespace,collection,id)DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at", namespace, collection, id, string(b), Now())
+	_, err = db.Exec("INSERT INTO documents(namespace,collection,id,data,updated_at)VALUES(?,?,?,?,?) ON CONFLICT(namespace,collection,id)DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at", namespace, collection, id, string(b), Now())
 	return err
+}
+
+func (s *Store) Get(namespace, collection, id string) (plugin.Record, error) {
+	var raw string
+	if err := s.DB.QueryRow("SELECT data FROM documents WHERE namespace=? AND collection=? AND id=?", namespace, collection, id).Scan(&raw); err != nil {
+		return nil, err
+	}
+	var record plugin.Record
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.UseNumber()
+	err := decoder.Decode(&record)
+	return record, err
 }
 func (s *Store) Delete(namespace, collection, id string) error {
 	_, err := s.DB.Exec("DELETE FROM documents WHERE namespace=? AND collection=? AND id=?", namespace, collection, id)

@@ -42,28 +42,33 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
 			plugin.Fail(w, 400, "后台入口需为单级路径，例如 /manage，不能与现有页面冲突")
 			return
 		}
+		tx, err := s.Store.DB.Begin()
+		if bad(w, err) {
+			return
+		}
+		defer tx.Rollback()
 		if value, ok := b["adminPath"]; ok {
-			routes, err := s.Store.List("subscriptions", "public_routes")
+			routes, err := registeredRoutes(tx)
 			if bad(w, err) {
 				return
 			}
 			for _, route := range routes {
-				if !plugin.Bool(route, "enabled") {
-					continue
-				}
-				paths, err := plugin.PublicRoutePaths(route)
-				if err != nil || routeConflictsAdmin(paths, value) {
-					plugin.Fail(w, 400, "后台入口与订阅路径冲突")
+				if routeConflictsAdmin([]string{route.path}, value) {
+					plugin.Fail(w, 400, "后台入口与公开路由冲突")
 					return
 				}
 			}
 		}
 		for k, v := range b {
 			if slices.Contains(keys, k) {
-				if bad(w, s.Store.Set(k, v)) {
+				_, err := tx.Exec("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", k, v)
+				if bad(w, err) {
 					return
 				}
 			}
+		}
+		if bad(w, tx.Commit()) {
+			return
 		}
 		s.Store.Log(actor(r).Email, "settings.update", "")
 	}

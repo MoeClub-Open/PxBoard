@@ -58,6 +58,7 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /api/v1/mode", s.require(s.workspaceMode, true))
 	m.HandleFunc("POST /api/v1/mode", s.require(s.workspaceMode, true))
 	m.HandleFunc("GET /api/v1/users", s.require(s.users, true))
+	m.HandleFunc("GET /api/v1/users/options", s.require(s.userOptions, true))
 	m.HandleFunc("POST /api/v1/users", s.require(s.users, true))
 	m.HandleFunc("PATCH /api/v1/users/{id}", s.require(s.users, true))
 	m.HandleFunc("GET /api/v1/plugins", s.require(s.listPlugins, false))

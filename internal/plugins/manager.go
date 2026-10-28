@@ -64,16 +64,23 @@ func (m *Manager) List() ([]Installed, error) {
 	return out, err
 }
 func (m *Manager) Get(id string) (Installed, error) {
-	list, err := m.List()
-	if err != nil {
-		return Installed{}, err
+	var p Installed
+	var raw string
+	if err := m.Store.DB.QueryRow("SELECT manifest,enabled,source_id,installed_at FROM plugins WHERE id=?", id).Scan(&raw, &p.Enabled, &p.SourceID, &p.InstalledAt); err != nil {
+		return p, fmt.Errorf("插件未安装")
 	}
-	for _, p := range list {
-		if p.ID == id {
-			return p, nil
-		}
+	if err := json.Unmarshal([]byte(raw), &p.Manifest); err != nil {
+		return p, err
 	}
-	return Installed{}, fmt.Errorf("插件未安装")
+	m.mu.RLock()
+	proc := m.running[id]
+	m.mu.RUnlock()
+	if proc != nil {
+		p.Error = proc.Error()
+	} else if p.Enabled {
+		p.Error = "进程未运行，请重启"
+	}
+	return p, nil
 }
 func (m *Manager) binary(id, version string, epoch int) string {
 	n := "plugin"
