@@ -40,6 +40,8 @@ func main() {
 
 ## 插件声明
 
+声明式表单的 `type: "code"` 使用保留空白和换行的等宽文本编辑框，适用于 JSON/YAML 等配置，编辑弹窗自动扩宽。扩展请求通过 SDK 的 `Request.Host` 保留原始请求主机名，处理器可以读取 `http.Request.Host`；查询参数和其他请求头保持原有传递方式。
+
 开发构建支持以下扩展约定：
 
 - `publicRouteTarget` 指向插件已在 `publicPaths` 声明的公开目标。插件在自己的 `public_routes` 集合保存 `id`、`enabled`、`path` 和 `baseUrls`；例如目标 `/download`、路径 `/files` 会把 `/files/{value}` 转入插件 `/download/{value}`。地址可包含多个域名和路径前缀。核心检查保留路径、后台路径和其他路由的占用，转发保留查询参数与请求头。停用插件关闭转发；仍启用的路由配置保留占用，释放路径应关闭该配置。

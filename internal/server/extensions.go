@@ -94,7 +94,7 @@ func (s *Server) extension(w http.ResponseWriter, r *http.Request) {
 	headers := r.Header.Clone()
 	headers.Del("Authorization")
 	headers.Del("Cookie")
-	res, e := s.Plugins.Call(r.Context(), id, plugin.Request{Method: r.Method, Path: path, Body: body, Headers: headers, Actor: a})
+	res, e := s.Plugins.Call(r.Context(), id, plugin.Request{Method: r.Method, Path: path, Body: body, Headers: headers, Actor: a, Host: r.Host})
 	if e != nil {
 		plugin.Fail(w, 503, e.Error())
 		return

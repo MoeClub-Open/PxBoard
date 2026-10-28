@@ -101,6 +101,14 @@ function fieldItem(f: Field, symbol: string) {
     )
   let control = <Input disabled={f.readOnly} />
   if (f.type === 'password') control = <Input.Password autoComplete="new-password" />
+  else if (f.type === 'code')
+    control = (
+      <Input.TextArea
+        autoSize={{ minRows: 16, maxRows: 30 }}
+        spellCheck={false}
+        style={{ fontFamily: 'monospace', fontSize: 13 }}
+      />
+    )
   else if (f.type === 'textarea')
     control = <Input.TextArea autoSize={{ minRows: 4, maxRows: 14 }} />
   else if (['number', 'money', 'gib'].includes(f.type || ''))

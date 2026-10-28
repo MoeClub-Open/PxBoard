@@ -88,6 +88,9 @@ func dispatch(handler http.Handler, req Request) (res Response) {
 		}
 	}()
 	r := httptest.NewRequest(req.Method, "http://plugin"+req.Path, strings.NewReader(string(req.Body)))
+	if req.Host != "" {
+		r.Host = req.Host
+	}
 	r.Header = req.Headers
 	if r.Header == nil {
 		r.Header = http.Header{}

@@ -71,6 +71,7 @@ type Actor struct {
 	Scope  string `json:"scope,omitempty"`
 }
 type Request struct {
+	Host    string              `json:"host,omitempty"`
 	ID      string              `json:"id"`
 	Method  string              `json:"method"`
 	Path    string              `json:"path"`

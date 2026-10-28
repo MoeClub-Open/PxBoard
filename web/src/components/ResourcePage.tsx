@@ -637,7 +637,13 @@ function ResourceTable({
         okText={editor?.action?.label || (editor?.row ? '保存' : resource.createLabel || '确定')}
         cancelText="取消"
         destroyOnHidden
-        width={fields.some((field) => field.type === 'periods') ? 760 : 560}
+        width={
+          fields.some((field) => field.type === 'code')
+            ? 960
+            : fields.some((field) => field.type === 'periods')
+              ? 760
+              : 560
+        }
       >
         <Form form={form} layout="vertical" requiredMark="optional" className="editor-form">
           <Fields fields={fields} row={editor?.row} />
