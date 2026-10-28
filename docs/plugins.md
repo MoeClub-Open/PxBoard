@@ -47,7 +47,7 @@ func main() {
 - 资源设置 `paginated: true` 时，前端以 `limit`、`offset`、`q` 读取 `{items,total}`。插件负责限定查询范围及可搜索字段；普通用户的所有权筛选必须在分页前完成。导出按钮明确导出当前页。
 - 官方业务资源可以设置 `renderer`，由主项目 `web/src/official/` 中的本地界面注册实现。第三方插件仍可使用通用资源和字段，不在线执行远程界面代码。
 
-SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等值及 `in` 过滤，`UsersByID` / `UsersByEmail` 只读取相关用户。用户选择框可声明 `optionsSearch: true`，用 `q` 搜索，并通过 `id` 保留当前选择。通用业务查询不应先读取全部用户或记录再筛选。
+SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等值及 `in` 过滤，`UsersByID` / `UsersByEmail` 只读取相关用户。`searchUserField` 指定记录关联用户的字段，让搜索同时匹配该用户的邮箱和姓名，需要 `users:read` 权限，仍与原记录范围筛选共同生效。用户选择框可声明 `optionsSearch: true`，用 `q` 搜索，并通过 `id` 保留当前选择。通用业务查询不应先读取全部用户或记录再筛选。
 
 `Client.Commit(operationId,writes,events...)` 在同一事务中保存调用插件自己的记录并登记事件。每条写入指定 `collection` 和包含 `id` 的 `record`；每条事件指定 `type` 和 `data`。需要 `storage:own` 与各项 `emit:<type>` 权限，重复的操作编号不会重放写入或事件。跨插件写入不在此接口的授权范围内，消费者仍须防止重复处理。
 

@@ -6,12 +6,13 @@ type Filter struct {
 	Op    string `json:"op,omitempty"`
 }
 type Query struct {
-	Search       string   `json:"search,omitempty"`
-	SearchFields []string `json:"searchFields,omitempty"`
-	Collection   string   `json:"collection"`
-	Filters      []Filter `json:"filters,omitempty"`
-	Offset       int      `json:"offset"`
-	Limit        int      `json:"limit"`
+	SearchUserField string   `json:"searchUserField,omitempty"`
+	Search          string   `json:"search,omitempty"`
+	SearchFields    []string `json:"searchFields,omitempty"`
+	Collection      string   `json:"collection"`
+	Filters         []Filter `json:"filters,omitempty"`
+	Offset          int      `json:"offset"`
+	Limit           int      `json:"limit"`
 }
 type QueryResult struct {
 	Items []Record `json:"items"`

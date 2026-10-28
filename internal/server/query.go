@@ -52,7 +52,7 @@ func (s *Server) queryRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 			return
 		}
 	}
-	if b.Search != "" && len(b.SearchFields) > 0 {
+	if b.Search != "" && (len(b.SearchFields) > 0 || b.SearchUserField != "") {
 		fields := []string{}
 		for _, field := range b.SearchFields {
 			if !queryField.MatchString(field) {
@@ -61,6 +61,18 @@ func (s *Server) queryRuntime(w http.ResponseWriter, r *http.Request, actor p.Ac
 			}
 			fields = append(fields, "CAST(json_extract(data,'$."+field+"') AS TEXT) LIKE ?")
 			args = append(args, "%"+b.Search+"%")
+		}
+		if b.SearchUserField != "" {
+			if !queryField.MatchString(b.SearchUserField) {
+				p.Fail(w, 400, "用户关联字段无效")
+				return
+			}
+			if !s.Plugins.Permission(actor.Plugin, "users:read") {
+				forbidden(w, "未获用户读取权限")
+				return
+			}
+			fields = append(fields, "json_extract(data,'$."+b.SearchUserField+"') IN (SELECT id FROM users WHERE email LIKE ? OR name LIKE ?)")
+			args = append(args, "%"+b.Search+"%", "%"+b.Search+"%")
 		}
 		where += " AND (" + strings.Join(fields, " OR ") + ")"
 	}

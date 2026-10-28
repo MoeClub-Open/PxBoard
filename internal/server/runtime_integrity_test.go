@@ -93,3 +93,30 @@ func TestGenericRoutesAndImportRules(t *testing.T) {
 		t.Fatal("duplicate route accepted")
 	}
 }
+
+func TestUserSearchKeepsRecordScope(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "data.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.DB.Close()
+	manifest, _ := json.Marshal(p.Manifest{ID: "reader", Permissions: []string{"storage:own", "users:read"}})
+	if _, err := db.DB.Exec(`INSERT INTO plugins VALUES('reader',?,1,'0.0.1','local','now');INSERT INTO users VALUES('user','find@example.test','Find','unused','member','active','now')`, string(manifest)); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"allowed", "other"} {
+		if err := db.Put("reader", "things", id, p.Record{"userId": "user", "scope": id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	server := &Server{Store: db, Plugins: plugins.New(db, t.TempDir(), "")}
+	body := `{"collection":"things","limit":12,"search":"find@","searchFields":["name"],"searchUserField":"userId","filters":[{"field":"scope","value":"allowed"}]}`
+	response := httptest.NewRecorder()
+	server.queryRuntime(response, httptest.NewRequest("POST", "/", strings.NewReader(body)), p.Actor{Role: "service", Plugin: "reader"})
+	var result struct {
+		Data p.QueryResult `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil || response.Code != 200 || result.Data.Total != 1 || p.Text(result.Data.Items[0], "id") != "allowed" {
+		t.Fatal("user search bypassed scope or failed", response.Body.String(), err)
+	}
+}
