@@ -188,11 +188,15 @@ export default function Checkout({
             label: '商品',
             children: order?.planName || intent.plan?.name || '余额充值',
           },
-          {
-            key: 'original',
-            label: '套餐原价',
-            children: money(Number(breakdown?.originalAmount ?? period?.price ?? amount)),
-          },
+          ...(!recharge && (Number(breakdown?.discount) > 0 || Number(breakdown?.surplusAmount) > 0)
+            ? [
+                {
+                  key: 'original',
+                  label: '套餐原价',
+                  children: money(Number(breakdown?.originalAmount ?? period?.price ?? amount)),
+                },
+              ]
+            : []),
           ...(Number(breakdown?.discount) > 0
             ? [
                 {

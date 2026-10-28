@@ -10,11 +10,7 @@ export default function ReminderPreferences() {
     try {
       await api('/extensions/access/preferences', {
         method: 'PATCH',
-        body: {
-          expireReminder: data?.expireReminder,
-          trafficReminder: data?.trafficReminder,
-          [key]: value,
-        },
+        body: { [key]: value },
       })
       reload()
     } catch (e) {
