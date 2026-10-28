@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Button } from 'antd'
 import type { Field, Resource, Row } from '../api'
 import NodeAddresses from '../components/NodeAddresses'
+import MailTemplateEditor from '../components/MailTemplateEditor'
 
 // Official business presentations are selected by the resource declaration.
 export function useResourcePresentation(
@@ -13,9 +14,15 @@ export function useResourcePresentation(
 ) {
   const [parent, setParent] = useState<Row | null>(null)
   const addresses = resource.renderer === 'node-connections'
+  const mailTemplates = resource.renderer === 'mail-templates'
   const grouped = addresses || resource.renderer === 'node-status'
   const ids = new Set(data.map((row) => row.id))
   return {
+    openEditor: (row: Row) => {
+      if (!mailTemplates) return false
+      setParent(row)
+      return true
+    },
     rows: data.filter(
       (row) => !grouped || !row.parentId || !ids.has(row.parentId) || (addresses && row.enabled),
     ),
@@ -62,7 +69,14 @@ export function useResourcePresentation(
       }
     },
     overlay:
-      addresses && parent ? (
+      mailTemplates && parent ? (
+        <MailTemplateEditor
+          template={parent}
+          endpoint={endpoint}
+          onClose={() => setParent(null)}
+          onSaved={reload}
+        />
+      ) : addresses && parent ? (
         <NodeAddresses
           parent={parent}
           nodes={data}

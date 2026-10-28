@@ -369,6 +369,7 @@ function ResourceTable({
   )
   const total = Array.isArray(data) ? rows.length : data?.total || 0
   function openEditor(row?: Row, action?: Action) {
+    if (row && !action && presentation.openEditor(row)) return
     const fs = action?.fields || resource.fields || []
     form.resetFields()
     form.setFieldsValue(formValues(fs, action ? undefined : row))
