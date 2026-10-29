@@ -147,13 +147,17 @@ func (s *Server) Handler() http.Handler {
 		m.ServeHTTP(w, r)
 	})
 }
-func (s *Server) authenticate(r *http.Request) (plugin.Actor, bool) {
+func requestToken(r *http.Request) string {
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if token == "" {
 		if c, e := r.Cookie("px_session"); e == nil {
 			token = c.Value
 		}
 	}
+	return token
+}
+func (s *Server) authenticate(r *http.Request) (plugin.Actor, bool) {
+	token := requestToken(r)
 	if token != "" {
 		if id, ok := s.Plugins.Authenticate(token); ok {
 			return plugin.Actor{Role: "service", Plugin: id}, true

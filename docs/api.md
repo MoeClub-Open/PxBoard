@@ -100,7 +100,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 `POST /extensions/redeem/redeem` 需要登录，接收 `{"code":"兑换码","requestId":"本次提交编号"}`。完成返回 `status=redeemed`；已登记但暂未发放时返回 HTTP `202`、`status=pending`，重试保留原 `requestId`，不能更换编号当作新兑换。每账号限兑一次的码可以省略此编号，允许同账号多次兑换时必须提供。`GET /extensions/redeem/claims` 对普通用户仅返回本人记录，管理员使用 `?mine=1` 查看本人记录。
 
-兑换码管理使用 `GET/POST /extensions/redeem/codes` 与 `PATCH/DELETE /extensions/redeem/codes/{id}`；已有用量的码不能删除，可停用。访问权益、流量及期限奖励不依赖商业插件，余额奖励需要商业钱包。旧 `sharing` 插件及商业插件内的注册、充值卡、推广和提现接口不再提供；旧数据通过一次性升级工具搬移，见 [升级说明](deployment.md#升级到-040)。
+兑换码管理使用 `GET/POST /extensions/redeem/codes` 与 `PATCH/DELETE /extensions/redeem/codes/{id}`；已有用量的码不能删除，可停用。访问权益、流量及期限奖励不依赖商业插件，余额奖励需要商业钱包。旧 `sharing` 插件及商业插件内的注册、充值卡、推广和提现接口不再提供；旧数据通过一次性升级工具搬移，见 [升级说明](deployment.md#拆分旧插件数据)。
 
 ## 模式安装
 

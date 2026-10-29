@@ -57,9 +57,9 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 {
   "id": "example-plugin",
   "name": "示例插件",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "apiVersion": "1.0",
-  "minCoreVersion": "0.3.0",
+  "minCoreVersion": "1!0.0.1",
   "description": "示例资源管理",
   "category": "工具",
   "author": "Example",
@@ -86,7 +86,7 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 | `buildRevision` | 可选的非负整数，同版本的发布批次；缺省为 0 |
 | `apiVersion`   | 当前必须为 `1.0`                                       |
 | `minCoreVersion` | 可选的最低核心版本，例如 `1!0.0.1`；安装和启用前检查 |
-| `dependencies` | 插件 ID 到最低版本的映射，例如 `{"access": ">=1.2.0"}` |
+| `dependencies` | 插件 ID 到最低版本的映射，例如 `{"access": ">=1!0.0.1"}` |
 | `permissions`  | 核心运行接口所需权限                                   |
 | `events`       | 订阅的事件类型                                         |
 | `pages`        | 管理或用户资源页面                                     |
@@ -111,11 +111,11 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 
 每个页面提供 `GET /ui/{pageId}`，返回 `p.View`。资源通过 `endpoint`、`columns`、`fields`、`createLabel`、`editable`、`deletable`、`actions` 和可选刷新间隔声明行为。
 
-核心 `0.4.0` 支持页面声明 `capability`，例如节点用户页设置 `"capability": "portal.status"`。核心向插件内部 `GET /_capabilities` 查询该布尔值，并从普通用户的插件列表中移除关闭的页面，同时拒绝直接访问对应 `/ui/{pageId}`。管理员保留声明给管理员的管理与监控页面。插件还应在业务接口检查开关；导航展示不能代替接口权限。
+核心支持页面声明 `capability`，例如节点用户页设置 `"capability": "portal.status"`。核心向插件内部 `GET /_capabilities` 查询该布尔值，并从普通用户的插件列表中移除关闭的页面，同时拒绝直接访问对应 `/ui/{pageId}`。管理员保留声明给管理员的管理与监控页面。插件还应在业务接口检查开关；导航展示不能代替接口权限。
 
 页面的 `surface` 指定展示位置：`admin` 为管理后台，`portal` 为用户前台，省略则两边均可展示。后台插件页面位于 `/admin/p/{pluginId}/{pageId}`，前台扩展页面位于 `/user/extensions/{pluginId}/{pageId}`。导航和前端直接路由都遵循此声明；访问权限仍由 `roles`、`capability` 和插件业务接口共同检查。例如兑换码管理页使用 `surface: "admin"`，用户兑换页使用 `surface: "portal"`，管理员可在用户前台预览兑换功能，后台不重复展示兑换入口。
 
-核心 `0.4.10` 支持后台插件页面声明 `shared: {"id": "migration", "title": "数据迁移", "selectorLabel": "来源面板"}`。相同 `id` 的已启用页面合并为一个导航入口，页面的 `title` 作为选择项；选中后仍由相应插件提供页面、接口和数据，插件停用或无访问权限时不会出现在选择中。`selectorLabel` 可省略，默认显示“选择类型”；同组插件应使用一致的标题和选择标签。原页面地址会跳转到对应的共享入口。共享声明仅影响后台展示，不赋予额外权限。
+核心支持后台插件页面声明 `shared: {"id": "migration", "title": "数据迁移", "selectorLabel": "来源面板"}`。相同 `id` 的已启用页面合并为一个导航入口，页面的 `title` 作为选择项；选中后仍由相应插件提供页面、接口和数据，插件停用或无访问权限时不会出现在选择中。`selectorLabel` 可省略，默认显示“选择类型”；同组插件应使用一致的标题和选择标签。原页面地址会跳转到对应的共享入口。共享声明仅影响后台展示，不赋予额外权限。
 
 | 操作     | 默认请求                    |
 | -------- | --------------------------- |
@@ -278,13 +278,13 @@ SDK 提供 `List`、`Put`、`Delete`、`Increment`、`Call`、`Users`、`Emit` �
     {
       "id": "example-plugin",
       "name": "示例插件",
-      "version": "1.0.0",
+      "version": "0.0.1",
       "apiVersion": "1.0",
       "dependencies": {},
       "permissions": ["storage:own"],
       "pages": [],
       "artifacts": {
-        "linux-amd64": "packages/example-plugin-1.0.0-linux-amd64"
+        "linux-amd64": "packages/example-plugin-0.0.1-linux-amd64"
       },
       "signatures": { "linux-amd64": "Base64 Ed25519 签名" }
     }
@@ -346,8 +346,8 @@ pxboard -data data \
 
 ## 人机验证插件
 
-核心 0.4.5 支持声明 `security.challenge` 的可选插件，最多启用一个。核心向插件内部 `GET /_challenge` 请求公开配置，通过 `POST /_challenge/verify` 传递 `action`（`login`、`register`、`reset`、`oauth`）及 `token`。插件应仅接受核心服务身份，按配置决定哪些场景需要验证，向服务商完成服务端核验；未通过返回 400，服务不可用返回 503。核心不将服务端密钥和验证凭证写入日志。插件进程不可用时受保护入口拒绝请求。
+核心支持声明 `security.challenge` 的可选插件，最多启用一个。核心向插件内部 `GET /_challenge` 请求公开配置，通过 `POST /_challenge/verify` 传递 `action`（`login`、`register`、`reset`、`oauth`）及 `token`。插件应仅接受核心服务身份，按配置决定哪些场景需要验证，向服务商完成服务端核验；未通过返回 400，服务不可用返回 503。核心不将服务端密钥和验证凭证写入日志。插件进程不可用时受保护入口拒绝请求。
 
 核心对自身密码登录和密码找回、插件 `auth` 声明的注册表单，以及声明 `auth:login` 权限的插件的公开 `POST /authorize` 执行验证。身份插件应使用该入口发起授权并通过 `purpose=bind` 区分已登录的绑定操作；普通登录和第三方注册发送 `purpose=login`。授权前端通过 `challengeToken` 传递凭证。此机制不会代替插件自身的权限校验。停用验证插件不改动已有账户或注册设置。
 
-核心 `0.4.7` 允许具有 `challenge:verify` 权限的插件复用订阅人机验证。`GET /api/v1/runtime/challenge` 返回公开验证配置；`POST /api/v1/runtime/challenge/verify` 接收 `action: "subscription"` 和一次性 `token`，成功返回 `data: true`。这两个接口要求当前验证服务已启用并声明 `security.challenge.subscription` 能力；服务缺失、停用或异常时返回 503，验证未通过时返回 400。调用插件必须自行检查当前用户的权限，不能将服务端密钥或验证凭证保存到客户端订阅地址。
+核心允许具有 `challenge:verify` 权限的插件复用订阅人机验证。`GET /api/v1/runtime/challenge` 返回公开验证配置；`POST /api/v1/runtime/challenge/verify` 接收 `action: "subscription"` 和一次性 `token`，成功返回 `data: true`。这两个接口要求当前验证服务已启用并声明 `security.challenge.subscription` 能力；服务缺失、停用或异常时返回 503，验证未通过时返回 400。调用插件必须自行检查当前用户的权限，不能将服务端密钥或验证凭证保存到客户端订阅地址。

@@ -21,8 +21,7 @@
 - `GET /api/v1/me`：当前身份。
 - `GET /api/v1/plugins`：按已启用插件显示可用功能。
 - `GET /api/v1/extensions/access/accounts?mine=1`：当前用户的权益、流量、期限和有效状态。管理员客户端也须带 `mine=1`。
-- `GET /api/v1/extensions/subscriptions/configuration?format=clash`：当前账号的完整 Mihomo 配置与分流规则。
-- `GET /api/v1/extensions/subscriptions/configuration?format=aerion`：适合 Aerion 的 JSON 节点列表，包含协议、地址、端口和连接参数；Mieru 不经过 sing-box 转换。
+- `GET /api/v1/extensions/subscriptions/configuration?format=clash`：当前账号的完整 Mihomo 配置；客户端从同一份配置读取节点和分流规则，无需重复请求专用节点格式。
 
 配置接口始终要求身份认证，只返回当前账号有权使用的节点，同时检查父节点权限、期限、配额和暂停状态。此接口不依赖公开订阅令牌，不更改用户已有的订阅链接、验证状态或客户端绑定。公开订阅链接继续遵守原有的人机验证、浏览器隐藏和绑定设置。
 

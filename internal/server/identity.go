@@ -276,22 +276,16 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		plugin.Fail(w, 401, "邮箱或密码不正确")
 		return
 	}
-	token := plugin.ID() + plugin.ID()
-	_, e = s.Store.DB.Exec("INSERT INTO sessions VALUES(?,?,?)", token, a.ID, time.Now().Add(7*24*time.Hour).UTC().Format(time.RFC3339))
+	token, _, e := store.CreateSession(s.Store.DB, a.ID)
 	if bad(w, e) {
 		return
 	}
-	s.cookie(w, token, 7*24*3600)
+	s.cookie(w, token, store.SessionMaxAge)
 	s.Store.Log(a.Email, "auth.login", a.ID)
 	plugin.JSON(w, a)
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if token == "" {
-		if c, e := r.Cookie("px_session"); e == nil {
-			token = c.Value
-		}
-	}
+	token := requestToken(r)
 	_, _ = s.Store.DB.Exec("DELETE FROM sessions WHERE token=?", token)
 	s.cookie(w, "", -1)
 	plugin.JSON(w, true)

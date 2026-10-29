@@ -31,11 +31,8 @@ func (s *Server) nativeRequest(w http.ResponseWriter, r *http.Request) {
 		p.Fail(w, 400, "客户端名称或授权校验值无效")
 		return
 	}
-	base, ok := publicOrigin(s.PublicURL)
-	if !ok {
-		base, ok = publicOrigin(s.Store.Setting("publicUrl", ""))
-	}
-	if !ok {
+	base := s.publicURL()
+	if base == "" {
 		p.Fail(w, 503, "尚未设置站点公开地址")
 		return
 	}
@@ -94,11 +91,8 @@ func (s *Server) browserLink(w http.ResponseWriter, r *http.Request) {
 		p.Fail(w, 400, "只能打开用户前台")
 		return
 	}
-	base, ok := publicOrigin(s.PublicURL)
-	if !ok {
-		base, ok = publicOrigin(s.Store.Setting("publicUrl", ""))
-	}
-	if !ok {
+	base := s.publicURL()
+	if base == "" {
 		p.Fail(w, 503, "尚未设置站点公开地址")
 		return
 	}
@@ -146,9 +140,7 @@ func (s *Server) exchangeNativeAuthorization(w http.ResponseWriter, r *http.Requ
 		p.Fail(w, 403, "账号已停用")
 		return
 	}
-	token := p.ID() + p.ID()
-	expires := time.Now().Add(7 * 24 * time.Hour).UTC().Format(time.RFC3339)
-	_, err = tx.Exec("INSERT INTO sessions VALUES(?,?,?)", token, user.ID, expires)
+	token, expires, err := store.CreateSession(tx, user.ID)
 	if bad(w, err) {
 		return
 	}
@@ -157,7 +149,7 @@ func (s *Server) exchangeNativeAuthorization(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if browser {
-		s.cookie(w, token, 7*24*3600)
+		s.cookie(w, token, store.SessionMaxAge)
 		p.JSON(w, p.Record{"redirectPath": flow.RedirectPath})
 	} else {
 		s.Store.Log(user.Email, "auth.native-login", flow.Name)

@@ -110,6 +110,15 @@ type Executor interface {
 	Exec(string, ...any) (sql.Result, error)
 }
 
+const SessionMaxAge = 7 * 24 * 3600
+
+func CreateSession(db Executor, userID string) (token, expires string, err error) {
+	token = plugin.ID() + plugin.ID()
+	expires = time.Now().Add(SessionMaxAge * time.Second).UTC().Format(time.RFC3339)
+	_, err = db.Exec("INSERT INTO sessions(token,user_id,expires_at) VALUES(?,?,?)", token, userID, expires)
+	return
+}
+
 func Put(db Executor, namespace, collection, id string, r plugin.Record) error {
 	r["id"] = id
 	b, err := json.Marshal(r)

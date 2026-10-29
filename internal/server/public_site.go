@@ -31,12 +31,17 @@ func publicOrigin(value string) (string, bool) {
 	return u.Scheme + "://" + u.Host, true
 }
 
-func (s *Server) siteDocument(r *http.Request, content bool) publicDocument {
+func (s *Server) publicURL() string {
 	base := s.PublicURL
 	if base == "" {
 		base = s.Store.Setting("publicUrl", "")
 	}
 	base, _ = publicOrigin(base) // Never build canonical URLs from an untrusted Host header.
+	return base
+}
+
+func (s *Server) siteDocument(r *http.Request, content bool) publicDocument {
+	base := s.publicURL()
 	doc := publicDocument{Mode: s.Store.Setting("mode", "personal"), Initialized: s.initialized(), BaseURL: base}
 	doc.Site = p.PublicSite{Name: s.Store.Setting("name", "PxBoard"), Title: s.Store.Setting("name", "PxBoard")}
 	if !doc.Initialized {

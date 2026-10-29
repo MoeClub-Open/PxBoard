@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MoeClub-Open/PxBoard/internal/store"
 	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
 )
 
@@ -154,8 +155,7 @@ func (s *Server) completeExternalLogin(w http.ResponseWriter, r *http.Request) {
 		plugin.Fail(w, 400, "登录跳转地址无效")
 		return
 	}
-	token := plugin.ID() + plugin.ID()
-	_, e = tx.Exec("INSERT INTO sessions VALUES(?,?,?)", token, user.ID, time.Now().Add(7*24*time.Hour).UTC().Format(time.RFC3339))
+	token, _, e := store.CreateSession(tx, user.ID)
 	if bad(w, e) {
 		return
 	}
@@ -163,7 +163,7 @@ func (s *Server) completeExternalLogin(w http.ResponseWriter, r *http.Request) {
 	if bad(w, e) || bad(w, tx.Commit()) {
 		return
 	}
-	s.cookie(w, token, 7*24*3600)
+	s.cookie(w, token, store.SessionMaxAge)
 	s.Store.Log(user.Email, "auth.external-login", grant.Plugin)
 	plugin.JSON(w, plugin.Record{"user": user, "redirectPath": redirect})
 }
