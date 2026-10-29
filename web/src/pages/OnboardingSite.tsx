@@ -19,6 +19,7 @@ import {
 import { api, errorText } from '../api'
 import type { Plugin, Row, User } from '../api'
 import { adminRoot } from '../adminPath'
+import { availablePeriods } from '../planPeriods'
 
 type Check = { key: string; label: string; ready: boolean; error?: string; path: string }
 export default function OnboardingSite({ onReady }: { onReady: () => Promise<void> }) {
@@ -81,9 +82,16 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
             {
               key: 'commerce',
               label: '上架套餐',
-              endpoint: '/extensions/commerce/public/plans',
+              endpoint: '/extensions/commerce/plans',
               path: '/p/commerce/plans',
-              ready: (rows: Row[]) => rows.length > 0,
+              ready: (rows: Row[]) =>
+                rows.some(
+                  (row) =>
+                    row.enabled &&
+                    row.visible !== false &&
+                    !row.reviewRequired &&
+                    availablePeriods(row).length > 0,
+                ),
             },
             {
               key: 'payments',

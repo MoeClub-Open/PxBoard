@@ -80,7 +80,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 | `access` | `GET/POST /accounts`、`PATCH /accounts/{id}`、`POST /accounts/{id}/reset`、`POST /accounts/{id}/suspend` |
 | `subscriptions` | `GET/POST /links`、`POST /links/{id}/rotate`、`POST /links/{id}/verify`；公开订阅 `GET /s/{token}` 根据客户端选择格式，也可显式指定 `format=clash\|sing-box\|uri` |
 | `redeem` | 管理员 `/codes`、`/codes/{id}`；用户 `POST /redeem`、`GET /claims` |
-| `commerce` | `/plans`、`/coupons`；`GET/POST /orders`、`POST /orders/{id}/{action}`；`GET/POST /ledger`；公开 `GET /public/plans` |
+| `commerce` | `/plans`、`/coupons`；`GET/POST /orders`、`POST /orders/{id}/{action}`；`GET/POST /ledger` |
 | `affiliate` | `GET /summary`、`GET /commissions`、`GET/POST /withdrawals`、`POST /withdrawals/{id}/{action}`；管理员 `/profiles`、`GET/PATCH /settings` |
 | `payments` | `/channels`、`POST /checkout`、`GET /transactions`、`POST /transactions/{id}/resolve`；公开 `GET/POST /webhooks/{channelId}` |
 | `audit` | `/rules`、`/logs` |
@@ -88,7 +88,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 | `notifications` | `/mail`、`/notifications` |
 | `oauth` | 公开 `GET /providers`、`POST /authorize` 与授权回调；当前用户 `/bindings`；管理员 `/settings/providers`、`POST /bindings/import` |
 
-用户前台读取访问账户、订阅、订单、账本、工单和推广记录时使用 `?mine=1`，管理员也只获取自己的记录；省略该参数时管理员可在后台管理全部记录。金额显示设置由商业插件的公开 `GET /extensions/commerce/public/currency` 和管理员 `GET/PATCH /extensions/commerce/currency` 提供；它只改变显示，不进行汇率换算或更改支付渠道结算币种。交易和账本只开放对应业务操作，用户只读取自己的订单、账本、订阅、工单和兑换记录。已登录用户的套餐列表按购买或续费资格筛选，公开套餐只展示已上架内容。支付渠道对普通用户只展示名称、标识和提供方，服务端密钥不会返回。
+用户前台读取访问账户、订阅、订单、账本、工单和推广记录时使用 `?mine=1`，管理员也只获取自己的记录；省略该参数时管理员可在后台管理全部记录。金额显示设置由商业插件的公开 `GET /extensions/commerce/public/currency` 和管理员 `GET/PATCH /extensions/commerce/currency` 提供；它只改变显示，不进行汇率换算或更改支付渠道结算币种。交易和账本只开放对应业务操作，用户只读取自己的订单、账本、订阅、工单和兑换记录。已登录用户的套餐列表按购买或续费资格筛选，匿名用户不能获取套餐目录。支付渠道对普通用户只展示名称、标识和提供方，服务端密钥不会返回。
 
 当前配置与业务列表返回完整集合，界面进行分页与筛选；操作记录和后台任务各返回最近 200 条。高数据量外部集成应增加面向所需资源的服务端分页，不能把界面分页误解为数据库分页。
 
@@ -112,7 +112,7 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 ## 用户前台接口
 
-公开套餐为 `GET /extensions/commerce/public/plans`，返回已上架套餐及其可选周期的展示字段，不返回原始迁移快照或内部限制。每个 `periods` 项包含标识、价格、类型和期限；期限单位 `durationUnit` 为 `day`、`month` 或 `permanent`，按月续费按日历月计算。`quotaGiB` 为周期额度，`unlimited` 明确决定是否不限流量；额度为零不会自动变成不限流量。
+套餐使用需登录的 `GET /extensions/commerce/plans?scope=mine`，按当前用户的购买与续费资格返回，匿名目录接口已移除。每个 `periods` 项包含标识、价格、类型和期限；期限单位 `durationUnit` 为 `day`、`month` 或 `permanent`，按月续费按日历月计算。`quotaGiB` 为周期额度，`unlimited` 明确决定是否不限流量；额度为零不会自动变成不限流量。
 
 `POST /extensions/commerce/orders` 创建订单，购买套餐时通过 `planId` 和 `periodId` 指定套餐与周期；订单保存选中周期的价格及权益快照。`POST /extensions/commerce/orders/{id}/{action}` 支持 `pay/cancel/confirm/refund`，其中人工确认和退回余额需要管理员。创建订单和提现申请可携带 `requestId`，同一用户重试相同内容时返回原记录，用同一标识改动内容返回冲突。客户端在用户重新确认另一笔操作时生成新标识，网络失败重试保留原标识。支付跳转或回跳参数不代表到账，须查询服务端订单状态。
 

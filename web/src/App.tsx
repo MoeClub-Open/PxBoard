@@ -118,7 +118,14 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
     location.pathname === '/' &&
     (publicDocument?.mode === 'business' || site?.mode === 'business')
   )
-    return <Storefront user={me} registrationOpen={!!site?.registration?.length} />
+    return (
+      <Storefront
+        user={me}
+        registrationOpen={!!site?.registration?.length}
+        dark={dark}
+        toggleTheme={toggleTheme}
+      />
+    )
   if (loading)
     return (
       <div className="full-loading">
@@ -150,7 +157,16 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
     return (
       <Routes>
         {site?.mode === 'business' && site.extensions.includes('commerce') && (
-          <Route path="/" element={<Storefront registrationOpen={!!site.registration?.length} />} />
+          <Route
+            path="/"
+            element={
+              <Storefront
+                registrationOpen={!!site.registration?.length}
+                dark={dark}
+                toggleTheme={toggleTheme}
+              />
+            }
+          />
         )}
         <Route path="/setup" element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Register />} />
