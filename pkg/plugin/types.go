@@ -27,6 +27,7 @@ type Manifest struct {
 	Summary             bool                `json:"summary,omitempty"`
 	Auth                []AuthForm          `json:"auth,omitempty"`
 	Capabilities        []string            `json:"capabilities,omitempty"`
+	Site                *SiteProvider       `json:"site,omitempty"`
 	Artifacts           map[string]string   `json:"artifacts,omitempty"`
 	MigrationGuard      *MigrationGuard     `json:"migrationGuard,omitempty"`
 }

@@ -11,6 +11,9 @@ import (
 // A plugin may create its initial user record in the same transaction as the
 // account, so an interrupted registration cannot leave an unusable account.
 func (s *Server) createRuntimeUser(pluginID string, b p.Record) (string, error) {
+	if !s.onboardingComplete() {
+		return "", problem("站点尚未完成初始化")
+	}
 	initial, provided := b["initialRecord"]
 	if !provided {
 		return s.createUser(b)

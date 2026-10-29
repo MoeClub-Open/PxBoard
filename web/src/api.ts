@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 export type Row = Record<string, any>
 export interface User {
+  needsOnboarding?: boolean
   id: string
   email: string
   name: string

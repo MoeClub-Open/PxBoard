@@ -41,6 +41,10 @@ func (s *Server) Handler() http.Handler {
 	})
 	m.HandleFunc("GET /api/v1/setup", s.setupStatus)
 	m.HandleFunc("POST /api/v1/setup", s.setup)
+	m.HandleFunc("GET /api/v1/site", s.publicSite)
+	m.HandleFunc("POST /api/v1/onboarding/complete", s.require(s.completeOnboarding, true))
+	m.HandleFunc("GET /robots.txt", s.robots)
+	m.HandleFunc("GET /sitemap.xml", s.sitemap)
 	m.HandleFunc("GET /api/v1/auth/challenge", s.challengeConfig)
 	m.HandleFunc("POST /api/v1/auth/login", s.login)
 	m.HandleFunc("POST /api/v1/auth/external/complete", s.completeExternalLogin)
@@ -81,7 +85,7 @@ func (s *Server) Handler() http.Handler {
 		if s.publicRoute(w, r) {
 			return
 		}
-		if r.Method != "GET" {
+		if r.Method != "GET" && r.Method != "HEAD" {
 			http.NotFound(w, r)
 			return
 		}
@@ -94,7 +98,12 @@ func (s *Server) Handler() http.Handler {
 			http.ServeFile(w, r, path)
 			return
 		}
-		http.ServeFile(w, r, filepath.Join(s.Web, "index.html"))
+		known := r.URL.Path == "/" || r.URL.Path == "/login" || r.URL.Path == "/register" || r.URL.Path == "/forgot" || r.URL.Path == "/reset" || r.URL.Path == "/setup" || r.URL.Path == "/auth/external" || r.URL.Path == "/user" || strings.HasPrefix(r.URL.Path, "/user/") || s.isAdminEntry(r.URL.Path)
+		if !known {
+			http.NotFound(w, r)
+			return
+		}
+		s.serveDocument(w, r)
 	})
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -105,6 +114,7 @@ func (s *Server) Handler() http.Handler {
 		}()
 		w.Header().Set("X-Request-ID", plugin.ID())
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
 		if r.Method != "GET" && r.Method != "HEAD" {

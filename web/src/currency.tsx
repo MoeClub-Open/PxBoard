@@ -1,13 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api } from './api'
+import { initialPublicSite } from './publicSite'
 
 type Currency = { currencyName: string; currencySymbol: string }
 const defaults: Currency = { currencyName: '单位', currencySymbol: '' }
 const CurrencyContext = createContext<Currency>(defaults)
 
 export function CurrencyProvider({ children }: { children: ReactNode }) {
-  const [currency, setCurrency] = useState(defaults)
+  const [currency, setCurrency] = useState<Currency>(
+    () => initialPublicSite()?.site.data?.currency || defaults,
+  )
   const reload = useCallback(async () => {
     try {
       setCurrency(await api<Currency>('/extensions/commerce/public/currency'))

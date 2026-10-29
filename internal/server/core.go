@@ -38,6 +38,14 @@ func (s *Server) settings(w http.ResponseWriter, r *http.Request) {
 		if bad(w, plugin.Decode(r, &b)) {
 			return
 		}
+		if value, ok := b["publicUrl"]; ok && value != "" {
+			normalized, valid := publicOrigin(value)
+			if !valid {
+				plugin.Fail(w, 400, "公开地址需为完整的 HTTP 或 HTTPS 域名地址")
+				return
+			}
+			b["publicUrl"] = normalized
+		}
 		if value, ok := b["adminPath"]; ok && (s.Store.Setting("mode", "personal") != "business" || !validAdminPath(value)) {
 			plugin.Fail(w, 400, "后台入口需为单级路径，例如 /manage，不能与现有页面冲突")
 			return

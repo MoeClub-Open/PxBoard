@@ -159,3 +159,11 @@ NodeRS 原生机器接口以 `/extensions/nodes/machines/{machineId}` 为前缀�
 工单支持 Markdown 文本；用户通过 `POST /extensions/support/attachments` 上传单张 PNG、JPEG、GIF 或 WebP 图片，JSON 的 `data` 字段是图片内容的 Base64，大小上限 2 MiB。响应包含受权限保护的 `url`，可插入工单内容。`GET` 图片地址需要登录，只有上传者、工单发起人或管理员可读取。站内图片引用在提交工单或回复时校验权限。已有旧文本对话保留，新消息按条存储。插件状态目录与数据库须一起备份。
 
 插件运行时 `POST /api/v1/runtime/users/search` 需要 `users:read`，接收 `search/status/role/offset/limit`，返回标准 `items/total` 分页结构；每页最多 1000 人，按用户 ID 固定排序，只返回用户公开管理信息，不返回密码或登录凭据。原按 ID/邮箱查询接口继续用于明确用户查找。
+
+### 公开站点与初始化完成
+
+`GET /site` 返回公开展示快照；`GET /robots.txt` 与 `GET /sitemap.xml` 在站点根路径提供爬虫配置。字段和插件接口见[公开首页与 SEO](public-site.md)。
+
+首次 `POST /setup` 额外接收 `siteName`、`publicUrl`。管理员与基础设置在同一事务创建。`GET /me` 对管理员返回 `needsOnboarding`，供登录后继续 `/setup`；公开初始化接口不返回管理地址。
+
+`POST /onboarding/complete` 需要管理员，接收 `name/publicUrl/adminPath`，所选模式必须已经安装完成，后台路径必须有效且不与公开路由冲突。完成标记、公开地址和管理入口同时保存。新站未完成时阻止普通用户注册，既有站点默认完成，不因升级要求重跑初始化。

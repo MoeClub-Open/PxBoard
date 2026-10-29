@@ -13,6 +13,8 @@ import Plugins from './pages/Plugins'
 import { Activity, Jobs, Settings, Users } from './pages/Core'
 import Account from './pages/Account'
 import ModeSetup from './pages/ModeSetup'
+import Setup from './pages/Setup'
+import { DocumentMetadata, usePublicSite } from './publicSite'
 import Storefront from './pages/Storefront'
 import type { AuthInfo } from './pages/Register'
 import OAuthComplete from './pages/OAuthComplete'
@@ -34,6 +36,7 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
   const [error, setError] = useState('')
   const [guestAdminPath, setGuestAdminPath] = useState('')
   const location = useLocation()
+  const { data: publicDocument } = usePublicSite()
   useEffect(() => {
     if (me || !initialized) return
     const path = location.pathname
@@ -110,6 +113,12 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
       alive = false
     }
   }, [refresh])
+  if (
+    initialized &&
+    location.pathname === '/' &&
+    (publicDocument?.mode === 'business' || site?.mode === 'business')
+  )
+    return <Storefront user={me} registrationOpen={!!site?.registration?.length} />
   if (loading)
     return (
       <div className="full-loading">
@@ -129,9 +138,8 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
     )
   if (!initialized)
     return (
-      <Auth
-        setup
-        onLogin={async () => {
+      <Setup
+        onCreated={async () => {
           await refresh()
           setInitialized(true)
         }}
@@ -142,8 +150,9 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
     return (
       <Routes>
         {site?.mode === 'business' && site.extensions.includes('commerce') && (
-          <Route path="/" element={<Storefront auth={site} />} />
+          <Route path="/" element={<Storefront registrationOpen={!!site.registration?.length} />} />
         )}
+        <Route path="/setup" element={<Navigate to="/" replace />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot" element={<Reset request />} />
         <Route path="/reset" element={<Reset />} />
@@ -177,7 +186,20 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
   const adminPath = location.pathname === base || location.pathname.startsWith(base + '/')
   return (
     <SessionContext.Provider value={{ me, plugins, refresh }}>
-      {!adminPath ? (
+      {location.pathname === '/setup' ? (
+        admin ? (
+          <ModeSetup
+            onboarding
+            initialMode={site?.requestedMode || me.mode}
+            onReady={async () => {
+              await refresh()
+              configurationChanged()
+            }}
+          />
+        ) : (
+          <Navigate to="/user" replace />
+        )
+      ) : !adminPath ? (
         <Routes>
           <Route
             path="/user/*"
@@ -290,6 +312,7 @@ export default function App() {
     >
       <AntApp className={dark ? 'theme-dark' : undefined}>
         <BrowserRouter>
+          <DocumentMetadata />
           <Workspace
             dark={dark}
             toggleTheme={() =>

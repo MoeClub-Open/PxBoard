@@ -59,6 +59,7 @@ go run ./cmd/pxboard -plugin-source http://127.0.0.1:8091/index.json
 | NodeRS                | 独立节点项目，使用 `--panel-type pxboard` 接入；省略参数时默认 Xboard |
 
 - [使用模式与初始化](docs/modes.md)
+- [公开首页与 SEO](docs/public-site.md)
 - [功能范围](docs/features.md)
 - [开发与部署](docs/deployment.md)
 - [架构](docs/architecture.md)

@@ -812,3 +812,6 @@ kbd {
     font-size: 19px;
   }
 }
+
+.onboarding-page { max-width: 760px; min-height: 100vh; margin: 0 auto; padding: 36px 24px; }
+.onboarding-page .setup-steps { margin-bottom: 28px; }

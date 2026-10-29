@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Alert,
+  Collapse,
+  Steps,
   App,
   Button,
   Form,
@@ -19,6 +21,8 @@ import { CheckCircleOutlined, LoadingOutlined, ReloadOutlined } from '@ant-desig
 import { api, errorText } from '../api'
 import type { Row, User } from '../api'
 import { adminRoot } from '../adminPath'
+import OnboardingSite from './OnboardingSite'
+import { useBrandTitle } from '../branding'
 
 interface ModeState {
   mode: string
@@ -65,10 +69,15 @@ const statusLabels = {
 export default function ModeSetup({
   onReady,
   initialMode,
+  onboarding = false,
 }: {
   onReady: () => Promise<void>
   initialMode?: string
+  onboarding?: boolean
 }) {
+  useBrandTitle(onboarding ? '初始化' : '使用方式')
+  const readyCallback = useRef(onReady)
+  readyCallback.current = onReady
   const [state, setState] = useState<ModeState>()
   const [sources, setSources] = useState<Row[]>([])
   const [error, setError] = useState('')
@@ -125,6 +134,11 @@ export default function ModeSetup({
     return () => window.clearInterval(timer)
   }, [state?.phase, load])
 
+  useEffect(() => {
+    if (onboarding && state?.phase === 'ready')
+      void readyCallback.current().catch((e) => setError(errorText(e)))
+  }, [onboarding, state?.phase])
+
   async function install(values: Row) {
     setBusy(true)
     setError('')
@@ -167,10 +181,19 @@ export default function ModeSetup({
   const completed = state?.plugins.filter((plugin) => plugin.status === 'ready').length || 0
   const total = state?.plugins.length || 0
 
+  if (onboarding && state?.phase === 'ready') return <OnboardingSite onReady={onReady} />
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 20px', minHeight: '100vh' }}>
       <div className="page-heading">
-        <h1>使用方式与功能安装</h1>
+        <h1>{onboarding ? '安装所选功能' : '使用方式与功能安装'}</h1>
+        {onboarding && (
+          <Steps
+            size="small"
+            current={0}
+            items={[{ title: '功能安装' }, { title: '站点信息' }, { title: '服务配置' }]}
+            className="setup-steps"
+          />
+        )}
       </div>
       {error && (
         <Alert
@@ -217,25 +240,39 @@ export default function ModeSetup({
         <Typography.Paragraph type="secondary">
           {modes.find((item) => item.value === mode)?.description}
         </Typography.Paragraph>
-        {sources.length > 0 && (
-          <Form.Item name="sourceId" label="插件源">
-            <Select
-              options={[
-                ...sources.map((source) => ({ label: source.name, value: source.id })),
-                { label: '使用其他插件源', value: 'custom' },
-              ]}
-            />
-          </Form.Item>
-        )}
-        {(sourceId === 'custom' || !sources.length) && (
-          <Form.Item
-            name="sourceUrl"
-            label="插件源地址"
-            rules={[{ required: true, type: 'url', message: '请输入插件源地址' }]}
-          >
-            <Input placeholder="https://plugins.example.com/index.json" />
-          </Form.Item>
-        )}
+        <Collapse
+          ghost
+          items={[
+            {
+              key: 'source',
+              label: '插件源设置',
+              children: (
+                <>
+                  {' '}
+                  {sources.length > 0 && (
+                    <Form.Item name="sourceId" label="插件源">
+                      <Select
+                        options={[
+                          ...sources.map((source) => ({ label: source.name, value: source.id })),
+                          { label: '使用其他插件源', value: 'custom' },
+                        ]}
+                      />
+                    </Form.Item>
+                  )}
+                  {(sourceId === 'custom' || !sources.length) && (
+                    <Form.Item
+                      name="sourceUrl"
+                      label="插件源地址"
+                      rules={[{ required: true, type: 'url', message: '请输入插件源地址' }]}
+                    >
+                      <Input placeholder="https://plugins.example.com/index.json" />
+                    </Form.Item>
+                  )}
+                </>
+              ),
+            },
+          ]}
+        />
         <Typography.Paragraph type="secondary">
           将安装并启用所选方式需要的插件，已安装的其他插件和数据会保留。
         </Typography.Paragraph>

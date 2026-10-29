@@ -139,7 +139,7 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		plugin.JSON(w, true)
 	}
 }
-func (s *Server) setupStatus(w http.ResponseWriter, r *http.Request) {
+func (s *Server) publicAuth(r *http.Request) ([]plugin.AuthForm, []string, bool) {
 	mode := s.Store.Setting("mode", "personal")
 	forms := []plugin.AuthForm{}
 	extensions := []string{}
@@ -177,6 +177,15 @@ func (s *Server) setupStatus(w http.ResponseWriter, r *http.Request) {
 			forms = append(forms, form)
 		}
 	}
+	if !s.onboardingComplete() {
+		forms = []plugin.AuthForm{}
+	}
+	return forms, extensions, passwordReset
+}
+
+func (s *Server) setupStatus(w http.ResponseWriter, r *http.Request) {
+	mode := s.Store.Setting("mode", "personal")
+	forms, extensions, passwordReset := s.publicAuth(r)
 	state := s.modeState()
 	w.Header().Set("Cache-Control", "no-store")
 	plugin.JSON(w, plugin.Record{"initialized": s.initialized(), "name": s.Store.Setting("name", "PxBoard"), "mode": mode, "requestedMode": state.RequestedMode, "needsModeSetup": state.Phase != "ready", "extensions": extensions, "registration": forms, "passwordReset": passwordReset, "adminEntry": s.isAdminEntry(r.URL.Query().Get("entry"))})
@@ -186,7 +195,7 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 		plugin.Fail(w, 409, "已经完成初始化")
 		return
 	}
-	var b struct{ Email, Password, Name, Mode string }
+	var b struct{ Email, Password, Name, Mode, SiteName, PublicURL string }
 	if bad(w, plugin.Decode(r, &b)) {
 		return
 	}
@@ -203,6 +212,17 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	}
 	if b.Name == "" {
 		b.Name = "管理员"
+	}
+	if b.PublicURL != "" {
+		var valid bool
+		b.PublicURL, valid = publicOrigin(b.PublicURL)
+		if !valid {
+			plugin.Fail(w, 400, "公开地址需为完整的 HTTP 或 HTTPS 域名地址")
+			return
+		}
+	}
+	if strings.TrimSpace(b.SiteName) == "" {
+		b.SiteName = "PxBoard"
 	}
 	hash, e := bcrypt.GenerateFromPassword([]byte(b.Password), bcrypt.DefaultCost)
 	if bad(w, e) {
@@ -223,11 +243,14 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 	if bad(w, e) {
 		return
 	}
+	for key, value := range map[string]string{"mode": "personal", "requested_mode": b.Mode, "name": strings.TrimSpace(b.SiteName), "publicUrl": b.PublicURL, "onboarding_complete": "false"} {
+		if _, e = tx.Exec("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", key, value); bad(w, e) {
+			return
+		}
+	}
 	if bad(w, tx.Commit()) {
 		return
 	}
-	_ = s.Store.Set("mode", "personal")
-	_ = s.Store.Set("requested_mode", b.Mode)
 	plugin.JSON(w, plugin.Record{"initialized": true})
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -276,6 +299,7 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	result := plugin.Record{"id": a.ID, "email": a.Email, "role": a.Role, "name": name, "siteName": s.Store.Setting("name", "PxBoard"), "mode": s.Store.Setting("mode", "personal")}
 	if a.Role == "admin" {
 		result["adminPath"] = s.adminPath()
+		result["needsOnboarding"] = !s.onboardingComplete()
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	plugin.JSON(w, result)

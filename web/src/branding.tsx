@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api, ApiError } from './api'
+import { initialPublicSite } from './publicSite'
 
 interface BrandConfig {
   name: string
@@ -13,7 +14,7 @@ const BrandingContext = createContext({ ...defaults, reload: async () => {} })
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
   const [fallbackName, setFallbackName] = useState(defaults.name)
-  const [custom, setCustom] = useState<Partial<BrandConfig>>({})
+  const [custom, setCustom] = useState<Partial<BrandConfig>>(() => initialPublicSite()?.site || {})
   const previousName = useRef(defaults.name)
   const reload = useCallback(async () => {
     const [setup, branding] = await Promise.allSettled([
