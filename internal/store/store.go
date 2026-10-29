@@ -171,12 +171,7 @@ func (s *Store) Increment(namespace, collection, id, field string, amount float6
 	}
 	if changed > 0 {
 		row[field] = plugin.Number(row, field) + amount
-		b, e := json.Marshal(row)
-		if e != nil {
-			return nil, e
-		}
-		_, e = tx.Exec("INSERT INTO documents VALUES(?,?,?,?,?) ON CONFLICT(namespace,collection,id)DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at", namespace, collection, id, string(b), Now())
-		if e != nil {
+		if e = Put(tx, namespace, collection, id, row); e != nil {
 			return nil, e
 		}
 	}
