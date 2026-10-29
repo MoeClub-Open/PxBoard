@@ -286,9 +286,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	plugin.JSON(w, a)
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	if c, e := r.Cookie("px_session"); e == nil {
-		_, _ = s.Store.DB.Exec("DELETE FROM sessions WHERE token=?", c.Value)
+	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if token == "" {
+		if c, e := r.Cookie("px_session"); e == nil {
+			token = c.Value
+		}
 	}
+	_, _ = s.Store.DB.Exec("DELETE FROM sessions WHERE token=?", token)
 	s.cookie(w, "", -1)
 	plugin.JSON(w, true)
 }

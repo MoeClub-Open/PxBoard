@@ -18,6 +18,7 @@ import { DocumentMetadata, usePublicSite } from './publicSite'
 import Storefront from './pages/Storefront'
 import type { AuthInfo } from './pages/Register'
 import OAuthComplete from './pages/OAuthComplete'
+import { BrowserAuthorization, NativeAuthorization } from './pages/NativeAuthorization'
 import { adminRoot } from './adminPath'
 
 const PersonalPortal = lazy(() => import('./pages/PersonalPortal'))
@@ -153,6 +154,8 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
       />
     )
   if (location.pathname === '/auth/external') return <OAuthComplete onLogin={refresh} />
+  if (location.pathname === '/auth/browser') return <BrowserAuthorization onLogin={refresh} />
+  if (me && location.pathname === '/user/authorize') return <NativeAuthorization user={me} />
   if (!me)
     return (
       <Routes>
