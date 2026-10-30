@@ -265,7 +265,7 @@ machine_id = 1
 
 机器密钥通过 `X-Machine-Key` 请求头传递。流量批次持久保存在 NodeRS 工作目录，网络失败后用同一批次重试；迁移或移动节点时一并保留该目录。完整的 NodeRS 安装、证书、协议和维护说明见所使用 NodeRS 仓库的 `docs/zh/pxboard.md`。
 
-需要由面板认证下发本地配置、迁移到另一面板时，使用 NodeRS `v0.1.49-pxboard.2` 或更新版本；使用当前 `0.0.1` 核心与节点插件。管理员入口、源 Xboard 桥接与回退操作见 [NodeRS 配置管理](../../PxBoard-Plugins/docs/noders-management.md)。
+NodeRS 统一使用原仓库的 [v0.1.49 或更新版本](https://github.com/MoeclubM/NodeRS/releases)，同一安装包支持 Xboard、PxBoard 与认证后的配置迁移；配合当前 `0.0.1` 核心与节点插件使用。此前安装组织适配版的节点，按 [发布源切换说明](https://github.com/MoeclubM/NodeRS/blob/main/docs/zh/install.md#从组织适配版升级) 完成一次升级。管理员入口、源 Xboard 桥接与回退操作见 [NodeRS 配置管理](../../PxBoard-Plugins/docs/noders-management.md)。
 
 ### 官方 Xray / sing-box 代理
 
