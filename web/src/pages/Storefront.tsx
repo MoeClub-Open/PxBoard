@@ -1,5 +1,5 @@
-import { Alert, Button, Space } from 'antd'
-import { ArrowRightOutlined } from '@ant-design/icons'
+import { Alert, Button } from 'antd'
+import { ArrowRightOutlined, CheckOutlined, GlobalOutlined } from '@ant-design/icons'
 import type { User } from '../api'
 import { Brand } from '../components/Brand'
 import { AppearanceButton } from '../appearance'
@@ -32,22 +32,23 @@ export default function Storefront({
             <Brand />
           </a>
           <nav aria-label="首页导航">
-            <Space size={20}>
-              {!!highlights.length && (
-                <a className="storefront-nav-link" href="#services">
-                  服务说明
-                </a>
-              )}
-              <AppearanceButton />
-            </Space>
+            {!!highlights.length && (
+              <a className="storefront-nav-link" href="#services">
+                服务说明
+              </a>
+            )}
+            <AppearanceButton />
           </nav>
         </div>
       </header>
       <main className="storefront-main">
-        <section className="storefront-hero">
+        <section className="storefront-hero" aria-labelledby="storefront-heading">
           <div className="storefront-copy">
-            <p className="storefront-eyebrow">网络与订阅服务</p>
-            <h1>{content?.heading || document?.site.name || 'PxBoard'}</h1>
+            <p className="storefront-eyebrow">
+              <GlobalOutlined aria-hidden />
+              网络与订阅服务
+            </p>
+            <h1 id="storefront-heading">{content?.heading || document?.site.name || 'PxBoard'}</h1>
             {content?.introduction && (
               <p className="storefront-intro-text">{content.introduction}</p>
             )}
@@ -55,7 +56,7 @@ export default function Storefront({
               <Button
                 type="primary"
                 size="large"
-                className="storefront-action storefront-primary"
+                className="storefront-action"
                 href={user ? '/user' : '/login'}
                 icon={<ArrowRightOutlined />}
                 iconPlacement="end"
@@ -63,11 +64,7 @@ export default function Storefront({
                 {user ? '进入账户' : '登录账户'}
               </Button>
               {!user && (document?.registrationOpen ?? registrationOpen) && (
-                <Button
-                  size="large"
-                  className="storefront-action storefront-secondary"
-                  href="/register"
-                >
+                <Button size="large" className="storefront-action" href="/register">
                   注册账户
                 </Button>
               )}
@@ -94,7 +91,10 @@ export default function Storefront({
             <h2 id="storefront-services-heading">服务说明</h2>
             <ul>
               {highlights.map((text, index) => (
-                <li key={index}>{text}</li>
+                <li key={index}>
+                  <CheckOutlined aria-hidden />
+                  <span>{text}</span>
+                </li>
               ))}
             </ul>
           </section>

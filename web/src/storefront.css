@@ -1,37 +1,36 @@
 .storefront {
-  --store-border: var(--px-border-soft);
-  --store-surface: var(--px-surface);
-  --store-background: var(--px-bg);
-  --store-text: var(--px-text);
-  --store-secondary: var(--px-secondary);
-  --store-accent: var(--px-primary);
-  --store-accent-text: var(--px-primary-text);
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  color: var(--store-text);
-  background: var(--store-background);
+  color: var(--px-text);
+  background:
+    radial-gradient(
+      ellipse at 80% 40%,
+      color-mix(in srgb, var(--px-primary-soft) 65%, transparent),
+      transparent 55%
+    ),
+    var(--px-surface);
 }
 .storefront a {
   text-decoration: none;
 }
 .storefront a:focus-visible {
-  outline: 2px solid var(--store-accent);
+  outline: 2px solid var(--px-primary-text);
   outline-offset: 4px;
 }
 .storefront-header {
-  border-bottom: 1px solid var(--store-border);
+  border-bottom: 1px solid var(--px-border-soft);
 }
 .storefront-header-inner,
 .storefront-main,
 .storefront-footer {
-  width: min(100%, 1184px);
+  width: min(100%, 1120px);
   margin-inline: auto;
   box-sizing: border-box;
+  padding-inline: 32px;
 }
 .storefront-header-inner {
-  min-height: 64px;
-  padding: 12px 28px;
+  min-height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -39,106 +38,108 @@
 }
 .storefront-name {
   display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--store-text);
-  font-size: 21px;
+  min-width: 0;
+  color: var(--px-text);
+  font-size: 19px;
   font-weight: 650;
   letter-spacing: -0.035em;
 }
+.storefront-name .brand {
+  min-width: 0;
+}
+.storefront-name .brand > span:last-child {
+  overflow-wrap: anywhere;
+}
+.storefront-header nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
 .storefront-nav-link {
-  color: var(--store-secondary);
-  font-size: 14px;
+  color: var(--px-secondary);
+  font-size: 13px;
 }
 .storefront-nav-link:hover {
-  color: var(--store-accent-text);
+  color: var(--px-primary-text);
 }
 .storefront-main {
-  padding: 24px 28px 40px;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 36px;
+  padding-block: 36px;
 }
 .storefront-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
   min-height: 380px;
-  gap: 32px;
+  gap: 40px;
 }
 .storefront-copy {
-  padding-block: 28px;
+  padding-block: 24px;
 }
 .storefront-eyebrow {
-  color: var(--store-accent-text);
-  font-size: 14px;
-  font-weight: 550;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--px-primary-text);
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.6;
-  margin: 0 0 20px;
-  letter-spacing: 0.08em;
+  margin: 0 0 18px;
+}
+.storefront-eyebrow .anticon {
+  font-size: 16px;
 }
 .storefront-copy h1 {
-  font-size: clamp(28px, 4vw, 42px);
+  font-size: clamp(30px, 3.2vw, 42px);
   font-weight: 650;
-  line-height: 1.13;
-  letter-spacing: -0.045em;
+  line-height: 1.25;
+  letter-spacing: -0.04em;
   overflow-wrap: anywhere;
   margin: 0;
-  max-width: 15ch;
+  text-wrap: balance;
 }
 .storefront-intro-text {
-  color: var(--store-secondary);
+  color: var(--px-secondary);
   font-size: 15px;
   line-height: 1.9;
   white-space: pre-line;
-  max-width: 36em;
-  margin: 24px 0 0;
+  overflow-wrap: anywhere;
+  max-width: 32em;
+  margin: 18px 0 0;
 }
 .storefront-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 24px;
+  margin-top: 28px;
 }
-.storefront-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  box-sizing: border-box;
+.storefront-action.ant-btn {
   min-height: 44px;
-  padding: 10px 22px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 22px;
-  transition:
-    box-shadow 0.15s,
-    border-color 0.15s;
-}
-.storefront-primary {
-  background: var(--store-accent);
-  color: #fff;
-  border-color: var(--store-accent);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--px-primary) 12%, transparent);
-}
-.storefront-primary:hover {
-  color: #fff;
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--px-primary) 20%, transparent);
-}
-.storefront-secondary {
-  background: var(--store-surface);
-  border-color: var(--store-border);
-  color: var(--store-text);
-}
-.storefront-secondary:hover {
-  border-color: var(--store-accent);
-  color: var(--store-accent);
+  padding-inline: 22px;
+  font-size: 14px;
 }
 .storefront-art {
+  position: relative;
+  isolation: isolate;
   aspect-ratio: 7 / 6;
   width: 100%;
-  max-height: 360px;
+  max-width: 480px;
+  justify-self: center;
   color: var(--px-primary-text);
+}
+.storefront-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(var(--px-primary-border) 1px, transparent 1px);
+  background-size: 20px 20px;
+  mask-image: radial-gradient(ellipse, #000 25%, transparent 70%);
 }
 .storefront-art svg {
   display: block;
@@ -146,106 +147,108 @@
   height: 100%;
 }
 .storefront-highlights {
-  padding-top: 28px;
-  border-top: 1px solid var(--store-border);
+  padding-top: 24px;
+  border-top: 1px solid var(--px-border-soft);
   scroll-margin-top: 24px;
 }
 .storefront-highlights h2 {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0 0 20px;
 }
 .storefront-highlights ul {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px 32px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 20px 28px;
   margin: 0;
   padding: 0;
 }
 .storefront-highlights li {
-  color: var(--store-secondary);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: var(--px-secondary);
   font-size: 14px;
   line-height: 1.8;
-  padding-left: 16px;
-  position: relative;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
-.storefront-highlights li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.75em;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--store-accent);
-  opacity: 0.65;
+.storefront-highlights li > .anticon {
+  flex-shrink: 0;
+  color: var(--px-primary-text);
+  font-size: 12px;
 }
 .storefront-alert {
-  margin-bottom: 24px;
+  margin: 0;
 }
 .storefront-footer {
-  border-top: 1px solid var(--store-border);
-  padding: 22px 36px;
+  border-top: 1px solid var(--px-border-soft);
+  padding-block: 20px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 24px;
-  color: var(--store-secondary);
+  color: var(--px-secondary);
   font-size: 12px;
   line-height: 1.8;
 }
 .storefront-footer p {
   margin: 0;
   white-space: pre-line;
+  overflow-wrap: anywhere;
   text-align: right;
 }
 @media (max-width: 760px) {
+  .storefront-header-inner,
+  .storefront-main,
+  .storefront-footer {
+    padding-inline: 24px;
+  }
   .storefront-header-inner {
-    min-height: 64px;
-    padding: 12px 20px;
+    min-height: 60px;
+    gap: 16px;
+  }
+  .storefront-name {
+    font-size: 17px;
+  }
+  .storefront-header nav {
+    gap: 12px;
   }
   .storefront-main {
-    padding: 12px 24px 36px;
+    padding-block: 28px;
+    gap: 24px;
   }
   .storefront-hero {
     grid-template-columns: 1fr;
-    gap: 0;
+    gap: 12px;
     min-height: auto;
   }
   .storefront-copy {
-    padding: 28px 0 16px;
+    padding-block: 16px 0;
   }
   .storefront-copy h1 {
-    font-size: clamp(28px, 7vw, 36px);
+    font-size: clamp(28px, 7vw, 34px);
   }
   .storefront-intro-text {
     font-size: 14px;
   }
   .storefront-art {
-    height: 220px;
-    aspect-ratio: auto;
-    max-width: 420px;
-    justify-self: center;
+    max-width: 320px;
+    max-height: 240px;
+  }
+  .storefront-highlights {
+    padding-top: 20px;
   }
   .storefront-highlights ul {
-    grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 14px;
   }
   .storefront-footer {
-    padding: 20px 24px;
     flex-direction: column;
     gap: 8px;
   }
   .storefront-footer p {
     text-align: left;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .storefront-action {
-    transition: none;
   }
 }
