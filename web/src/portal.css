@@ -1,17 +1,13 @@
 .customer-portal {
   min-height: 100vh;
-  --portal-border: #e9e9ed;
-  --portal-surface: #fff;
-  --portal-muted: #858592;
-}
-.customer-portal.portal-dark {
-  --portal-border: #303039;
-  --portal-surface: #1b1b20;
-  --portal-muted: #aaaab5;
-  color: #e6e6eb;
+  --portal-border: var(--px-border-soft);
+  --portal-surface: var(--px-surface);
+  --portal-muted: var(--px-secondary);
 }
 .customer-portal .portal-header {
   padding-inline: 24px;
+  height: 64px;
+  line-height: normal;
   border-bottom: 1px solid var(--portal-border);
   background: var(--portal-surface);
 }
@@ -19,7 +15,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 1180px;
+  max-width: 1200px;
   height: 100%;
   margin: auto;
   gap: 16px;
@@ -33,6 +29,10 @@
 .portal-brand .brand {
   font-size: 19px;
 }
+.portal-account .ant-avatar {
+  background: var(--px-primary-soft);
+  color: var(--px-primary-text);
+}
 .portal-account {
   display: flex;
   align-items: center;
@@ -44,13 +44,14 @@
   padding-inline: 24px;
 }
 .portal-desktop-nav .ant-menu {
-  max-width: 1180px;
+  line-height: 48px;
+  max-width: 1200px;
   margin: auto;
   border: 0;
 }
 .portal-content {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1200px;
   margin-inline: auto;
   padding: 24px 24px 40px;
 }
@@ -141,7 +142,7 @@
   margin-top: 20px;
 }
 .portal-payment-methods {
-  border-top: 1px solid var(--portal-border, #e9e9ed);
+  border-top: 1px solid var(--px-border-soft);
   margin-top: 20px;
   padding-top: 1px;
 }
@@ -182,7 +183,7 @@
 .portal-ticket-thread {
   padding-block: 20px;
   margin-block: 12px 24px;
-  border-block: 1px solid var(--portal-border, #e9e9ed);
+  border-block: 1px solid var(--px-border-soft);
 }
 @media (max-width: 760px) {
   .portal-desktop-nav {
@@ -201,7 +202,7 @@
     padding: 18px 16px 36px;
   }
   .portal-brand {
-    max-width: 155px;
+    max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

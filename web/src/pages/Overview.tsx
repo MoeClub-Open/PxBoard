@@ -63,7 +63,7 @@ export default function Overview() {
           <div className="eyebrow">工作空间</div>
           <h1>总览</h1>
         </div>
-        <Tag color="purple">{modeLabels[me.mode] || '自用'}</Tag>
+        <Tag className="mode-tag">{modeLabels[me.mode] || '自用'}</Tag>
       </div>
       {error && <Alert type="error" title={error} />}
       {me.role === 'admin' && (
@@ -80,11 +80,12 @@ export default function Overview() {
               label: '服务状态',
               value: status.length ? '需处理' : '运行正常',
               note: data ? `v${data.version} · ${data.platform}` : '正在连接',
+              tone: status.length ? 'danger' : 'success',
             },
           ].map((m) => (
             <div key={m.label}>
               <span>{m.label}</span>
-              <strong>{m.value}</strong>
+              <strong className={m.tone}>{m.value}</strong>
               <small>{m.note}</small>
             </div>
           ))}

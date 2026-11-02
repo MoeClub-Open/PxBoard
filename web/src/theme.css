@@ -1,17 +1,107 @@
-.theme-dark .auth-page {
-  background: #141418;
+:root {
+  --px-bg: #f5f7fa;
+  --px-surface: #fff;
+  --px-elevated: #fff;
+  --px-fill: #fafafa;
+  --px-border: #dce2ea;
+  --px-border-soft: #e8ecf1;
+  --px-text: #182230;
+  --px-secondary: #586577;
+  --px-muted: #7a8797;
+  --px-primary: #2563eb;
+  --px-primary-hover: #5184f0;
+  --px-primary-soft: #eff6ff;
+  --px-primary-border: #b6d0ff;
+  --px-primary-text: #2563eb;
+  --px-success: #15803d;
+  --px-error: #dc2626;
+  --px-font:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
-.theme-dark .mode-option {
-  background: #1d1d24;
-  border-color: #37303f;
+html {
+  background: var(--px-bg);
 }
-.theme-dark .mode-option.selected {
-  background: #292236;
-  border-color: #805bc7;
+.ant-app {
+  min-height: 100dvh;
+  background: var(--px-bg);
 }
-.theme-dark .mode-option strong {
-  color: #dfd7e8;
+a {
+  color: var(--px-primary-text);
 }
-.theme-dark .mode-option small {
-  color: #a99bb9;
+a:hover {
+  color: var(--px-primary-hover);
+}
+::selection {
+  background: var(--px-primary-soft);
+  color: var(--px-primary-text);
+}
+.workspace-avatar {
+  background: var(--px-primary-soft);
+  color: var(--px-primary-text);
+}
+.mode-tag {
+  color: var(--px-primary-text);
+  background: var(--px-primary-soft);
+  border-color: var(--px-primary-border);
+}
+.appearance-settings {
+  width: 272px;
+  display: grid;
+  gap: 18px;
+  padding-block: 4px;
+}
+.appearance-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--px-secondary);
+  font-size: 12px;
+}
+.appearance-colors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.appearance-colors .ant-radio-button-wrapper {
+  padding-inline: 10px;
+  border: 1px solid var(--px-border);
+  border-radius: 6px;
+}
+.appearance-colors .ant-radio-button-wrapper::before {
+  display: none;
+}
+.appearance-colors .ant-radio-button-wrapper-checked {
+  background: var(--px-primary-soft);
+}
+.ant-radio-group:not(.ant-radio-group-solid)
+  .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  color: var(--px-primary-text);
+  border-color: var(--px-primary-text);
+}
+.appearance-color {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.appearance-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+.standalone-appearance {
+  position: fixed;
+  top: 32px;
+  right: 40px;
+  z-index: 30;
+}
+@media (max-width: 760px) {
+  .appearance-button-label {
+    display: none;
+  }
+  .standalone-appearance {
+    top: 24px;
+    right: 20px;
+  }
 }

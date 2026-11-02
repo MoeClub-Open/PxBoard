@@ -192,7 +192,7 @@ export default function MailTemplateEditor({
                         style={{
                           width: '100%',
                           height: 390,
-                          border: '1px solid #e5e7eb',
+                          border: '1px solid var(--px-border)',
                           borderRadius: 6,
                         }}
                       />

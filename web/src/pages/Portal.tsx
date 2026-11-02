@@ -18,13 +18,12 @@ import {
   LinkOutlined,
   LogoutOutlined,
   MenuOutlined,
-  MoonOutlined,
-  SunOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { api } from '../api'
 import { useSession } from '../context'
 import { Brand } from '../components/Brand'
+import { AppearanceButton } from '../appearance'
 import ResourcePage from '../components/ResourcePage'
 import { useBrandTitle } from '../branding'
 import Account from './Account'
@@ -50,7 +49,7 @@ const coveredPages = new Set([
   'support/notifications',
   'nodes/status',
 ])
-export type PortalProps = { dark: boolean; toggleTheme: () => void; onLogout: () => void }
+export type PortalProps = { onLogout: () => void }
 export type NavigationItem = { key: string; label: string; icon: ReactNode }
 
 export function usePortalFeatures() {
@@ -142,8 +141,6 @@ function PortalExtension() {
 }
 
 export default function PortalLayout({
-  dark,
-  toggleTheme,
   onLogout,
   navigation: entries,
   children,
@@ -197,7 +194,7 @@ export default function PortalLayout({
     />
   )
   return (
-    <Layout className={`customer-portal${dark ? ' portal-dark' : ''}`}>
+    <Layout className="customer-portal">
       <Layout.Header className="portal-header">
         <div className="portal-header-content">
           <Space size={12}>
@@ -213,12 +210,7 @@ export default function PortalLayout({
             </Link>
           </Space>
           <Space size={8}>
-            <Button
-              type="text"
-              aria-label={dark ? '切换浅色' : '切换深色'}
-              icon={dark ? <SunOutlined /> : <MoonOutlined />}
-              onClick={toggleTheme}
-            />
+            <AppearanceButton />
             <Dropdown
               trigger={['click']}
               menu={{

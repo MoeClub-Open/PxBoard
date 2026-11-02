@@ -1,6 +1,6 @@
 .ticket-conversation {
   margin-block: 16px 24px;
-  border-block: 1px solid var(--portal-border, #e9e9ed);
+  border-block: 1px solid var(--px-border-soft);
 }
 .ticket-legacy {
   padding-block: 16px;
@@ -13,7 +13,7 @@
 }
 .ticket-message + .ticket-message,
 .ticket-legacy + .ticket-message {
-  border-top: 1px solid var(--portal-border, #e9e9ed);
+  border-top: 1px solid var(--px-border-soft);
 }
 .ticket-message-meta {
   display: flex;
@@ -23,7 +23,7 @@
   margin-bottom: 8px;
 }
 .ticket-message-meta span {
-  color: #777;
+  color: var(--px-secondary);
   font-size: 12px;
 }
 .ticket-markdown {
@@ -47,13 +47,13 @@
 .ticket-markdown pre {
   overflow: auto;
   padding: 12px;
-  background: rgba(128, 128, 128, 0.1);
+  background: var(--px-fill);
   border-radius: 4px;
 }
 .ticket-markdown blockquote {
   margin-inline: 0;
   padding-left: 12px;
-  border-left: 3px solid #aaa;
+  border-left: 3px solid var(--px-border);
 }
 .ticket-markdown table {
   border-collapse: collapse;
@@ -61,7 +61,7 @@
 }
 .ticket-markdown td,
 .ticket-markdown th {
-  border: 1px solid #aaa;
+  border: 1px solid var(--px-border);
   padding: 4px 8px;
 }
 .ticket-video {
@@ -77,6 +77,6 @@
 .ticket-preview {
   min-height: 130px;
   padding: 10px 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--px-border);
   border-radius: 6px;
 }

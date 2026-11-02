@@ -305,7 +305,7 @@ export default function ModeSetup({
               <List.Item>
                 <Space>
                   {plugin.status === 'ready' ? (
-                    <CheckCircleOutlined style={{ color: 'var(--ant-color-success, #52c41a)' }} />
+                    <CheckCircleOutlined style={{ color: 'var(--px-success)' }} />
                   ) : plugin.status === 'installed' ? (
                     <LoadingOutlined />
                   ) : null}

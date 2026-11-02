@@ -29,14 +29,12 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MessageOutlined,
-  MoonOutlined,
   SearchOutlined,
   SettingOutlined,
   ShareAltOutlined,
   SafetyCertificateOutlined,
   ShopOutlined,
   ExportOutlined,
-  SunOutlined,
   TeamOutlined,
   WalletOutlined,
 } from '@ant-design/icons'
@@ -44,6 +42,7 @@ import type { ReactNode } from 'react'
 import { api } from '../api'
 import { useSession } from '../context'
 import { Brand } from './Brand'
+import { AppearanceButton } from '../appearance'
 import { useBrand, useBrandTitle } from '../branding'
 import { settingsDestinations } from '../settingsDestinations'
 import { adminRoot, adminURL } from '../adminPath'
@@ -65,13 +64,9 @@ const icons: Record<string, ReactNode> = {
   database: <DatabaseOutlined />,
 }
 export default function Shell({
-  dark,
-  toggleTheme,
   onLogout,
   children,
 }: {
-  dark: boolean
-  toggleTheme: () => void
   onLogout: () => void
   children: ReactNode
 }) {
@@ -183,13 +178,12 @@ export default function Shell({
   const results = mappedEntries.filter((e) => e.label.toLowerCase().includes(search.toLowerCase()))
   return (
     <>
-      <Layout className={dark ? 'workspace dark' : 'workspace'}>
+      <Layout className="workspace">
         <Layout.Sider
-          width={236}
+          width={228}
           collapsed={collapsed}
           collapsedWidth={76}
           className="desktop-sider"
-          theme={dark ? 'dark' : 'light'}
         >
           <Link to={adminRoot(me)} className="sidebar-brand" aria-label={brand.name}>
             <Brand compact={collapsed} />
@@ -244,12 +238,7 @@ export default function Shell({
               >
                 跳转 <kbd>Ctrl K</kbd>
               </Button>
-              <Button
-                type="text"
-                aria-label={dark ? '切换浅色' : '切换深色'}
-                icon={dark ? <SunOutlined /> : <MoonOutlined />}
-                onClick={toggleTheme}
-              />
+              <AppearanceButton />
               <Dropdown
                 trigger={['click']}
                 menu={{
@@ -270,7 +259,7 @@ export default function Shell({
                 }}
               >
                 <Button type="text" className="account-button">
-                  <Avatar size={28} style={{ background: '#ede9fe', color: '#6d28d9' }}>
+                  <Avatar size={28} className="workspace-avatar">
                     {(me.name || me.email)[0].toUpperCase()}
                   </Avatar>
                   <span>{me.name}</span>

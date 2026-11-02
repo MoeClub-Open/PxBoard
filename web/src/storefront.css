@@ -1,17 +1,16 @@
 .storefront {
-  --store-border: #e8e6ed;
-  --store-surface: #fff;
-  --store-background: #faf9fd;
-  --store-text: #20202a;
-  --store-secondary: #686776;
-  --store-accent: #7454d9;
-  --store-accent-text: #6945cc;
+  --store-border: var(--px-border-soft);
+  --store-surface: var(--px-surface);
+  --store-background: var(--px-bg);
+  --store-text: var(--px-text);
+  --store-secondary: var(--px-secondary);
+  --store-accent: var(--px-primary);
+  --store-accent-text: var(--px-primary-text);
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   color: var(--store-text);
-  background:
-    radial-gradient(ellipse at 82% 35%, #9474e50a, transparent 56%), var(--store-background);
+  background: var(--store-background);
 }
 .storefront a {
   text-decoration: none;
@@ -31,8 +30,8 @@
   box-sizing: border-box;
 }
 .storefront-header-inner {
-  min-height: 84px;
-  padding: 18px 36px;
+  min-height: 64px;
+  padding: 12px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -55,18 +54,18 @@
   color: var(--store-accent-text);
 }
 .storefront-main {
-  padding: 24px 36px 44px;
+  padding: 24px 28px 40px;
   flex: 1;
 }
 .storefront-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  min-height: 490px;
-  gap: 44px;
+  min-height: 380px;
+  gap: 32px;
 }
 .storefront-copy {
-  padding-block: 44px;
+  padding-block: 28px;
 }
 .storefront-eyebrow {
   color: var(--store-accent-text);
@@ -77,7 +76,7 @@
   letter-spacing: 0.08em;
 }
 .storefront-copy h1 {
-  font-size: clamp(38px, 5.6vw, 68px);
+  font-size: clamp(28px, 4vw, 42px);
   font-weight: 650;
   line-height: 1.13;
   letter-spacing: -0.045em;
@@ -87,7 +86,7 @@
 }
 .storefront-intro-text {
   color: var(--store-secondary);
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.9;
   white-space: pre-line;
   max-width: 36em;
@@ -97,7 +96,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 36px;
+  margin-top: 24px;
 }
 .storefront-action {
   display: inline-flex;
@@ -120,11 +119,11 @@
   background: var(--store-accent);
   color: #fff;
   border-color: var(--store-accent);
-  box-shadow: 0 4px 12px #7454d91a;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--px-primary) 12%, transparent);
 }
 .storefront-primary:hover {
   color: #fff;
-  box-shadow: 0 6px 20px #7454d92b;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--px-primary) 20%, transparent);
 }
 .storefront-secondary {
   background: var(--store-surface);
@@ -138,7 +137,13 @@
 .storefront-art {
   aspect-ratio: 7 / 6;
   width: 100%;
-  background: url('./assets/network-scene.svg') center / contain no-repeat;
+  max-height: 360px;
+  color: var(--px-primary-text);
+}
+.storefront-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .storefront-highlights {
   padding-top: 28px;
@@ -200,8 +205,8 @@
 }
 @media (max-width: 760px) {
   .storefront-header-inner {
-    min-height: 72px;
-    padding: 16px 24px;
+    min-height: 64px;
+    padding: 12px 20px;
   }
   .storefront-main {
     padding: 12px 24px 36px;
@@ -212,16 +217,16 @@
     min-height: auto;
   }
   .storefront-copy {
-    padding: 44px 0 20px;
+    padding: 28px 0 16px;
   }
   .storefront-copy h1 {
-    font-size: clamp(38px, 9vw, 58px);
+    font-size: clamp(28px, 7vw, 36px);
   }
   .storefront-intro-text {
-    font-size: 16px;
+    font-size: 14px;
   }
   .storefront-art {
-    height: 280px;
+    height: 220px;
     aspect-ratio: auto;
     max-width: 420px;
     justify-self: center;

@@ -188,7 +188,7 @@ export default function MailCampaignEditor({
                 title="群发邮件预览"
                 sandbox=""
                 srcDoc={preview.html}
-                style={{ width: '100%', height: 320, border: '1px solid #ddd' }}
+                style={{ width: '100%', height: 320, border: '1px solid var(--px-border)' }}
               />
             ) : (
               <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>

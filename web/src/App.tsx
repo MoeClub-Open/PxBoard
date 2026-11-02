@@ -1,7 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { Alert, App as AntApp, Button, ConfigProvider, Spin, theme } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
+import { Alert, Button, Spin } from 'antd'
 import type { Plugin, User } from './api'
 import { api, configurationChanged } from './api'
 import { SessionContext } from './context'
@@ -20,6 +19,7 @@ import type { AuthInfo } from './pages/Register'
 import OAuthComplete from './pages/OAuthComplete'
 import { BrowserAuthorization, NativeAuthorization } from './pages/NativeAuthorization'
 import { adminRoot } from './adminPath'
+import { AppearanceButton, AppearanceProvider } from './appearance'
 
 const PersonalPortal = lazy(() => import('./pages/PersonalPortal'))
 const BusinessPortal = lazy(() => import('./pages/BusinessPortal'))
@@ -28,7 +28,7 @@ const PortalSupport = lazy(() =>
   import('./pages/PortalSupport').then((module) => ({ default: module.PortalSupport })),
 )
 
-function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => void }) {
+function Workspace() {
   const [me, setMe] = useState<User | null>(null)
   const [plugins, setPlugins] = useState<Plugin[]>([])
   const [initialized, setInitialized] = useState(true)
@@ -119,14 +119,7 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
     location.pathname === '/' &&
     (publicDocument?.mode === 'business' || site?.mode === 'business')
   )
-    return (
-      <Storefront
-        user={me}
-        registrationOpen={!!site?.registration?.length}
-        dark={dark}
-        toggleTheme={toggleTheme}
-      />
-    )
+    return <Storefront user={me} registrationOpen={!!site?.registration?.length} />
   if (loading)
     return (
       <div className="full-loading">
@@ -146,65 +139,80 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
     )
   if (!initialized)
     return (
-      <Setup
-        onCreated={async () => {
-          await refresh()
-          setInitialized(true)
-        }}
-      />
+      <>
+        <AppearanceButton className="standalone-appearance" />
+        <Setup
+          onCreated={async () => {
+            await refresh()
+            setInitialized(true)
+          }}
+        />
+      </>
     )
-  if (location.pathname === '/auth/external') return <OAuthComplete onLogin={refresh} />
-  if (location.pathname === '/auth/browser') return <BrowserAuthorization onLogin={refresh} />
-  if (me && location.pathname === '/user/authorize') return <NativeAuthorization user={me} />
+  if (location.pathname === '/auth/external')
+    return (
+      <>
+        <AppearanceButton className="standalone-appearance" />
+        <OAuthComplete onLogin={refresh} />
+      </>
+    )
+  if (location.pathname === '/auth/browser')
+    return (
+      <>
+        <AppearanceButton className="standalone-appearance" />
+        <BrowserAuthorization onLogin={refresh} />
+      </>
+    )
+  if (me && location.pathname === '/user/authorize')
+    return (
+      <>
+        <AppearanceButton className="standalone-appearance" />
+        <NativeAuthorization user={me} />
+      </>
+    )
   if (!me)
     return (
-      <Routes>
-        {site?.mode === 'business' && site.extensions.includes('commerce') && (
+      <>
+        <AppearanceButton className="standalone-appearance" />
+        <Routes>
+          <Route path="/setup" element={<Navigate to="/" replace />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot" element={<Reset request />} />
+          <Route path="/reset" element={<Reset />} />
+          <Route path="/login" element={<Auth onLogin={refresh} />} />
           <Route
-            path="/"
+            path="/user/*"
             element={
-              <Storefront
-                registrationOpen={!!site.registration?.length}
-                dark={dark}
-                toggleTheme={toggleTheme}
-              />
-            }
-          />
-        )}
-        <Route path="/setup" element={<Navigate to="/" replace />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot" element={<Reset request />} />
-        <Route path="/reset" element={<Reset />} />
-        <Route path="/login" element={<Auth onLogin={refresh} />} />
-        <Route
-          path="/user/*"
-          element={
-            <Navigate
-              to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
-              replace
-            />
-          }
-        />
-        <Route
-          path="*"
-          element={
-            guestAdminPath === location.pathname ? (
               <Navigate
                 to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
                 replace
               />
-            ) : (
-              <Auth onLogin={refresh} />
-            )
-          }
-        />
-      </Routes>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              guestAdminPath === location.pathname ? (
+                <Navigate
+                  to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
+                  replace
+                />
+              ) : (
+                <Auth onLogin={refresh} />
+              )
+            }
+          />
+        </Routes>
+      </>
     )
   const admin = me.role === 'admin'
   const base = adminRoot(me)
   const adminPath = location.pathname === base || location.pathname.startsWith(base + '/')
   return (
     <SessionContext.Provider value={{ me, plugins, refresh }}>
+      {(location.pathname === '/setup' || location.pathname === `${base}/mode`) && (
+        <AppearanceButton className="standalone-appearance" />
+      )}
       {location.pathname === '/setup' ? (
         admin ? (
           <ModeSetup
@@ -231,17 +239,9 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
                 }
               >
                 {me.mode === 'business' ? (
-                  <BusinessPortal
-                    dark={dark}
-                    toggleTheme={toggleTheme}
-                    onLogout={() => setMe(null)}
-                  />
+                  <BusinessPortal onLogout={() => setMe(null)} />
                 ) : (
-                  <PersonalPortal
-                    dark={dark}
-                    toggleTheme={toggleTheme}
-                    onLogout={() => setMe(null)}
-                  />
+                  <PersonalPortal onLogout={() => setMe(null)} />
                 )}
               </Suspense>
             }
@@ -262,7 +262,7 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
         site?.needsModeSetup ? (
         <Navigate to={`${base}/mode`} replace />
       ) : (
-        <Shell dark={dark} toggleTheme={toggleTheme} onLogout={() => setMe(null)}>
+        <Shell onLogout={() => setMe(null)}>
           <Routes>
             <Route path={base} element={<Overview />} />
             <Route path={`${base}/account`} element={<Account />} />
@@ -300,49 +300,12 @@ function Workspace({ dark, toggleTheme }: { dark: boolean; toggleTheme: () => vo
   )
 }
 export default function App() {
-  const [dark, setDark] = useState(localStorage.getItem('px-theme') === 'dark')
   return (
-    <ConfigProvider
-      locale={zhCN}
-      theme={{
-        algorithm: dark ? theme.darkAlgorithm : theme.defaultAlgorithm,
-        token: {
-          colorPrimary: '#7454d9',
-          borderRadius: 7,
-          fontFamily: 'Inter, "Segoe UI", "Microsoft YaHei", sans-serif',
-          fontSize: 14,
-          colorBgLayout: dark ? '#141418' : '#f7f8fb',
-        },
-        components: {
-          Layout: { headerBg: dark ? '#1b1b20' : '#ffffff', siderBg: dark ? '#1b1b20' : '#ffffff' },
-          Menu: {
-            itemSelectedBg: dark ? '#33294f' : '#f0ecfa',
-            itemSelectedColor: dark ? '#c4b5fd' : '#6d45cf',
-            itemHeight: 36,
-            itemMarginInline: 12,
-          },
-          Table: {
-            headerBg: dark ? '#24242b' : '#f8f9fc',
-            cellPaddingBlockMD: 10,
-            cellPaddingInlineMD: 12,
-          },
-        },
-      }}
-    >
-      <AntApp className={dark ? 'theme-dark' : undefined}>
-        <BrowserRouter>
-          <DocumentMetadata />
-          <Workspace
-            dark={dark}
-            toggleTheme={() =>
-              setDark((v) => {
-                localStorage.setItem('px-theme', v ? 'light' : 'dark')
-                return !v
-              })
-            }
-          />
-        </BrowserRouter>
-      </AntApp>
-    </ConfigProvider>
+    <AppearanceProvider>
+      <BrowserRouter>
+        <DocumentMetadata />
+        <Workspace />
+      </BrowserRouter>
+    </AppearanceProvider>
   )
 }

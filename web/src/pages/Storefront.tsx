@@ -1,39 +1,31 @@
-import type { CSSProperties } from 'react'
-import { Alert, Button, Space, theme } from 'antd'
-import { ArrowRightOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons'
+import { Alert, Button, Space } from 'antd'
+import { ArrowRightOutlined } from '@ant-design/icons'
 import type { User } from '../api'
 import { Brand } from '../components/Brand'
+import { AppearanceButton } from '../appearance'
+import NetworkScene from '../assets/NetworkScene'
 import { usePublicSite } from '../publicSite'
 import '../storefront.css'
 
 export default function Storefront({
   user,
   registrationOpen,
-  dark,
-  toggleTheme,
 }: {
   user?: User | null
   registrationOpen?: boolean
-  dark?: boolean
-  toggleTheme?: () => void
 }) {
   const { data: document, error, reload } = usePublicSite()
   const content = document?.site.data
-  const { token } = theme.useToken()
   const highlights = (content?.highlights || []) as string[]
-  const style = {
-    '--store-border': token.colorBorderSecondary,
-    '--store-surface': token.colorBgContainer,
-    '--store-background': token.colorBgLayout,
-    '--store-text': token.colorText,
-    '--store-secondary': token.colorTextSecondary,
-    '--store-accent': token.colorPrimary,
-    '--store-accent-text': token.colorPrimaryText,
-  } as CSSProperties
   if (document?.available && document.site.renderer !== 'storefront' && document.site.html)
-    return <div dangerouslySetInnerHTML={{ __html: document.site.html }} />
+    return (
+      <>
+        <AppearanceButton className="standalone-appearance" />
+        <div dangerouslySetInnerHTML={{ __html: document.site.html }} />
+      </>
+    )
   return (
-    <div className="storefront" style={style}>
+    <div className="storefront">
       <header className="storefront-header">
         <div className="storefront-header-inner">
           <a href="/" className="storefront-name">
@@ -46,15 +38,7 @@ export default function Storefront({
                   服务说明
                 </a>
               )}
-              {toggleTheme && (
-                <Button
-                  type="text"
-                  shape="circle"
-                  icon={dark ? <SunOutlined /> : <MoonOutlined />}
-                  onClick={toggleTheme}
-                  aria-label={dark ? '切换到浅色' : '切换到深色'}
-                />
-              )}
+              <AppearanceButton />
             </Space>
           </nav>
         </div>
@@ -89,7 +73,9 @@ export default function Storefront({
               )}
             </div>
           </div>
-          <div className="storefront-art" aria-hidden="true" />
+          <div className="storefront-art" aria-hidden="true">
+            <NetworkScene />
+          </div>
         </section>
         {error && (
           <Alert
