@@ -1,34 +1,40 @@
 .affiliate-invitation {
   display: grid;
-  gap: 12px;
-  padding-bottom: 24px;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--px-surface);
+  border: 1px solid var(--px-border-soft);
+  border-radius: 8px;
+  box-shadow: var(--px-shadow-sm);
+  margin-bottom: 16px;
 }
 .affiliate-invitation > label {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
 }
 .affiliate-link {
   width: 100%;
-  max-width: 800px;
+  max-width: 720px;
 }
 .affiliate-rules {
-  row-gap: 8px;
-  column-gap: 20px;
+  row-gap: 6px;
+  column-gap: 16px;
+  font-size: 12px;
 }
 .affiliate-statistics {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-.affiliate-actions {
-  padding-block: 22px;
-}
 .affiliate-form {
-  margin-top: 22px;
+  margin-top: 18px;
 }
 .affiliate-form-actions {
   display: flex;
   justify-content: flex-end;
 }
 @media (max-width: 760px) {
+  .affiliate-invitation {
+    padding: 14px 16px;
+  }
   .affiliate-statistics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

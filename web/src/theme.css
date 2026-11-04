@@ -1,10 +1,10 @@
 :root {
-  --px-bg: #f5f7fa;
+  --px-bg: #f4f6f9;
   --px-surface: #fff;
   --px-elevated: #fff;
-  --px-fill: #fafafa;
-  --px-border: #dce2ea;
-  --px-border-soft: #e8ecf1;
+  --px-fill: #f8fafc;
+  --px-border: #d5dde7;
+  --px-border-soft: #e5eaf1;
   --px-text: #182230;
   --px-secondary: #586577;
   --px-muted: #7a8797;
@@ -15,8 +15,21 @@
   --px-primary-text: #2563eb;
   --px-success: #15803d;
   --px-error: #dc2626;
+  --px-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
   --px-font:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+:root[data-theme='dark'] {
+  --px-bg: #0d1117;
+  --px-surface: #151b23;
+  --px-elevated: #1c232e;
+  --px-fill: #19202a;
+  --px-border: #2f3947;
+  --px-border-soft: #232b36;
+  --px-text: rgba(255, 255, 255, 0.88);
+  --px-secondary: rgba(255, 255, 255, 0.65);
+  --px-muted: rgba(255, 255, 255, 0.45);
+  --px-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
 }
 html {
   background: var(--px-bg);
@@ -38,6 +51,7 @@ a:hover {
 .workspace-avatar {
   background: var(--px-primary-soft);
   color: var(--px-primary-text);
+  font-weight: 600;
 }
 .mode-tag {
   color: var(--px-primary-text);
@@ -45,25 +59,27 @@ a:hover {
   border-color: var(--px-primary-border);
 }
 .appearance-settings {
-  width: 272px;
+  width: 264px;
   display: grid;
-  gap: 18px;
-  padding-block: 4px;
+  gap: 14px;
+  padding-block: 2px;
 }
 .appearance-label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--px-secondary);
   font-size: 12px;
 }
 .appearance-colors {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 .appearance-colors .ant-radio-button-wrapper {
-  padding-inline: 10px;
-  border: 1px solid var(--px-border);
+  padding-inline: 8px;
+  height: 32px;
+  line-height: 30px;
+  border: 1px solid var(--px-border-soft);
   border-radius: 6px;
 }
 .appearance-colors .ant-radio-button-wrapper::before {
@@ -81,19 +97,23 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 12px;
 }
 .appearance-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
   flex: 0 0 auto;
+}
+.appearance-button {
+  color: var(--px-secondary);
 }
 .standalone-appearance {
   position: fixed;
-  top: 32px;
-  right: 40px;
+  top: 16px;
+  right: 20px;
   z-index: 30;
 }
 @media (max-width: 760px) {
@@ -101,7 +121,7 @@ a:hover {
     display: none;
   }
   .standalone-appearance {
-    top: 24px;
-    right: 20px;
+    top: 12px;
+    right: 14px;
   }
 }

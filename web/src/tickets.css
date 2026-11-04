@@ -42,13 +42,15 @@
   display: block;
   max-width: 100%;
   max-height: 420px;
-  border-radius: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--px-border-soft);
 }
 .ticket-markdown pre {
   overflow: auto;
   padding: 12px;
   background: var(--px-fill);
-  border-radius: 4px;
+  border: 1px solid var(--px-border-soft);
+  border-radius: 6px;
 }
 .ticket-markdown blockquote {
   margin-inline: 0;
@@ -77,6 +79,7 @@
 .ticket-preview {
   min-height: 130px;
   padding: 10px 12px;
+  background: var(--px-fill);
   border: 1px solid var(--px-border);
   border-radius: 6px;
 }

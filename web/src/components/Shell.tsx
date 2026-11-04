@@ -180,12 +180,16 @@ export default function Shell({
     <>
       <Layout className="workspace">
         <Layout.Sider
-          width={228}
+          width={220}
           collapsed={collapsed}
-          collapsedWidth={76}
+          collapsedWidth={68}
           className="desktop-sider"
         >
-          <Link to={adminRoot(me)} className="sidebar-brand" aria-label={brand.name}>
+          <Link
+            to={adminRoot(me)}
+            className={`sidebar-brand${collapsed ? ' collapsed' : ''}`}
+            aria-label={brand.name}
+          >
             <Brand compact={collapsed} />
           </Link>
           <div className="sidebar-menu">{menu}</div>

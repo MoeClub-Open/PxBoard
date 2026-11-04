@@ -6,6 +6,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons'
 import { api, errorText, useData } from '../api'
 import type { Field, Row } from '../api'
 import { Fields, formValues, serialize } from '../components/Fields'
+import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 import { OAuthButtons } from '../components/OAuthButtons'
 import { useBrandTitle } from '../branding'
@@ -67,10 +68,13 @@ export default function Register() {
   )
   return (
     <div className="auth-page">
-      <div className="auth-brand">
-        <Brand />
-      </div>
-      <div className="auth-form">
+      <header className="auth-header">
+        <Link to="/">
+          <Brand />
+        </Link>
+        <AppearanceButton />
+      </header>
+      <main className="auth-form">
         <h1>创建账户</h1>
         {loading ? (
           <Spin />
@@ -97,6 +101,7 @@ export default function Register() {
             <Form
               key={provider.key}
               layout="vertical"
+              requiredMark={false}
               initialValues={initial}
               onFinish={async (values) => {
                 if (
@@ -153,7 +158,7 @@ export default function Register() {
             <ArrowLeftOutlined /> 返回登录
           </Link>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

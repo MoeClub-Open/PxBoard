@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Form, Input, Radio } from 'antd'
 import { api, errorText } from '../api'
+import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 import { useBrandTitle } from '../branding'
 
@@ -38,9 +39,10 @@ export default function Setup({ onCreated }: { onCreated: () => Promise<void> })
   }
   return (
     <div className="auth-page">
-      <div className="auth-brand">
+      <header className="auth-header">
         <Brand />
-      </div>
+        <AppearanceButton />
+      </header>
       <main className="auth-form">
         <h1>{created ? '继续配置站点' : '创建站点'}</h1>
         {error && <Alert type="error" title={error} showIcon className="page-notice" />}

@@ -5,11 +5,11 @@
   color: var(--px-text);
   background:
     radial-gradient(
-      ellipse at 80% 40%,
-      color-mix(in srgb, var(--px-primary-soft) 65%, transparent),
-      transparent 55%
+      ellipse 70% 50% at 75% 0%,
+      color-mix(in srgb, var(--px-primary-soft) 58%, transparent),
+      transparent 70%
     ),
-    var(--px-surface);
+    var(--px-bg);
 }
 .storefront a {
   text-decoration: none;
@@ -19,33 +19,36 @@
   outline-offset: 4px;
 }
 .storefront-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--px-surface) 88%, transparent);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--px-border-soft);
 }
 .storefront-header-inner,
 .storefront-main,
-.storefront-footer {
-  width: min(100%, 1120px);
+.storefront-footer-inner {
+  width: min(100%, 1060px);
   margin-inline: auto;
   box-sizing: border-box;
-  padding-inline: 32px;
+  padding-inline: 24px;
 }
 .storefront-header-inner {
-  min-height: 68px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
 }
 .storefront-name {
   display: inline-flex;
   min-width: 0;
   color: var(--px-text);
-  font-size: 19px;
-  font-weight: 650;
-  letter-spacing: -0.035em;
 }
 .storefront-name .brand {
   min-width: 0;
+  font-size: 18px;
 }
 .storefront-name .brand > span:last-child {
   overflow-wrap: anywhere;
@@ -53,12 +56,13 @@
 .storefront-header nav {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
   flex-shrink: 0;
 }
 .storefront-nav-link {
   color: var(--px-secondary);
   font-size: 13px;
+  font-weight: 500;
 }
 .storefront-nav-link:hover {
   color: var(--px-primary-text);
@@ -68,68 +72,88 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 36px;
-  padding-block: 36px;
+  gap: 18px;
+  padding-block: 24px 32px;
 }
 .storefront-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: center;
-  min-height: 380px;
-  gap: 40px;
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+  align-items: stretch;
+  min-height: 320px;
+  background: var(--px-surface);
+  border: 1px solid var(--px-border-soft);
+  border-radius: 10px;
+  box-shadow: var(--px-shadow-sm);
+  overflow: hidden;
 }
 .storefront-copy {
-  padding-block: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 32px 36px;
 }
 .storefront-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  width: fit-content;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--px-primary-soft);
+  border: 1px solid var(--px-primary-border);
   color: var(--px-primary-text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.6;
-  margin: 0 0 18px;
+  line-height: 1.5;
+  margin: 0 0 14px;
 }
 .storefront-eyebrow .anticon {
-  font-size: 16px;
+  font-size: 12px;
 }
 .storefront-copy h1 {
-  font-size: clamp(30px, 3.2vw, 42px);
+  font-size: clamp(24px, 2.5vw, 30px);
   font-weight: 650;
   line-height: 1.25;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
   overflow-wrap: anywhere;
   margin: 0;
   text-wrap: balance;
 }
 .storefront-intro-text {
   color: var(--px-secondary);
-  font-size: 15px;
-  line-height: 1.9;
+  font-size: 14px;
+  line-height: 1.75;
   white-space: pre-line;
   overflow-wrap: anywhere;
-  max-width: 32em;
-  margin: 18px 0 0;
+  max-width: 34em;
+  margin: 12px 0 0;
 }
 .storefront-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 28px;
+  gap: 10px;
+  margin-top: 22px;
 }
 .storefront-action.ant-btn {
-  min-height: 44px;
-  padding-inline: 22px;
+  height: 38px;
+  padding-inline: 18px;
   font-size: 14px;
 }
 .storefront-art {
   position: relative;
   isolation: isolate;
-  aspect-ratio: 7 / 6;
-  width: 100%;
-  max-width: 480px;
-  justify-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border-left: 1px solid var(--px-border-soft);
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--px-primary-soft) 68%, transparent),
+      transparent 72%
+    ),
+    var(--px-fill);
   color: var(--px-primary-text);
 }
 .storefront-art::before {
@@ -138,61 +162,78 @@
   inset: 0;
   z-index: -1;
   background-image: radial-gradient(var(--px-primary-border) 1px, transparent 1px);
-  background-size: 20px 20px;
-  mask-image: radial-gradient(ellipse, #000 25%, transparent 70%);
+  background-size: 18px 18px;
+  opacity: 0.7;
+  mask-image: radial-gradient(ellipse, #000 30%, transparent 75%);
 }
 .storefront-art svg {
   display: block;
   width: 100%;
-  height: 100%;
+  max-width: 416px;
+  height: auto;
 }
 .storefront-highlights {
-  padding-top: 24px;
-  border-top: 1px solid var(--px-border-soft);
-  scroll-margin-top: 24px;
+  scroll-margin-top: 76px;
 }
 .storefront-highlights h2 {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.6;
-  margin: 0 0 20px;
+  color: var(--px-secondary);
+  line-height: 1.5;
+  margin: 0 0 10px;
 }
 .storefront-highlights ul {
   list-style: none;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 20px 28px;
+  gap: 12px;
   margin: 0;
   padding: 0;
 }
 .storefront-highlights li {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 10px;
-  color: var(--px-secondary);
-  font-size: 14px;
-  line-height: 1.8;
+  padding: 12px 15px;
+  background: var(--px-surface);
+  border: 1px solid var(--px-border-soft);
+  border-radius: 8px;
+  box-shadow: var(--px-shadow-sm);
+  color: var(--px-text);
+  font-size: 13px;
+  line-height: 1.65;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
-.storefront-highlights li > .anticon {
+.storefront-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 5px;
+  background: var(--px-primary-soft);
   flex-shrink: 0;
   color: var(--px-primary-text);
-  font-size: 12px;
+  font-size: 11px;
 }
 .storefront-alert {
   margin: 0;
 }
 .storefront-footer {
   border-top: 1px solid var(--px-border-soft);
-  padding-block: 20px;
+  background: var(--px-surface);
+}
+.storefront-footer-inner {
+  padding-block: 14px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 24px;
   color: var(--px-secondary);
   font-size: 12px;
-  line-height: 1.8;
+  line-height: 1.6;
 }
 .storefront-footer p {
   margin: 0;
@@ -200,53 +241,53 @@
   overflow-wrap: anywhere;
   text-align: right;
 }
-@media (max-width: 760px) {
+@media (max-width: 820px) {
   .storefront-header-inner,
   .storefront-main,
-  .storefront-footer {
-    padding-inline: 24px;
+  .storefront-footer-inner {
+    padding-inline: 16px;
   }
   .storefront-header-inner {
-    min-height: 60px;
-    gap: 16px;
+    min-height: 52px;
+    gap: 12px;
   }
-  .storefront-name {
+  .storefront-name .brand {
     font-size: 17px;
   }
   .storefront-header nav {
-    gap: 12px;
+    gap: 10px;
   }
   .storefront-main {
-    padding-block: 28px;
-    gap: 24px;
+    padding-block: 18px 28px;
+    gap: 16px;
   }
   .storefront-hero {
     grid-template-columns: 1fr;
-    gap: 12px;
     min-height: auto;
   }
   .storefront-copy {
-    padding-block: 16px 0;
+    padding: 22px 20px;
   }
   .storefront-copy h1 {
-    font-size: clamp(28px, 7vw, 34px);
+    font-size: clamp(22px, 6vw, 27px);
   }
   .storefront-intro-text {
-    font-size: 14px;
+    font-size: 13px;
   }
   .storefront-art {
-    max-width: 320px;
-    max-height: 240px;
+    padding: 18px 16px;
+    border-left: 0;
+    border-top: 1px solid var(--px-border-soft);
   }
-  .storefront-highlights {
-    padding-top: 20px;
+  .storefront-art svg {
+    max-width: 300px;
   }
   .storefront-highlights ul {
-    gap: 14px;
+    gap: 10px;
   }
-  .storefront-footer {
+  .storefront-footer-inner {
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
   .storefront-footer p {
     text-align: left;

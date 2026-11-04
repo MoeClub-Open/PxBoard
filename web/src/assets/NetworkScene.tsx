@@ -1,141 +1,184 @@
+import { useId } from 'react'
+
 export default function NetworkScene() {
+  const uid = useId().replaceAll(':', '')
+  const ringId = `${uid}-ring`
+  const coreId = `${uid}-core`
+  const glowId = `${uid}-glow`
+  const cardId = `${uid}-card`
   return (
-    <svg viewBox="0 0 560 480" fill="none">
+    <svg viewBox="0 0 520 380" fill="none">
       <defs>
-        <linearGradient id="orbit" x1="80" y1="40" x2="490" y2="420" gradientUnits="userSpaceOnUse">
-          <stop stopColor="currentColor" stopOpacity=".18" />
-          <stop offset=".5" stopColor="currentColor" stopOpacity=".7" />
-          <stop offset="1" stopColor="currentColor" stopOpacity=".08" />
-        </linearGradient>
-        <linearGradient id="hub" x1="212" y1="163" x2="350" y2="302" gradientUnits="userSpaceOnUse">
-          <stop stopColor="var(--px-primary-hover)" />
-          <stop offset="1" stopColor="var(--px-primary)" />
-        </linearGradient>
         <linearGradient
-          id="panel"
-          x1="75"
-          y1="105"
-          x2="135"
-          y2="200"
+          id={ringId}
+          x1="90"
+          y1="30"
+          x2="430"
+          y2="350"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="var(--px-surface)" />
-          <stop offset="1" stopColor="var(--px-primary-soft)" />
+          <stop stopColor="currentColor" stopOpacity=".14" />
+          <stop offset=".5" stopColor="currentColor" stopOpacity=".48" />
+          <stop offset="1" stopColor="currentColor" stopOpacity=".12" />
         </linearGradient>
-        <radialGradient id="halo">
-          <stop stopColor="currentColor" stopOpacity=".19" />
+        <linearGradient
+          id={coreId}
+          x1="212"
+          y1="142"
+          x2="308"
+          y2="238"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop style={{ stopColor: 'var(--px-primary-hover)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--px-primary)' }} />
+        </linearGradient>
+        <linearGradient id={cardId} x1="0" y1="0" x2="0" y2="1">
+          <stop style={{ stopColor: 'var(--px-surface)' }} />
+          <stop offset="1" style={{ stopColor: 'var(--px-primary-soft)', stopOpacity: 0.65 }} />
+        </linearGradient>
+        <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
+          <stop stopColor="currentColor" stopOpacity=".18" />
           <stop offset="1" stopColor="currentColor" stopOpacity="0" />
         </radialGradient>
-        <filter id="shadow" x="150" y="100" width="270" height="280" filterUnits="userSpaceOnUse">
-          <feGaussianBlur stdDeviation="16" />
-        </filter>
       </defs>
-      <circle cx="282" cy="234" r="225" fill="url(#halo)" />
-      <circle cx="282" cy="234" r="196" stroke="url(#orbit)" />
-      <circle cx="282" cy="234" r="148" stroke="url(#orbit)" strokeDasharray="3 8" />
-      <ellipse
-        cx="282"
-        cy="234"
-        rx="244"
-        ry="102"
-        transform="rotate(-31 282 234)"
-        stroke="url(#orbit)"
-      />
+      <circle cx="260" cy="190" r="172" fill={`url(#${glowId})`} />
+      <circle cx="260" cy="190" r="148" stroke={`url(#${ringId})`} />
+      <circle cx="260" cy="190" r="106" stroke={`url(#${ringId})`} strokeDasharray="3 6" />
       <path
-        d="M113 151C174 151 179 231 232 231M444 122C390 122 389 199 334 215M439 341C383 341 383 258 333 250M164 372C218 372 208 286 259 274"
+        d="M260 28V42M260 338V352M98 190H112M408 190H422"
         stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <circle cx="190" cy="204" r="4" fill="currentColor" />
-      <circle cx="388" cy="165" r="4" fill="currentColor" />
-      <circle cx="389" cy="299" r="4" fill="currentColor" />
-      <circle cx="282" cy="250" r="67" fill="currentColor" opacity=".23" filter="url(#shadow)" />
-      <rect x="214" y="166" width="136" height="136" rx="39" fill="url(#hub)" />
-      <rect
-        x="214.5"
-        y="166.5"
-        width="135"
-        height="135"
-        rx="38.5"
-        stroke="var(--px-primary-border)"
-        strokeOpacity=".6"
-      />
-      <circle cx="282" cy="234" r="34" stroke="#fff" strokeWidth="1.7" strokeOpacity=".95" />
-      <ellipse
-        cx="282"
-        cy="234"
-        rx="15"
-        ry="34"
-        stroke="#fff"
-        strokeWidth="1.5"
-        strokeOpacity=".8"
+        strokeOpacity=".28"
+        strokeLinecap="round"
       />
       <path
-        d="M249 225H315M249 244H315M282 200V268"
-        stroke="#fff"
-        strokeWidth="1.5"
-        strokeOpacity=".8"
+        d="M168 96H198C210 96 218 104 218 116V146M352 96H322C310 96 302 104 302 116V146M168 284H198C210 284 218 276 218 264V234M352 284H322C310 284 302 276 302 264V234"
+        stroke="currentColor"
+        strokeOpacity=".55"
+        strokeWidth="1.4"
+        strokeLinecap="round"
       />
+      <circle cx="218" cy="124" r="3" fill="currentColor" />
+      <circle cx="302" cy="124" r="3" fill="currentColor" />
+      <circle cx="218" cy="256" r="3" fill="currentColor" />
+      <circle cx="302" cy="256" r="3" fill="currentColor" />
       <rect
-        x="61"
-        y="111"
-        width="104"
-        height="80"
-        rx="17"
-        fill="url(#panel)"
+        x="196"
+        y="126"
+        width="128"
+        height="128"
+        rx="28"
+        fill="var(--px-surface)"
         stroke="var(--px-primary-border)"
       />
-      <rect x="83" y="129" width="60" height="38" rx="5" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="208" y="138" width="104" height="104" rx="22" fill={`url(#${coreId})`} />
+      <circle cx="260" cy="190" r="28" stroke="#fff" strokeWidth="1.6" strokeOpacity=".95" />
+      <ellipse
+        cx="260"
+        cy="190"
+        rx="12.5"
+        ry="28"
+        stroke="#fff"
+        strokeWidth="1.35"
+        strokeOpacity=".82"
+      />
       <path
-        d="M100 175H126M113 168V175"
+        d="M233 182H287M233 198H287M260 162V218"
+        stroke="#fff"
+        strokeWidth="1.35"
+        strokeOpacity=".82"
+      />
+      <rect
+        x="56"
+        y="58"
+        width="112"
+        height="76"
+        rx="12"
+        fill={`url(#${cardId})`}
+        stroke="var(--px-border)"
+      />
+      <circle cx="72" cy="72" r="2.2" fill="currentColor" fillOpacity=".55" />
+      <circle cx="80" cy="72" r="2.2" fill="currentColor" fillOpacity=".3" />
+      <rect x="72" y="82" width="48" height="32" rx="4" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M88 120H104M96 114V120M130 90H150M130 98H145M130 106H148"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.4"
         strokeLinecap="round"
       />
       <rect
-        x="412"
-        y="77"
-        width="65"
-        height="95"
-        rx="18"
-        fill="url(#panel)"
-        stroke="var(--px-primary-border)"
+        x="352"
+        y="58"
+        width="112"
+        height="76"
+        rx="12"
+        fill={`url(#${cardId})`}
+        stroke="var(--px-border)"
       />
-      <rect x="423" y="89" width="43" height="63" rx="7" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M441 160H449" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <rect x="370" y="71" width="30" height="50" rx="5" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M382 114H388M412 84H444M412 94H436M412 104H440"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="444" cy="72" r="3" fill="currentColor" />
       <rect
-        x="395"
-        y="310"
-        width="90"
-        height="65"
-        rx="17"
-        fill="url(#panel)"
-        stroke="var(--px-primary-border)"
+        x="56"
+        y="246"
+        width="112"
+        height="76"
+        rx="12"
+        fill={`url(#${cardId})`}
+        stroke="var(--px-border)"
       />
       <path
-        d="M420 349H460V344C460 338 455 334 450 335C448 323 430 323 428 335C417 333 412 348 420 349Z"
+        d="M88 268L101 273V283C101 291.5 94.8 297.6 88 301C81.2 297.6 75 291.5 75 283V273L88 268Z"
         stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <circle cx="164" cy="372" r="28" fill="url(#panel)" stroke="var(--px-primary-border)" />
-      <path
-        d="M164 357L175 362V371C175 378 169 383 164 386C159 383 153 378 153 371V362L164 357Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.4"
         strokeLinejoin="round"
       />
       <path
-        d="M159 371L163 375L170 367"
+        d="M83.5 284L86.8 287.3L93 280.5M114 278H148M114 288H140"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="297" cy="39" r="4" fill="currentColor" />
-      <circle cx="85" cy="280" r="3" fill="currentColor" />
-      <circle cx="302" cy="430" r="3" fill="currentColor" />
-      <circle cx="487" cy="218" r="3" fill="currentColor" />
+      <rect
+        x="352"
+        y="246"
+        width="112"
+        height="76"
+        rx="12"
+        fill={`url(#${cardId})`}
+        stroke="var(--px-border)"
+      />
+      <rect
+        x="370"
+        y="264"
+        width="76"
+        height="16"
+        rx="4"
+        stroke="currentColor"
+        strokeWidth="1.35"
+      />
+      <rect
+        x="370"
+        y="286"
+        width="76"
+        height="16"
+        rx="4"
+        stroke="currentColor"
+        strokeWidth="1.35"
+      />
+      <circle cx="379" cy="272" r="2.2" fill="currentColor" />
+      <circle cx="379" cy="294" r="2.2" fill="currentColor" />
+      <path
+        d="M390 272H434M390 294H426"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
     </svg>
   )
 }

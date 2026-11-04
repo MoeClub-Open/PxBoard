@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Alert, Button, Form, Input, Spin, Typography } from 'antd'
+import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 import { oauthFlowKey } from '../components/OAuthButtons'
 import type { OAuthFlow } from '../components/OAuthButtons'
@@ -122,12 +123,13 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
   }, [])
   return (
     <div className="auth-page">
-      <div className="auth-brand">
+      <header className="auth-header">
         <Link to="/">
           <Brand />
         </Link>
-      </div>
-      <div className="auth-form">
+        <AppearanceButton />
+      </header>
+      <main className="auth-form">
         <h1>
           {callback.mode === 'bind'
             ? '绑定登录方式'
@@ -196,7 +198,7 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
             </Link>
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }

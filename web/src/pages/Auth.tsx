@@ -7,6 +7,7 @@ import { api, ApiError, errorText, useData } from '../api'
 import type { AuthInfo } from './Register'
 import type { User } from '../api'
 import { loginDestination } from '../adminPath'
+import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 import { OAuthButtons } from '../components/OAuthButtons'
 import { useBrand, useBrandTitle } from '../branding'
@@ -54,11 +55,12 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
   }
   return (
     <div className="auth-page">
-      <div className="auth-brand">
+      <header className="auth-header">
         <Link to="/">
           <Brand />
         </Link>
-      </div>
+        <AppearanceButton />
+      </header>
       <main className="auth-form">
         <h1>登录 {name}</h1>
         {error && <Alert type="error" title={error} showIcon className="page-notice" />}
@@ -139,10 +141,13 @@ export function Reset({ request = false }: { request?: boolean }) {
   const [done, setDone] = useState(false)
   return (
     <div className="auth-page">
-      <div className="auth-brand">
-        <Brand />
-      </div>
-      <div className="auth-form">
+      <header className="auth-header">
+        <Link to="/">
+          <Brand />
+        </Link>
+        <AppearanceButton />
+      </header>
+      <main className="auth-form">
         <h1>{request ? '找回密码' : '设置新密码'}</h1>
         {error && <Alert type="error" title={error} showIcon className="page-notice" />}
         {done ? (
@@ -154,6 +159,7 @@ export function Reset({ request = false }: { request?: boolean }) {
         ) : (
           <Form
             layout="vertical"
+            requiredMark={false}
             onFinish={async (values) => {
               if (
                 request &&
@@ -186,7 +192,7 @@ export function Reset({ request = false }: { request?: boolean }) {
                 label="邮箱"
                 rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}
               >
-                <Input size="large" type="email" />
+                <Input size="large" type="email" prefix={<MailOutlined />} autoComplete="email" />
               </Form.Item>
             ) : (
               <Form.Item
@@ -194,7 +200,11 @@ export function Reset({ request = false }: { request?: boolean }) {
                 label="新密码"
                 rules={[{ required: true, min: 10, message: '密码至少 10 位' }]}
               >
-                <Input.Password size="large" autoComplete="new-password" />
+                <Input.Password
+                  size="large"
+                  prefix={<LockOutlined />}
+                  autoComplete="new-password"
+                />
               </Form.Item>
             )}
             {request && <ChallengeNotice loading={challenge.loading} error={challenge.error} />}
@@ -223,7 +233,7 @@ export function Reset({ request = false }: { request?: boolean }) {
             <ArrowLeftOutlined /> 返回登录
           </Link>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

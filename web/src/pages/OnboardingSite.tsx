@@ -7,7 +7,6 @@ import {
   Collapse,
   Form,
   Input,
-  List,
   Result,
   Space,
   Spin,
@@ -19,6 +18,8 @@ import {
 import { api, errorText } from '../api'
 import type { Plugin, Row, User } from '../api'
 import { adminRoot } from '../adminPath'
+import { AppearanceButton } from '../appearance'
+import { Brand } from '../components/Brand'
 import { availablePeriods } from '../planPeriods'
 
 type Check = { key: string; label: string; ready: boolean; error?: string; path: string }
@@ -178,165 +179,173 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
   if (complete)
     return (
       <div className="onboarding-page">
-        <Result
-          status="success"
-          title="基础设置已完成"
-          subTitle="服务配置可继续在管理后台完成。"
-          extra={
-            <Space>
-              <Button type="primary" onClick={() => enter('/user')}>
-                进入用户前台
-              </Button>
-              <Button onClick={() => enter(complete.adminPath)}>继续配置服务</Button>
-              {settings?.mode === 'business' && (
-                <Button href={complete.publicUrl + '/'} target="_blank">
-                  查看首页
+        <header className="onboarding-header">
+          <Brand />
+          <AppearanceButton />
+        </header>
+        <main className="onboarding-card">
+          <Result
+            status="success"
+            title="基础设置已完成"
+            subTitle="服务配置可继续在管理后台完成。"
+            extra={
+              <Space>
+                <Button type="primary" onClick={() => enter('/user')}>
+                  进入用户前台
                 </Button>
-              )}
-            </Space>
-          }
-        />
-        <Typography.Paragraph>
-          管理地址：
-          <Typography.Text copyable>{complete.publicUrl + complete.adminPath}</Typography.Text>
-        </Typography.Paragraph>
+                <Button onClick={() => enter(complete.adminPath)}>继续配置服务</Button>
+                {settings?.mode === 'business' && (
+                  <Button href={complete.publicUrl + '/'} target="_blank">
+                    查看首页
+                  </Button>
+                )}
+              </Space>
+            }
+          />
+          <div className="onboarding-admin-url">
+            管理地址：
+            <Typography.Text copyable>{complete.publicUrl + complete.adminPath}</Typography.Text>
+          </div>
+        </main>
       </div>
     )
   return (
-    <main className="onboarding-page">
-      <h1>配置站点</h1>
-      <Steps
-        size="small"
-        current={step}
-        items={[{ title: '功能安装' }, { title: '站点信息' }, { title: '服务配置' }]}
-        className="setup-steps"
-      />
-      {error && <Alert type="error" showIcon title={error} className="page-notice" />}
-      {!settings ? (
-        <Spin />
-      ) : step === 1 ? (
-        <Form form={form} layout="vertical" onFinish={save} disabled={busy}>
-          <Form.Item
-            name="name"
-            label="站点名称"
-            rules={[{ required: true, message: '请输入站点名称' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="publicUrl"
-            label="公开访问地址"
-            rules={[{ required: true, type: 'url', message: '请输入完整的站点地址' }]}
-          >
-            <Input placeholder="https://panel.example.com" />
-          </Form.Item>
-          {settings.mode === 'business' && (
-            <>
-              <Form.Item
-                name="adminPath"
-                label="独立管理入口"
-                rules={[
-                  {
-                    required: true,
-                    pattern: /^\/[a-zA-Z0-9_-]{3,64}$/,
-                    message: '请输入单级路径，例如 /manage',
-                  },
-                ]}
-              >
-                <Input autoComplete="off" />
-              </Form.Item>
-              {has('branding') && (
-                <>
-                  <Form.Item name="heading" label="首页标题">
-                    <Input />
-                  </Form.Item>
-                  <Form.Item name="introduction" label="服务介绍">
-                    <Input.TextArea rows={3} />
-                  </Form.Item>
-                  <Collapse
-                    ghost
-                    items={[
-                      {
-                        key: 'seo',
-                        label: '搜索与分享设置',
-                        forceRender: true,
-                        children: (
-                          <>
-                            {' '}
-                            <Form.Item name="seoTitle" label="搜索与分享标题">
-                              <Input />
-                            </Form.Item>
-                            <Form.Item name="description" label="搜索与分享摘要">
-                              <Input.TextArea rows={2} />
-                            </Form.Item>
-                            <Form.Item
-                              name="indexingEnabled"
-                              label="允许搜索引擎收录首页"
-                              valuePropName="checked"
-                            >
-                              <Switch />
-                            </Form.Item>
-                          </>
-                        ),
-                      },
-                    ]}
-                  />
-                </>
-              )}
-            </>
-          )}
-          {has('registration') && (
-            <Form.Item name="registrationEnabled" label="开放新用户注册" valuePropName="checked">
-              <Switch />
+    <div className="onboarding-page">
+      <header className="onboarding-header">
+        <Brand />
+        <AppearanceButton />
+      </header>
+      <main className="onboarding-card">
+        <div className="page-heading">
+          <h1>配置站点</h1>
+        </div>
+        <Steps
+          size="small"
+          current={step}
+          items={[{ title: '功能安装' }, { title: '站点信息' }, { title: '服务配置' }]}
+          className="setup-steps"
+        />
+        {error && <Alert type="error" showIcon title={error} className="page-notice" />}
+        {!settings ? (
+          <Spin />
+        ) : step === 1 ? (
+          <Form form={form} layout="vertical" requiredMark={false} onFinish={save} disabled={busy}>
+            <Form.Item
+              name="name"
+              label="站点名称"
+              rules={[{ required: true, message: '请输入站点名称' }]}
+            >
+              <Input />
             </Form.Item>
-          )}
-          <Button type="primary" htmlType="submit" loading={busy}>
-            保存并继续
-          </Button>
-        </Form>
-      ) : (
-        <>
-          <div className="table-toolbar">
-            <h2>服务配置</h2>
-            <Button onClick={() => void readiness().catch((e) => message.error(errorText(e)))}>
-              重新检查
+            <Form.Item
+              name="publicUrl"
+              label="公开访问地址"
+              rules={[{ required: true, type: 'url', message: '请输入完整的站点地址' }]}
+            >
+              <Input placeholder="https://panel.example.com" />
+            </Form.Item>
+            {settings.mode === 'business' && (
+              <>
+                <Form.Item
+                  name="adminPath"
+                  label="独立管理入口"
+                  rules={[
+                    {
+                      required: true,
+                      pattern: /^\/[a-zA-Z0-9_-]{3,64}$/,
+                      message: '请输入单级路径，例如 /manage',
+                    },
+                  ]}
+                >
+                  <Input autoComplete="off" />
+                </Form.Item>
+                {has('branding') && (
+                  <>
+                    <Form.Item name="heading" label="首页标题">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="introduction" label="服务介绍">
+                      <Input.TextArea rows={3} />
+                    </Form.Item>
+                    <Collapse
+                      ghost
+                      items={[
+                        {
+                          key: 'seo',
+                          label: '搜索与分享设置',
+                          forceRender: true,
+                          children: (
+                            <>
+                              {' '}
+                              <Form.Item name="seoTitle" label="搜索与分享标题">
+                                <Input />
+                              </Form.Item>
+                              <Form.Item name="description" label="搜索与分享摘要">
+                                <Input.TextArea rows={2} />
+                              </Form.Item>
+                              <Form.Item
+                                name="indexingEnabled"
+                                label="允许搜索引擎收录首页"
+                                valuePropName="checked"
+                              >
+                                <Switch />
+                              </Form.Item>
+                            </>
+                          ),
+                        },
+                      ]}
+                    />
+                  </>
+                )}
+              </>
+            )}
+            {has('registration') && (
+              <Form.Item name="registrationEnabled" label="开放新用户注册" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            )}
+            <Button type="primary" htmlType="submit" loading={busy}>
+              保存并继续
             </Button>
-          </div>
-          <List
-            dataSource={checks}
-            renderItem={(item) => (
-              <List.Item
-                actions={[
-                  <Button key="configure" href={item.path} target="_blank">
-                    配置
-                  </Button>,
-                ]}
-              >
-                <List.Item.Meta
-                  title={
-                    <Space>
-                      {item.label}
+          </Form>
+        ) : (
+          <>
+            <div className="table-toolbar">
+              <h2>服务配置</h2>
+              <Button onClick={() => void readiness().catch((e) => message.error(errorText(e)))}>
+                重新检查
+              </Button>
+            </div>
+            <div className="data-list onboarding-checks">
+              {checks.map((item) => (
+                <div className="data-row" key={item.key}>
+                  <div className="data-row-copy">
+                    <Space size={8}>
+                      <strong>{item.label}</strong>
                       <Tag color={item.ready ? 'success' : 'default'}>
                         {item.ready ? '已配置' : '待配置'}
                       </Tag>
                     </Space>
-                  }
-                  description={item.error}
-                />
-              </List.Item>
-            )}
-          />
-          <Typography.Paragraph type="secondary">
-            未完成的服务可以稍后配置。节点连接、收款和邮件投递仍需使用实际配置核对。
-          </Typography.Paragraph>
-          <Space>
-            <Button onClick={() => setStep(1)}>返回修改</Button>
-            <Button type="primary" loading={busy} onClick={() => void finish()}>
-              完成初始化
-            </Button>
-          </Space>
-        </>
-      )}
-    </main>
+                    {item.error && <small className="danger">{item.error}</small>}
+                  </div>
+                  <Button size="small" href={item.path} target="_blank">
+                    配置
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Typography.Paragraph type="secondary">
+              未完成的服务可以稍后配置。节点连接、收款和邮件投递仍需使用实际配置核对。
+            </Typography.Paragraph>
+            <Space>
+              <Button onClick={() => setStep(1)}>返回修改</Button>
+              <Button type="primary" loading={busy} onClick={() => void finish()}>
+                完成初始化
+              </Button>
+            </Space>
+          </>
+        )}
+      </main>
+    </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Alert,
   Collapse,
@@ -8,7 +8,6 @@ import {
   Button,
   Form,
   Input,
-  List,
   Progress,
   Radio,
   Select,
@@ -21,6 +20,9 @@ import { CheckCircleOutlined, LoadingOutlined, ReloadOutlined } from '@ant-desig
 import { api, errorText } from '../api'
 import type { Row, User } from '../api'
 import { adminRoot } from '../adminPath'
+import { AppearanceButton } from '../appearance'
+import { Brand } from '../components/Brand'
+import { useSession } from '../context'
 import OnboardingSite from './OnboardingSite'
 import { useBrandTitle } from '../branding'
 
@@ -76,6 +78,7 @@ export default function ModeSetup({
   onboarding?: boolean
 }) {
   useBrandTitle(onboarding ? '初始化' : '使用方式')
+  const { me } = useSession()
   const readyCallback = useRef(onReady)
   readyCallback.current = onReady
   const [state, setState] = useState<ModeState>()
@@ -170,8 +173,16 @@ export default function ModeSetup({
 
   if (loading)
     return (
-      <div className="page-loading">
-        <Spin />
+      <div className="onboarding-page">
+        <header className="onboarding-header">
+          <Brand />
+          <AppearanceButton />
+        </header>
+        <main className="onboarding-card">
+          <div className="page-loading">
+            <Spin />
+          </div>
+        </main>
       </div>
     )
   const installing = state?.phase === 'installing'
@@ -183,9 +194,21 @@ export default function ModeSetup({
 
   if (onboarding && state?.phase === 'ready') return <OnboardingSite onReady={onReady} />
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 20px', minHeight: '100vh' }}>
-      <div className="page-heading">
-        <h1>{onboarding ? '安装所选功能' : '使用方式与功能安装'}</h1>
+    <div className="onboarding-page">
+      <header className="onboarding-header">
+        {onboarding ? (
+          <Brand />
+        ) : (
+          <Link to={adminRoot(me)}>
+            <Brand />
+          </Link>
+        )}
+        <AppearanceButton />
+      </header>
+      <main className="onboarding-card">
+        <div className="page-heading">
+          <h1>{onboarding ? '安装所选功能' : '使用方式与功能安装'}</h1>
+        </div>
         {onboarding && (
           <Steps
             size="small"
@@ -194,140 +217,144 @@ export default function ModeSetup({
             className="setup-steps"
           />
         )}
-      </div>
-      {error && (
-        <Alert
-          type="error"
-          title={error}
-          showIcon
-          className="page-notice"
-          action={
-            <Button onClick={() => void load().catch((e) => setError(errorText(e)))}>
-              重试连接
-            </Button>
-          }
-        />
-      )}
-      {state?.phase === 'failed' && (
-        <Alert
-          type="error"
-          title="功能安装未完成"
-          description={state.error || state.message}
-          showIcon
-          className="page-notice"
-        />
-      )}
-      <Form
-        form={form}
-        initialValues={{ mode: initialMode || 'personal', sourceId: 'custom' }}
-        layout="vertical"
-        onFinish={install}
-        disabled={installing || busy}
-      >
-        <Form.Item
-          name="mode"
-          label="使用方式"
-          rules={[{ required: true, message: '请选择使用方式' }]}
-        >
-          <Radio.Group style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            {modes.map((item) => (
-              <Radio.Button key={item.value} value={item.value}>
-                {item.label}
-              </Radio.Button>
-            ))}
-          </Radio.Group>
-        </Form.Item>
-        <Typography.Paragraph type="secondary">
-          {modes.find((item) => item.value === mode)?.description}
-        </Typography.Paragraph>
-        <Collapse
-          ghost
-          items={[
-            {
-              key: 'source',
-              label: '插件源设置',
-              children: (
-                <>
-                  {' '}
-                  {sources.length > 0 && (
-                    <Form.Item name="sourceId" label="插件源">
-                      <Select
-                        options={[
-                          ...sources.map((source) => ({ label: source.name, value: source.id })),
-                          { label: '使用其他插件源', value: 'custom' },
-                        ]}
-                      />
-                    </Form.Item>
-                  )}
-                  {(sourceId === 'custom' || !sources.length) && (
-                    <Form.Item
-                      name="sourceUrl"
-                      label="插件源地址"
-                      rules={[{ required: true, type: 'url', message: '请输入插件源地址' }]}
-                    >
-                      <Input placeholder="https://plugins.example.com/index.json" />
-                    </Form.Item>
-                  )}
-                </>
-              ),
-            },
-          ]}
-        />
-        <Typography.Paragraph type="secondary">
-          将安装并启用所选方式需要的插件，已安装的其他插件和数据会保留。
-        </Typography.Paragraph>
-        {!ready && (
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={busy || installing}
-            icon={state?.phase === 'failed' ? <ReloadOutlined /> : undefined}
-          >
-            {installing ? '正在安装功能' : state?.phase === 'failed' ? '重新安装' : '安装并启用'}
-          </Button>
+        {error && (
+          <Alert
+            type="error"
+            title={error}
+            showIcon
+            className="page-notice"
+            action={
+              <Button onClick={() => void load().catch((e) => setError(errorText(e)))}>
+                重试连接
+              </Button>
+            }
+          />
         )}
-      </Form>
-      {!!total && (
-        <section className="resource-section" style={{ marginTop: 28 }}>
-          <div className="table-toolbar">
-            <h2>{installing ? '正在安装' : '安装结果'}</h2>
-            <span className="muted">
-              {completed} / {total} 已就绪
-            </span>
-          </div>
-          <Progress
-            percent={Math.round((completed / total) * 100)}
-            status={state?.phase === 'failed' ? 'exception' : ready ? 'success' : 'active'}
+        {state?.phase === 'failed' && (
+          <Alert
+            type="error"
+            title="功能安装未完成"
+            description={state.error || state.message}
+            showIcon
+            className="page-notice"
           />
-          <List
-            dataSource={state?.plugins}
-            renderItem={(plugin) => (
-              <List.Item>
-                <Space>
-                  {plugin.status === 'ready' ? (
-                    <CheckCircleOutlined style={{ color: 'var(--px-success)' }} />
-                  ) : plugin.status === 'installed' ? (
-                    <LoadingOutlined />
-                  ) : null}
-                  <span>{plugin.name || pluginNames[plugin.id] || plugin.id}</span>
-                </Space>
-                <Space>
-                  <Typography.Text type="danger">{plugin.error}</Typography.Text>
-                  <Tag color={statusLabels[plugin.status][1]}>{statusLabels[plugin.status][0]}</Tag>
-                </Space>
-              </List.Item>
-            )}
+        )}
+        <Form
+          form={form}
+          initialValues={{ mode: initialMode || 'personal', sourceId: 'custom' }}
+          layout="vertical"
+          requiredMark={false}
+          onFinish={install}
+          disabled={installing || busy}
+        >
+          <Form.Item
+            name="mode"
+            label="使用方式"
+            rules={[{ required: true, message: '请选择使用方式' }]}
+          >
+            <Radio.Group style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {modes.map((item) => (
+                <Radio.Button key={item.value} value={item.value}>
+                  {item.label}
+                </Radio.Button>
+              ))}
+            </Radio.Group>
+          </Form.Item>
+          <Typography.Paragraph type="secondary">
+            {modes.find((item) => item.value === mode)?.description}
+          </Typography.Paragraph>
+          <Collapse
+            ghost
+            items={[
+              {
+                key: 'source',
+                label: '插件源设置',
+                children: (
+                  <>
+                    {' '}
+                    {sources.length > 0 && (
+                      <Form.Item name="sourceId" label="插件源">
+                        <Select
+                          options={[
+                            ...sources.map((source) => ({ label: source.name, value: source.id })),
+                            { label: '使用其他插件源', value: 'custom' },
+                          ]}
+                        />
+                      </Form.Item>
+                    )}
+                    {(sourceId === 'custom' || !sources.length) && (
+                      <Form.Item
+                        name="sourceUrl"
+                        label="插件源地址"
+                        rules={[{ required: true, type: 'url', message: '请输入插件源地址' }]}
+                      >
+                        <Input placeholder="https://plugins.example.com/index.json" />
+                      </Form.Item>
+                    )}
+                  </>
+                ),
+              },
+            ]}
           />
-        </section>
-      )}
-      {ready && (
-        <Space wrap style={{ marginTop: 24 }}>
-          <Button type="primary" loading={busy} onClick={() => void enter('/user')}>
-            进入用户前台
-          </Button>
-          <Button onClick={() => void enter('admin')}>配置站点</Button>
-        </Space>
-      )}
+          <Typography.Paragraph type="secondary">
+            将安装并启用所选方式需要的插件，已安装的其他插件和数据会保留。
+          </Typography.Paragraph>
+          {!ready && (
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={busy || installing}
+              icon={state?.phase === 'failed' ? <ReloadOutlined /> : undefined}
+            >
+              {installing ? '正在安装功能' : state?.phase === 'failed' ? '重新安装' : '安装并启用'}
+            </Button>
+          )}
+        </Form>
+        {!!total && (
+          <section className="resource-section" style={{ marginTop: 28 }}>
+            <div className="table-toolbar">
+              <h2>{installing ? '正在安装' : '安装结果'}</h2>
+              <span className="muted">
+                {completed} / {total} 已就绪
+              </span>
+            </div>
+            <Progress
+              percent={Math.round((completed / total) * 100)}
+              status={state?.phase === 'failed' ? 'exception' : ready ? 'success' : 'active'}
+            />
+            <div className="data-list">
+              {state?.plugins.map((plugin) => (
+                <div className="data-row" key={plugin.id}>
+                  <Space size={8}>
+                    {plugin.status === 'ready' ? (
+                      <CheckCircleOutlined className="success" />
+                    ) : plugin.status === 'installed' || plugin.status === 'installing' ? (
+                      <LoadingOutlined />
+                    ) : null}
+                    <span>{plugin.name || pluginNames[plugin.id] || plugin.id}</span>
+                  </Space>
+                  <Space size={8}>
+                    {plugin.error && (
+                      <Typography.Text type="danger">{plugin.error}</Typography.Text>
+                    )}
+                    <Tag color={statusLabels[plugin.status][1]}>
+                      {statusLabels[plugin.status][0]}
+                    </Tag>
+                  </Space>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {ready && (
+          <Space wrap style={{ marginTop: 24 }}>
+            <Button type="primary" loading={busy} onClick={() => void enter('/user')}>
+              进入用户前台
+            </Button>
+            <Button onClick={() => void enter('admin')}>配置站点</Button>
+          </Space>
+        )}
+      </main>
     </div>
   )
 }

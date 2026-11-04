@@ -1,6 +1,6 @@
 import type { useHumanChallenge } from './HumanChallenge'
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Empty, Form, Input, List, Space, Spin, Typography } from 'antd'
+import { Alert, App, Button, Empty, Form, Input, Space, Spin, Typography } from 'antd'
 import { GithubOutlined, GoogleOutlined, LinkOutlined } from '@ant-design/icons'
 import { api, errorText } from '../api'
 
@@ -157,85 +157,73 @@ export function OAuthBindings() {
       )}
       {loading ? (
         <Spin />
+      ) : bindings.length ? (
+        <div className="data-list">
+          {bindings.map((binding) => (
+            <div className="data-row" key={binding.id}>
+              <div className="data-row-copy">
+                <strong>{binding.providerName}</strong>
+                <small>{binding.displayName || '已绑定'}</small>
+              </div>
+              <Button
+                type="link"
+                danger
+                loading={busy === binding.id}
+                onClick={() => {
+                  form.resetFields()
+                  modal.confirm({
+                    title: `解除 ${binding.providerName} 绑定？`,
+                    content: binding.requiresPassword ? (
+                      <Form form={form} layout="vertical" requiredMark={false}>
+                        <Typography.Paragraph>
+                          解除最后一个绑定前，请确认登录密码。
+                        </Typography.Paragraph>
+                        <Form.Item
+                          name="password"
+                          label="当前登录密码"
+                          rules={[{ required: true, message: '请输入当前登录密码' }]}
+                        >
+                          <Input.Password autoComplete="current-password" />
+                        </Form.Item>
+                        <Form.Item name="code" label="动态验证码（已启用时填写）">
+                          <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
+                        </Form.Item>
+                      </Form>
+                    ) : (
+                      '解除后无法再使用此账号登录。'
+                    ),
+                    okText: '解除绑定',
+                    cancelText: '取消',
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                      const body = binding.requiresPassword
+                        ? await form.validateFields()
+                        : undefined
+                      setBusy(binding.id)
+                      try {
+                        await api(`/extensions/oauth/bindings/${encodeURIComponent(binding.id)}`, {
+                          method: 'DELETE',
+                          body,
+                        })
+                        await reload()
+                        message.success('已解除绑定')
+                      } catch (e) {
+                        message.error(errorText(e))
+                        throw e
+                      } finally {
+                        setBusy('')
+                      }
+                    },
+                  })
+                }}
+              >
+                解除绑定
+              </Button>
+            </div>
+          ))}
+        </div>
       ) : (
-        <List
-          dataSource={bindings}
-          locale={{
-            emptyText: (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未绑定其他登录方式" />
-            ),
-          }}
-          renderItem={(binding) => (
-            <List.Item
-              actions={[
-                <Button
-                  key="unbind"
-                  type="link"
-                  danger
-                  loading={busy === binding.id}
-                  onClick={() => {
-                    form.resetFields()
-                    modal.confirm({
-                      title: `解除 ${binding.providerName} 绑定？`,
-                      content: binding.requiresPassword ? (
-                        <Form form={form} layout="vertical" requiredMark={false}>
-                          <Typography.Paragraph>
-                            解除最后一个绑定前，请确认登录密码。
-                          </Typography.Paragraph>
-                          <Form.Item
-                            name="password"
-                            label="当前登录密码"
-                            rules={[{ required: true, message: '请输入当前登录密码' }]}
-                          >
-                            <Input.Password autoComplete="current-password" />
-                          </Form.Item>
-                          <Form.Item name="code" label="动态验证码（已启用时填写）">
-                            <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
-                          </Form.Item>
-                        </Form>
-                      ) : (
-                        '解除后无法再使用此账号登录。'
-                      ),
-                      okText: '解除绑定',
-                      cancelText: '取消',
-                      okButtonProps: { danger: true },
-                      onOk: async () => {
-                        const body = binding.requiresPassword
-                          ? await form.validateFields()
-                          : undefined
-                        setBusy(binding.id)
-                        try {
-                          await api(
-                            `/extensions/oauth/bindings/${encodeURIComponent(binding.id)}`,
-                            { method: 'DELETE', body },
-                          )
-                          await reload()
-                          message.success('已解除绑定')
-                        } catch (e) {
-                          message.error(errorText(e))
-                          throw e
-                        } finally {
-                          setBusy('')
-                        }
-                      },
-                    })
-                  }}
-                >
-                  解除绑定
-                </Button>,
-              ]}
-            >
-              <List.Item.Meta
-                title={binding.providerName}
-                description={
-                  <Typography.Text type="secondary">
-                    {binding.displayName || '已绑定'}
-                  </Typography.Text>
-                }
-              />
-            </List.Item>
-          )}
-        />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未绑定其他登录方式" />
       )}
       <OAuthButtons
         purpose="bind"

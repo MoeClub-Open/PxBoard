@@ -1,5 +1,5 @@
 import { useCurrency } from '../currency'
-import { Alert, Button, Empty, List, Tag } from 'antd'
+import { Alert, Button, Empty, Tag } from 'antd'
 import {
   AppstoreOutlined,
   ArrowRightOutlined,
@@ -118,30 +118,30 @@ export default function Overview() {
             <h2>插件状态</h2>
           </div>
           {plugins.length ? (
-            <List
-              dataSource={plugins}
-              renderItem={(p) => (
-                <List.Item
-                  extra={
-                    <Tag color={p.error ? 'error' : p.enabled ? 'success' : 'default'}>
-                      {p.error ? '异常' : p.enabled ? '运行中' : '已停用'}
-                    </Tag>
-                  }
-                >
-                  <List.Item.Meta
-                    avatar={
-                      p.error ? (
-                        <ExclamationCircleFilled className="danger" />
-                      ) : (
-                        <CheckCircleFilled className={p.enabled ? 'success' : 'muted'} />
-                      )
-                    }
-                    title={p.name}
-                    description={p.error || `v${p.version}`}
-                  />
-                </List.Item>
-              )}
-            />
+            <div className="data-list">
+              {plugins.map((p) => (
+                <div className="data-row" key={p.id}>
+                  <div className="data-row-main">
+                    {p.error ? (
+                      <ExclamationCircleFilled className="danger data-row-icon" />
+                    ) : (
+                      <CheckCircleFilled
+                        className={`${p.enabled ? 'success' : 'muted'} data-row-icon`}
+                      />
+                    )}
+                    <div className="data-row-copy">
+                      <strong>{p.name}</strong>
+                      <small className={p.error ? 'danger' : undefined}>
+                        {p.error || `v${p.version}`}
+                      </small>
+                    </div>
+                  </div>
+                  <Tag color={p.error ? 'error' : p.enabled ? 'success' : 'default'}>
+                    {p.error ? '异常' : p.enabled ? '运行中' : '已停用'}
+                  </Tag>
+                </div>
+              ))}
+            </div>
           ) : (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未安装插件" />
           )}
@@ -155,20 +155,22 @@ export default function Overview() {
               </Link>
             </div>
             {activity?.length ? (
-              <List
-                dataSource={activity.slice(0, 6)}
-                renderItem={(item) => (
-                  <List.Item>
-                    <List.Item.Meta title={activityLabel(item.action)} description={item.actor} />
+              <div className="data-list">
+                {activity.slice(0, 6).map((item) => (
+                  <div className="data-row" key={item.id}>
+                    <div className="data-row-copy">
+                      <strong>{activityLabel(item.action)}</strong>
+                      <small>{item.actor}</small>
+                    </div>
                     <span className="muted date-cell">
                       {new Date(item.createdAt).toLocaleTimeString('zh-CN', {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
                     </span>
-                  </List.Item>
-                )}
-              />
+                  </div>
+                ))}
+              </div>
             ) : (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无活动" />
             )}

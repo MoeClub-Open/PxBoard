@@ -164,6 +164,7 @@ export function PortalSubscriptions() {
                 </Space>
                 <Space wrap>
                   <Button
+                    size="small"
                     onClick={() =>
                       modal.confirm({
                         title: '重置订阅链接？',
@@ -177,6 +178,7 @@ export function PortalSubscriptions() {
                     重置
                   </Button>
                   <Button
+                    size="small"
                     danger
                     onClick={() =>
                       modal.confirm({
@@ -193,10 +195,11 @@ export function PortalSubscriptions() {
                 </Space>
               </div>
               {pending ? (
-                <Space>
+                <div className="portal-subscription-pending">
                   <span>完成验证后获取链接</span>
                   <Button
                     type="primary"
+                    size="small"
                     onClick={() => {
                       challenge.reset()
                       setVerifying(link)
@@ -204,7 +207,7 @@ export function PortalSubscriptions() {
                   >
                     验证
                   </Button>
-                </Space>
+                </div>
               ) : url ? (
                 <div className="portal-subscription-format">
                   <Input readOnly value={url} aria-label={`${name}地址`} />

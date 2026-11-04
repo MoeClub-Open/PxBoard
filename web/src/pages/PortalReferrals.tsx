@@ -106,7 +106,19 @@ export default function PortalReferrals() {
     <>
       <div className="page-heading">
         <h1>推广返佣</h1>
-        <Button icon={<ReloadOutlined />} onClick={refresh} aria-label="刷新推广信息" />
+        <Space wrap>
+          <Button disabled={available < 1 || summary.loading} onClick={() => setMethod('wallet')}>
+            转入余额
+          </Button>
+          <Button
+            type="primary"
+            disabled={available < 100 || summary.loading}
+            onClick={() => setMethod('cash')}
+          >
+            申请提现
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={refresh} aria-label="刷新推广信息" />
+        </Space>
       </div>
       {summary.error && (
         <Alert
@@ -163,20 +175,6 @@ export default function PortalReferrals() {
             {summary.data ? Number(summary.data.invitedCount).toLocaleString('zh-CN') : '—'}
           </strong>
         </div>
-      </div>
-      <div className="affiliate-actions">
-        <Space wrap>
-          <Button disabled={available < 1 || summary.loading} onClick={() => setMethod('wallet')}>
-            转入余额
-          </Button>
-          <Button
-            type="primary"
-            disabled={available < 100 || summary.loading}
-            onClick={() => setMethod('cash')}
-          >
-            申请提现
-          </Button>
-        </Space>
       </div>
       <Tabs
         items={[

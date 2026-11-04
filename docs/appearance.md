@@ -19,7 +19,7 @@
 | 正文、次级正文、辅助文字 | `--px-text`、`--px-secondary`、`--px-muted` |
 | 主色、悬停、浅底、边框、强调文字 | `--px-primary`、`--px-primary-hover`、`--px-primary-soft`、`--px-primary-border`、`--px-primary-text` |
 | 成功与错误文字 | `--px-success`、`--px-error` |
-| 字体、浮层阴影 | `--px-font`、`--px-shadow` |
+| 字体、阴影 | `--px-font`、`--px-shadow`、`--px-shadow-sm` |
 
 深色模式的强调文字使用独立的高对比颜色。链接和选中项应使用 `--px-primary-text`，实色按钮背景使用 `--px-primary`，避免把同一个色值同时用于深色背景上的文字与按钮填充。
 

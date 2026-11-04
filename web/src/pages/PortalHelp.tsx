@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Button, Collapse, Empty, Input, List, Modal, Spin, Typography } from 'antd'
+import { Alert, Button, Collapse, Empty, Input, Modal, Spin } from 'antd'
 import { useData } from '../api'
 import type { Row } from '../api'
 
@@ -64,25 +64,23 @@ export function PortalAnnouncements() {
           title={articles.error}
           action={<Button onClick={articles.reload}>重试</Button>}
         />
-      ) : (
-        <List
-          loading={articles.loading}
-          dataSource={rows}
-          locale={{ emptyText: '暂无公告' }}
-          renderItem={(row) => (
-            <List.Item
-              extra={
-                <Typography.Text type="secondary">
-                  {row.createdAt ? new Date(row.createdAt).toLocaleDateString('zh-CN') : ''}
-                </Typography.Text>
-              }
-            >
+      ) : articles.loading ? (
+        <Spin />
+      ) : rows.length ? (
+        <div className="data-list">
+          {rows.map((row) => (
+            <div className="data-row" key={row.id}>
               <Button type="link" className="portal-inline-button" onClick={() => setSelected(row)}>
                 {row.title}
               </Button>
-            </List.Item>
-          )}
-        />
+              <span className="muted date-cell">
+                {row.createdAt ? new Date(row.createdAt).toLocaleDateString('zh-CN') : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无公告" />
       )}
       <Modal
         open={!!selected}

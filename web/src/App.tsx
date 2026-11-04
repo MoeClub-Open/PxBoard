@@ -139,23 +139,14 @@ function Workspace() {
     )
   if (!initialized)
     return (
-      <>
-        <AppearanceButton className="standalone-appearance" />
-        <Setup
-          onCreated={async () => {
-            await refresh()
-            setInitialized(true)
-          }}
-        />
-      </>
+      <Setup
+        onCreated={async () => {
+          await refresh()
+          setInitialized(true)
+        }}
+      />
     )
-  if (location.pathname === '/auth/external')
-    return (
-      <>
-        <AppearanceButton className="standalone-appearance" />
-        <OAuthComplete onLogin={refresh} />
-      </>
-    )
+  if (location.pathname === '/auth/external') return <OAuthComplete onLogin={refresh} />
   if (location.pathname === '/auth/browser')
     return (
       <>
@@ -163,56 +154,44 @@ function Workspace() {
         <BrowserAuthorization onLogin={refresh} />
       </>
     )
-  if (me && location.pathname === '/user/authorize')
-    return (
-      <>
-        <AppearanceButton className="standalone-appearance" />
-        <NativeAuthorization user={me} />
-      </>
-    )
+  if (me && location.pathname === '/user/authorize') return <NativeAuthorization user={me} />
   if (!me)
     return (
-      <>
-        <AppearanceButton className="standalone-appearance" />
-        <Routes>
-          <Route path="/setup" element={<Navigate to="/" replace />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot" element={<Reset request />} />
-          <Route path="/reset" element={<Reset />} />
-          <Route path="/login" element={<Auth onLogin={refresh} />} />
-          <Route
-            path="/user/*"
-            element={
+      <Routes>
+        <Route path="/setup" element={<Navigate to="/" replace />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot" element={<Reset request />} />
+        <Route path="/reset" element={<Reset />} />
+        <Route path="/login" element={<Auth onLogin={refresh} />} />
+        <Route
+          path="/user/*"
+          element={
+            <Navigate
+              to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
+              replace
+            />
+          }
+        />
+        <Route
+          path="*"
+          element={
+            guestAdminPath === location.pathname ? (
               <Navigate
                 to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
                 replace
               />
-            }
-          />
-          <Route
-            path="*"
-            element={
-              guestAdminPath === location.pathname ? (
-                <Navigate
-                  to={`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`}
-                  replace
-                />
-              ) : (
-                <Auth onLogin={refresh} />
-              )
-            }
-          />
-        </Routes>
-      </>
+            ) : (
+              <Auth onLogin={refresh} />
+            )
+          }
+        />
+      </Routes>
     )
   const admin = me.role === 'admin'
   const base = adminRoot(me)
   const adminPath = location.pathname === base || location.pathname.startsWith(base + '/')
   return (
     <SessionContext.Provider value={{ me, plugins, refresh }}>
-      {(location.pathname === '/setup' || location.pathname === `${base}/mode`) && (
-        <AppearanceButton className="standalone-appearance" />
-      )}
       {location.pathname === '/setup' ? (
         admin ? (
           <ModeSetup

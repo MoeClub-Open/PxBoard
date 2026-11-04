@@ -44,10 +44,10 @@ export default function Storefront({
       <main className="storefront-main">
         <section className="storefront-hero" aria-labelledby="storefront-heading">
           <div className="storefront-copy">
-            <p className="storefront-eyebrow">
+            <span className="storefront-eyebrow">
               <GlobalOutlined aria-hidden />
               网络与订阅服务
-            </p>
+            </span>
             <h1 id="storefront-heading">{content?.heading || document?.site.name || 'PxBoard'}</h1>
             {content?.introduction && (
               <p className="storefront-intro-text">{content.introduction}</p>
@@ -92,7 +92,9 @@ export default function Storefront({
             <ul>
               {highlights.map((text, index) => (
                 <li key={index}>
-                  <CheckOutlined aria-hidden />
+                  <span className="storefront-check" aria-hidden="true">
+                    <CheckOutlined />
+                  </span>
                   <span>{text}</span>
                 </li>
               ))}
@@ -101,8 +103,10 @@ export default function Storefront({
         )}
       </main>
       <footer className="storefront-footer">
-        <span>© {document?.site.name || 'PxBoard'}</span>
-        {content?.footer && <p>{content.footer}</p>}
+        <div className="storefront-footer-inner">
+          <span>© {document?.site.name || 'PxBoard'}</span>
+          {content?.footer && <p>{content.footer}</p>}
+        </div>
       </footer>
     </div>
   )

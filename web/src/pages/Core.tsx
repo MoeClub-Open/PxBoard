@@ -108,7 +108,7 @@ export function Users() {
             title: '角色',
             dataIndex: 'role',
             render: (role: string) => (
-              <Tag color={role === 'admin' ? 'purple' : 'default'}>
+              <Tag className={role === 'admin' ? 'mode-tag' : undefined}>
                 {role === 'admin' ? '管理员' : '普通用户'}
               </Tag>
             ),
@@ -211,6 +211,7 @@ export function Settings() {
       <div className="settings-form">
         <Form
           layout="vertical"
+          requiredMark={false}
           initialValues={data}
           onFinish={async (body) => {
             setBusy(true)
