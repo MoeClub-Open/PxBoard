@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 import {
+  App,
   Button,
   Collapse,
   Input,
@@ -13,26 +14,6 @@ import {
 } from 'antd'
 import { DeleteOutlined, KeyOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Row } from '../api'
-
-const P25519 = (1n << 255n) - 19n
-const A24 = 121665n
-
-function modP(value: bigint): bigint {
-  const rem = value % P25519
-  return rem < 0n ? rem + P25519 : rem
-}
-
-function powModP(base: bigint, exp: bigint): bigint {
-  let result = 1n
-  let cur = modP(base)
-  let power = exp
-  while (power > 0n) {
-    if (power & 1n) result = modP(result * cur)
-    cur = modP(cur * cur)
-    power >>= 1n
-  }
-  return result
-}
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = ''
@@ -52,62 +33,13 @@ function randomObfsKey(): string {
   return toBase64Url(bytes).slice(0, 32)
 }
 
-function generateRealityKeypair(): { privateKey: string; publicKey: string } {
-  const priv = new Uint8Array(32)
-  crypto.getRandomValues(priv)
-  priv[0] &= 248
-  priv[31] &= 127
-  priv[31] |= 64
-
-  let scalar = 0n
-  for (let i = 0; i < 32; i++) {
-    scalar |= BigInt(priv[i]) << BigInt(8 * i)
-  }
-
-  const x1 = 9n
-  let x2 = 1n
-  let z2 = 0n
-  let x3 = 9n
-  let z3 = 1n
-  let swap = 0n
-
-  for (let bit = 254n; bit >= 0n; bit--) {
-    const kt = (scalar >> bit) & 1n
-    swap ^= kt
-    if (swap) {
-      ;[x2, x3] = [x3, x2]
-      ;[z2, z3] = [z3, z2]
-    }
-    swap = kt
-    const a = modP(x2 + z2)
-    const aa = modP(a * a)
-    const b = modP(x2 - z2)
-    const bb = modP(b * b)
-    const e = modP(aa - bb)
-    const c = modP(x3 + z3)
-    const d = modP(x3 - z3)
-    const da = modP(d * a)
-    const cb = modP(c * b)
-    x3 = modP((da + cb) * (da + cb))
-    z3 = modP(x1 * modP((da - cb) * (da - cb)))
-    x2 = modP(aa * bb)
-    z2 = modP(e * modP(aa + A24 * e))
-  }
-  if (swap) {
-    ;[x2, x3] = [x3, x2]
-    ;[z2, z3] = [z3, z2]
-  }
-
-  let pubVal = modP(x2 * powModP(z2, P25519 - 2n))
-  const pub = new Uint8Array(32)
-  for (let i = 0; i < 32; i++) {
-    pub[i] = Number(pubVal & 0xffn)
-    pubVal >>= 8n
-  }
-  return {
-    privateKey: toBase64Url(priv),
-    publicKey: toBase64Url(pub),
-  }
+async function generateRealityKeypair(): Promise<{ privateKey: string; publicKey: string }> {
+  const pair = (await crypto.subtle.generateKey({ name: 'X25519' }, true, [
+    'deriveBits',
+  ])) as CryptoKeyPair
+  const privateJwk = await crypto.subtle.exportKey('jwk', pair.privateKey)
+  if (!privateJwk.d || !privateJwk.x) throw new Error('浏览器无法导出 X25519 密钥')
+  return { privateKey: privateJwk.d, publicKey: privateJwk.x }
 }
 
 function textOf(row: Row, ...keys: string[]): string {
@@ -162,6 +94,7 @@ export function FluxChannels({
   value?: Row[]
   onChange?: (value: Row[]) => void
 }) {
+  const { message } = App.useApp()
   const [open, setOpen] = useState<string[]>([])
   const [headerDrafts, setHeaderDrafts] = useState<Record<string, string>>({})
   const rowKeysRef = useRef<WeakMap<object, string>>(new WeakMap())
@@ -476,18 +409,24 @@ export function FluxChannels({
                         <Button
                           size="small"
                           icon={<KeyOutlined />}
-                          onClick={() => {
-                            const pair = generateRealityKeypair()
-                            const existingShortId = realityTextOf(channel, 'shortId', 'short_id')
-                            patchRow(
-                              index,
-                              {
-                                privateKey: pair.privateKey,
-                                publicKey: pair.publicKey,
-                                shortId: existingShortId || randomHex(4),
-                              },
-                              ['private_key', 'public_key', 'short_id', 'reality'],
-                            )
+                          onClick={async () => {
+                            try {
+                              const pair = await generateRealityKeypair()
+                              const existingShortId = realityTextOf(channel, 'shortId', 'short_id')
+                              patchRow(
+                                index,
+                                {
+                                  privateKey: pair.privateKey,
+                                  publicKey: pair.publicKey,
+                                  shortId: existingShortId || randomHex(4),
+                                },
+                                ['private_key', 'public_key', 'short_id', 'reality'],
+                              )
+                            } catch (error) {
+                              void message.error(
+                                error instanceof Error ? error.message : '生成密钥失败',
+                              )
+                            }
                           }}
                         >
                           生成密钥对
@@ -528,15 +467,12 @@ export function FluxChannels({
                         {field(
                           '客户端指纹',
                           <Select
-                            value={
-                              textOf(channel, 'fingerprint', 'clientFingerprint') || 'inherit'
-                            }
+                            value={textOf(channel, 'fingerprint', 'clientFingerprint') || 'inherit'}
                             onChange={(v) =>
-                              patchRow(
-                                index,
-                                { fingerprint: v === 'inherit' ? undefined : v },
-                                ['clientFingerprint', 'client_fingerprint'],
-                              )
+                              patchRow(index, { fingerprint: v === 'inherit' ? undefined : v }, [
+                                'clientFingerprint',
+                                'client_fingerprint',
+                              ])
                             }
                             options={[
                               { label: '跟随节点默认', value: 'inherit' },
