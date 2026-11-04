@@ -10,7 +10,6 @@ const states: Record<string, { label: string; color: string }> = {
   offline: { label: '离线', color: 'error' },
   never: { label: '未接入', color: 'default' },
   disabled: { label: '已停用', color: 'default' },
-  error: { label: '运行异常', color: 'warning' },
 }
 
 export default function PortalStatus() {
@@ -22,19 +21,17 @@ export default function PortalStatus() {
   const display = useData<{ fields: string[] }>('/extensions/nodes/status/display')
   const [search, setSearch] = useState('')
   const rows = status.data || []
-  const visible = rows.filter((node) =>
-    `${node.name} ${node.region || ''} ${node.protocol || ''}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
+  const visible = rows.filter((server) =>
+    `${server.name} ${server.region || ''}`.toLowerCase().includes(search.toLowerCase()),
   )
-  const online = rows.filter((node) => node.status === 'online').length
+  const online = rows.filter((server) => server.status === 'online').length
   const fields = display.data?.fields || []
 
   return (
     <>
       <div className="page-heading">
-        <h1>节点状态</h1>
-        <Button icon={<ReloadOutlined />} aria-label="刷新节点状态" onClick={status.reload} />
+        <h1>服务器状态</h1>
+        <Button icon={<ReloadOutlined />} aria-label="刷新服务器状态" onClick={status.reload} />
       </div>
       {(status.error || display.error) && (
         <Alert
@@ -56,7 +53,7 @@ export default function PortalStatus() {
       )}
       <div className="portal-statistics">
         <div>
-          <span>可用节点</span>
+          <span>可用服务器</span>
           <strong>{status.data ? rows.length : '—'}</strong>
         </div>
         {fields.includes('status') && (
@@ -67,20 +64,16 @@ export default function PortalStatus() {
         )}
         {fields.includes('status') && (
           <div>
-            <span>离线或异常</span>
-            <strong>
-              {status.data
-                ? rows.filter((node) => node.status === 'offline' || node.status === 'error').length
-                : '—'}
-            </strong>
+            <span>离线</span>
+            <strong>{status.data ? rows.filter((server) => server.status !== 'online').length : '—'}</strong>
           </div>
         )}
       </div>
       <div className="table-toolbar">
-        <Typography.Text type="secondary">节点列表</Typography.Text>
+        <Typography.Text type="secondary">服务器列表</Typography.Text>
         <Space>
           <Input.Search
-            placeholder="搜索节点或地区"
+            placeholder="搜索服务器或地区"
             allowClear
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -94,28 +87,19 @@ export default function PortalStatus() {
         loading={status.loading || display.loading}
         dataSource={visible}
         scroll={{ x: 620 }}
-        pagination={{ pageSize: 12, showTotal: (total) => `共 ${total} 个节点` }}
+        pagination={{ pageSize: 12, showTotal: (total) => `共 ${total} 台服务器` }}
         locale={{
           emptyText: (
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={search ? '没有匹配的节点' : '暂无可查看的节点'}
+              description={search ? '没有匹配的服务器' : '暂无可查看的服务器'}
             />
           ),
         }}
         columns={[
-          { title: '节点', dataIndex: 'name' },
+          { title: '服务器', dataIndex: 'name' },
           ...(fields.includes('region')
             ? [{ title: '地区', dataIndex: 'region', render: (value: any) => value || '—' }]
-            : []),
-          ...(fields.includes('protocol')
-            ? [
-                {
-                  title: '协议',
-                  dataIndex: 'protocol',
-                  render: (value: any) => (value ? <Tag>{String(value).toUpperCase()}</Tag> : '—'),
-                },
-              ]
             : []),
           ...(fields.includes('status')
             ? [
@@ -128,22 +112,12 @@ export default function PortalStatus() {
                 },
               ]
             : []),
-          ...(fields.includes('trafficRate')
+          ...(fields.includes('nodeCount')
             ? [
                 {
-                  title: '流量倍率',
-                  dataIndex: 'trafficRate',
-                  render: (value: any) => (value === undefined ? '—' : `${value}×`),
-                },
-              ]
-            : []),
-          ...(fields.includes('lastSeen')
-            ? [
-                {
-                  title: '最近心跳',
-                  dataIndex: 'lastSeen',
-                  render: (value: any) =>
-                    value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '尚未上报',
+                  title: '运行节点',
+                  dataIndex: 'nodeCount',
+                  render: (value: any) => value ?? '—',
                 },
               ]
             : []),
@@ -165,6 +139,16 @@ export default function PortalStatus() {
                   title: '在线账户',
                   dataIndex: 'onlineAccounts',
                   render: (value: any) => value ?? '—',
+                },
+              ]
+            : []),
+          ...(fields.includes('lastSeen')
+            ? [
+                {
+                  title: '最近心跳',
+                  dataIndex: 'lastSeen',
+                  render: (value: any) =>
+                    value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '尚未上报',
                 },
               ]
             : []),

@@ -17,7 +17,7 @@ export function useResourcePresentation(
   const addresses = resource.renderer === 'node-connections'
   const mailTemplates = resource.renderer === 'mail-templates'
   const campaigns = resource.renderer === 'mail-campaigns'
-  const grouped = addresses || resource.renderer === 'node-status'
+  const grouped = addresses
   const ids = new Set(data.map((row) => row.id))
   return {
     openEditor: (row?: Row) => {

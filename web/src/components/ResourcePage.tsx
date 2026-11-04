@@ -38,6 +38,10 @@ import { useResourcePresentation } from '../official/resourcePresentation'
 
 const statuses: Record<string, [string, string]> = {
   active: ['正常', 'success'],
+  online: ['在线', 'success'],
+  offline: ['离线', 'error'],
+  never: ['未接入', 'default'],
+  disabled: ['已停用', 'default'],
   suspended: ['已暂停', 'error'],
   draft: ['草稿', 'default'],
   running: ['发送中', 'processing'],
@@ -120,6 +124,10 @@ function Cell({
           .join('、') || '—'}
       </span>
     )
+  if (field.type === 'select') {
+    const option = field.options?.find((item) => String(item.value) === text)
+    return <span>{option?.label || text}</span>
+  }
   if (field.type === 'groups')
     return (
       <Space size={[4, 4]} wrap>
@@ -215,6 +223,24 @@ function Cell({
   return <span title={text}>{text}</span>
 }
 
+function searchableText(column: Field, value: any, groupNames: Map<string, string>) {
+  if (value === null || value === undefined) return ''
+  const raw = String(value)
+  if (column.type === 'select') {
+    const label = column.options?.find((item) => String(item.value) === raw)?.label
+    return label ? `${raw} ${label}` : raw
+  }
+  if (column.type === 'status' && statuses[raw]) return `${raw} ${statuses[raw][0]}`
+  if (column.type === 'groups') {
+    const names = raw
+      .split(',')
+      .map((id) => groupNames.get(id.trim()) || id.trim())
+      .join(' ')
+    return `${raw} ${names}`
+  }
+  return raw
+}
+
 function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map<string, string>) {
   const escape = (value: any) => {
     let v = String(value ?? '')
@@ -234,6 +260,9 @@ function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map
                     .split(',')
                     .map((id) => groupNames.get(id.trim()) || id.trim())
                     .join(', ')
+                : c.type === 'select'
+                  ? c.options?.find((item) => String(item.value) === String(row[c.key] ?? ''))
+                      ?.label ?? row[c.key]
                 : row[c.key],
             ),
           )
@@ -367,7 +396,7 @@ function ResourceTable({
       !search ||
       presentation.searchRows(row).some((candidate) =>
         resource.columns.some((column) =>
-          String(candidate[column.key] ?? '')
+          searchableText(column, candidate[column.key], groupNames)
             .toLowerCase()
             .includes(search.toLowerCase()),
         ),

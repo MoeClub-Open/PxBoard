@@ -118,9 +118,9 @@ JSON 成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message
 
 推广使用独立路径 `GET /extensions/affiliate/summary`，返回当前账户的推广链接、邀请人数、可用、冻结和累计佣金等信息。`POST /extensions/affiliate/withdrawals` 接收 `method=wallet` 时由本人直接转入余额，无需申请审批；`method=cash` 时创建现金提现申请。余额转入最低 1 分，现金提现最低 1 元。相同 `requestId` 重试保留原记录与入账标识。本人可使用 `POST /extensions/affiliate/withdrawals/{id}/transfer` 完成旧的待处理余额转入；`cancel` 可撤回本人尚未处理的现金申请或旧余额转入，新余额转入直接进入处理中，不可撤回。管理员使用同一资源的 `approve/reject/paid` 操作审批现金提现、拒绝未处理记录或登记现金打款。现金打款由管理员在外部完成，不会通过此接口自动转账。推广设置使用 `GET/PATCH /extensions/affiliate/settings`；个人规则使用 `GET/POST /extensions/affiliate/profiles`、`PATCH /extensions/affiliate/profiles/{userId}`。停用该插件不影响商业订单与钱包。
 
-`GET /extensions/nodes/status` 对普通用户只返回其有权使用的节点；管理员可查看全部节点与真实上报的 CPU、内存、磁盘、在线人数和错误。管理员前台预览使用 `?scope=mine`。最近 120 秒心跳判为在线，缺少心跳判为未接入或离线；没有负载上报时相应字段省略，不以零值假定空闲。此接口不探测公网延迟或线路可达性。
+`GET /extensions/nodes/status` 以服务器为单位返回状态：对普通用户只返回包含其有权使用节点的启用服务器；管理员可查看全部服务器与真实上报的 CPU、内存、磁盘、交换空间和去重在线账户数。管理员前台预览使用 `?scope=mine`。最近 120 秒心跳判为在线，缺少心跳判为未接入或离线；离线或缺少负载上报时相应字段省略，不以零值假定空闲。此接口不探测公网延迟或线路可达性。
 
-管理员以 `PATCH /extensions/nodes/settings` 提交 `{"userStatusEnabled":false}`，关闭用户节点状态入口和用户状态接口；管理员监控、NodeRS 接入、流量上报及订阅继续运行。节点记录的 `enabled` 控制服务启用，`visible` 控制订阅及用户状态列表中的显示，两者独立。共用父节点的记录通过 `parentId` 保留关系，子节点可使用父节点服务与状态而不重复启动监听。
+管理员以 `PATCH /extensions/nodes/settings` 提交 `{"userStatusEnabled":false}`，关闭用户服务器状态入口和用户状态接口；管理员监控、NodeRS 接入、流量上报及订阅继续运行。节点记录的 `enabled` 控制服务启用，`visible` 控制订阅及用户服务器可见性判断，两者独立。共用父节点的记录通过 `parentId` 保留关系，子节点可使用父节点服务而不重复启动监听。
 
 管理员可同时设置 `userStatusFields` 字符串数组，选择用户状态页的展示项；用户通过 `GET /extensions/nodes/status/display` 读取所选字段，未选择的数据不会出现在用户状态接口中。订阅浏览器伪装由管理员通过 `GET/PATCH /extensions/subscriptions/settings` 配置 `hideFromBrowsers` 和按行分隔的 `browserAgents`，根据 User-Agent 匹配；该标识可以伪造。
 

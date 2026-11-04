@@ -87,7 +87,7 @@ export function serviceNavigation(features: Features): NavigationItem[] {
   return [
     ...(features.redeem ? [{ key: '/user/redeem', label: '兑换码', icon: <GiftOutlined /> }] : []),
     ...(features.nodeStatus
-      ? [{ key: '/user/status', label: '节点状态', icon: <CloudServerOutlined /> }]
+      ? [{ key: '/user/status', label: '服务器状态', icon: <CloudServerOutlined /> }]
       : []),
     ...(features.support
       ? [
