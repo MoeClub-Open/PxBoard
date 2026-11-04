@@ -1,6 +1,7 @@
 import { Button, Input, Space } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Field, Row } from '../api'
+import { FluxChannels } from '../components/FluxChannels'
 import { PlanPeriods } from '../components/PlanPeriods'
 import { periodLabel } from '../planPeriods'
 
@@ -95,6 +96,7 @@ const controls = {
   periods: () => <PlanPeriods />,
   siteRoutes: () => <SiteItemsEditor withRegion />,
   siteFeatures: () => <SiteItemsEditor />,
+  fluxChannels: () => <FluxChannels />,
 }
 
 export function officialControl(field: Field) {
@@ -102,6 +104,9 @@ export function officialControl(field: Field) {
 }
 
 export function officialCell(field: Field, value: unknown, money: (amount: number) => string) {
+  if (field.type === 'fluxChannels' && Array.isArray(value)) {
+    return value.length ? String(value.length) + ' 条通道' : '默认双通道'
+  }
   if (field.type !== 'periods' || !Array.isArray(value)) return undefined
   return (
     <>

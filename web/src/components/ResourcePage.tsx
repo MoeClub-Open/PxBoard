@@ -720,7 +720,7 @@ function ResourceTable({
         width={
           fields.some((field) => field.type === 'code')
             ? 960
-            : fields.some((field) => field.type === 'periods')
+            : fields.some((field) => field.type === 'periods' || field.type === 'fluxChannels')
               ? 760
               : 560
         }
