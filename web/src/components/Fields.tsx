@@ -239,7 +239,9 @@ export function serialize(fields: Field[], values: Row) {
         ? Array.isArray(value)
           ? value.join(',')
           : ''
-        : field.type === 'multiselect'
+        : field.type === 'multiselect' ||
+            field.type === 'siteRoutes' ||
+            field.type === 'siteFeatures'
           ? Array.isArray(value)
             ? value
             : []

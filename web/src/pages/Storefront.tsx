@@ -1,43 +1,119 @@
 import type { CSSProperties } from 'react'
 import { Alert, Button } from 'antd'
 import {
+  ApiOutlined,
+  AppstoreOutlined,
   ArrowRightOutlined,
-  CheckOutlined,
-  CloudServerOutlined,
-  CopyOutlined,
-  LaptopOutlined,
-  LockOutlined,
-  MobileOutlined,
+  ControlOutlined,
+  GlobalOutlined,
   SafetyCertificateOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
-import type { User } from '../api'
+import type { Row, User } from '../api'
 import { Brand } from '../components/Brand'
 import { AppearanceButton } from '../appearance'
 import { usePublicSite } from '../publicSite'
 import '../storefront.css'
 
-const defaultIntroduction = '统一管理账户权限、客户端订阅配置与在线服务状态。'
-const currentYear = new Date().getFullYear()
-
-function QrGlyph() {
-  return (
-    <svg
-      className="preview-qr"
-      viewBox="0 0 19 19"
-      fill="currentColor"
-      shapeRendering="crispEdges"
-      aria-hidden="true"
-    >
-      <path d="M0 0h6v6H0V0zm1 1v4h4V1H1zm1 1h2v2H2V2zm11-2h6v6h-6V0zm1 1v4h4V1h-4zm1 1h2v2h-2V2zM0 13h6v6H0v-6zm1 1v4h4v-4H1zm1 1h2v2H2v-2z" />
-      <path
-        opacity="0.72"
-        d="M8 1h2v2H8V1zm3 2h1v3h-1V3zM8 5h2v2H8V5zM1 8h3v1H1V8zm5 0h2v2H6V8zm4 0h3v1h-3V8zm5 0h3v2h-3V8zM3 10h2v2H3v-2zm5 1h3v2H8v-2zm5 0h2v2h-2v-2zm3 2h3v1h-3v-1zm-8 2h2v4H8v-4zm3 1h3v1h-3v-1zm4 0h2v3h-2v-3zm-3 2h2v1h-2v-1z"
-      />
-    </svg>
-  )
+interface RouteEntry {
+  title: string
+  region?: string
+  description?: string
 }
 
-function highlightColumns(count: number) {
+interface FeatureEntry {
+  title: string
+  description?: string
+}
+
+const fallbackIntroduction =
+  '覆盖亚太、北美与欧洲机房的加密网络接入服务，为跨区域访问、远程协作与日常终端连接提供稳定通道。'
+
+const fallbackRoutes: RouteEntry[] = [
+  {
+    title: '亚太高速接入',
+    region: '香港 · 日本 · 新加坡',
+    description:
+      '毗邻核心国际海缆与优质直连入口，提供低延迟响应，适合高频网页浏览、即时通讯与流媒体播放。',
+  },
+  {
+    title: '北美骨干互联',
+    region: '美西 · 美东',
+    description:
+      '接入高带宽北美数据中心骨干网络，兼顾跨洋吞吐能力，适合开发工具、云端平台与大体积数据传输。',
+  },
+  {
+    title: '欧洲多点覆盖',
+    region: '德国 · 荷兰 · 瑞士',
+    description:
+      '部署多国独立接入节点与冗余出口路由，满足跨区域业务访问、地区内容解锁及备用线路切换。',
+  },
+  {
+    title: '抗干扰传输架构',
+    region: 'TLS · IPv4 / IPv6',
+    description: '采用现代加密传输协议与多栈接入地址，针对晚高峰与复杂网络环境优化连接稳定性。',
+  },
+]
+
+const fallbackFeatures: FeatureEntry[] = [
+  {
+    title: '主流客户端通用订阅',
+    description:
+      '通过同一订阅地址按客户端标识自动下发节点与分流规则，支持桌面端、移动端及路由设备直接导入。',
+  },
+  {
+    title: '多链接与凭据隔离',
+    description:
+      '支持按设备单独创建订阅链接并绑定客户端类型，连接凭据与账户密码相互独立，异常时可随时重置。',
+  },
+  {
+    title: '自助管理与状态可视',
+    description:
+      '在线完成多周期开通、套餐折抵升级、兑换码核销与工单咨询，实时查看周期流量明细与服务器负载。',
+  },
+]
+
+const featureIcons = [
+  <ApiOutlined key="api" />,
+  <SafetyCertificateOutlined key="sec" />,
+  <ControlOutlined key="ctrl" />,
+  <ThunderboltOutlined key="fast" />,
+]
+
+const currentYear = new Date().getFullYear()
+
+function resolveRoutes(content?: Row): RouteEntry[] {
+  if (!content) return fallbackRoutes
+  if (Array.isArray(content.routes)) {
+    return content.routes.filter(
+      (item): item is RouteEntry => !!item && (!!item.title || !!item.region),
+    )
+  }
+  return fallbackRoutes
+}
+
+function resolveFeatures(content?: Row): FeatureEntry[] {
+  if (!content) return fallbackFeatures
+  if (Array.isArray(content.features)) {
+    return content.features.filter((item): item is FeatureEntry => !!item && !!item.title)
+  }
+  if (Array.isArray(content.highlights) && content.highlights.length > 0) {
+    return content.highlights
+      .map((line) => String(line || '').trim())
+      .filter(Boolean)
+      .map((title) => ({ title }))
+  }
+  return fallbackFeatures
+}
+
+function routeColumns(count: number) {
+  if (count <= 1) return 1
+  if (count === 2) return 2
+  if (count === 4) return 4
+  return 3
+}
+
+function featureColumns(count: number) {
   if (count <= 1) return 1
   if (count === 2 || count === 4) return 2
   return 3
@@ -52,11 +128,14 @@ export default function Storefront({
 }) {
   const { data: document, error, reload } = usePublicSite()
   const content = document?.site.data
-  const highlights = (content?.highlights || []) as string[]
   const siteName = document?.site.name || 'PxBoard'
   const heading = content?.heading || siteName
-  const introduction = content?.introduction || defaultIntroduction
+  const introduction =
+    content && 'introduction' in content ? String(content.introduction || '') : fallbackIntroduction
+  const routes = resolveRoutes(content)
+  const features = resolveFeatures(content)
   const canRegister = !user && (document?.registrationOpen ?? registrationOpen)
+
   if (document?.available && document.site.renderer !== 'storefront' && document.site.html)
     return (
       <>
@@ -64,6 +143,7 @@ export default function Storefront({
         <div dangerouslySetInnerHTML={{ __html: document.site.html }} />
       </>
     )
+
   return (
     <div className="storefront">
       <header className="storefront-header">
@@ -72,135 +152,126 @@ export default function Storefront({
             <Brand />
           </a>
           <nav aria-label="首页导航">
-            {!!highlights.length && (
-              <a className="storefront-nav-link" href="#services">
-                服务说明
+            {!!routes.length && (
+              <a className="storefront-nav-link" href="#routes">
+                线路与网络
+              </a>
+            )}
+            {!!features.length && (
+              <a className="storefront-nav-link" href="#features">
+                功能特性
               </a>
             )}
             <AppearanceButton />
           </nav>
         </div>
       </header>
-      <main className="storefront-frame">
-        <div className="storefront-stage">
-          <div className="storefront-band-wrap">
-            <span className="frame-cross frame-cross-tl" aria-hidden="true" />
-            <span className="frame-cross frame-cross-tr" aria-hidden="true" />
-            <span className="frame-cross frame-cross-bl" aria-hidden="true" />
-            <span className="frame-cross frame-cross-br" aria-hidden="true" />
-            <section className="storefront-hero" aria-labelledby="storefront-heading">
-              <div className="storefront-copy">
-                <h1 id="storefront-heading">{heading}</h1>
-                <p className="storefront-intro-text">{introduction}</p>
-                <div className="storefront-actions">
-                  <Button
-                    type="primary"
-                    size="large"
-                    className="storefront-action"
-                    href={user ? '/user' : '/login'}
-                    icon={<ArrowRightOutlined />}
-                    iconPlacement="end"
-                  >
-                    {user ? '进入账户' : '登录账户'}
-                  </Button>
-                  {canRegister && (
-                    <Button size="large" className="storefront-action" href="/register">
-                      注册账户
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="storefront-showcase" aria-hidden="true">
-                <div className="preview-card">
-                  <div className="preview-card-top">
-                    <div className="preview-endpoint">
-                      <div className="preview-label-row">
-                        <span className="preview-label">HTTPS 订阅凭证</span>
-                        <span className="preview-badge">
-                          <i />
-                          TLS
-                        </span>
-                      </div>
-                      <div className="preview-url-box">
-                        <LockOutlined className="preview-lock" />
-                        <code>https://••••••••••/s/••••••••</code>
-                        <span className="preview-copy-btn">
-                          <CopyOutlined />
-                        </span>
-                      </div>
-                    </div>
-                    <div className="preview-qr-box">
-                      <QrGlyph />
-                    </div>
-                  </div>
-                  <div className="preview-divider" />
-                  <div className="preview-topology">
-                    <div className="preview-node">
-                      <span className="preview-node-icon">
-                        <LaptopOutlined />
-                        <MobileOutlined />
-                      </span>
-                      <span>多端客户端</span>
-                    </div>
-                    <div className="preview-link">
-                      <span className="preview-line" />
-                      <span className="preview-shield">
-                        <SafetyCertificateOutlined />
-                      </span>
-                      <span className="preview-line" />
-                    </div>
-                    <div className="preview-node">
-                      <span className="preview-node-icon">
-                        <CloudServerOutlined />
-                      </span>
-                      <span>接入节点群</span>
-                      <i className="preview-pulse" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-            {!!highlights.length && (
-              <section
-                id="services"
-                className="storefront-services"
-                aria-labelledby="storefront-services-heading"
-              >
-                <div className="storefront-services-head">
-                  <h2 id="storefront-services-heading">服务说明</h2>
-                </div>
-                <ul
-                  className="storefront-highlights-grid"
-                  style={
-                    {
-                      '--highlight-cols': highlightColumns(highlights.length),
-                    } as CSSProperties
-                  }
+
+      <main className="storefront-main">
+        <section className="storefront-hero" aria-labelledby="storefront-heading">
+          <div className="storefront-container">
+            <div className="storefront-hero-inner">
+              <h1 id="storefront-heading">{heading}</h1>
+              {introduction && <p className="storefront-intro-text">{introduction}</p>}
+              <div className="storefront-actions">
+                <Button
+                  type="primary"
+                  size="large"
+                  className="storefront-action"
+                  href={user ? '/user' : '/login'}
+                  icon={<ArrowRightOutlined />}
+                  iconPlacement="end"
                 >
-                  {highlights.map((item, index) => (
-                    <li key={index}>
-                      <span className="storefront-check" aria-hidden="true">
-                        <CheckOutlined />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+                  {user ? '进入账户' : '登录账户'}
+                </Button>
+                {canRegister && (
+                  <Button size="large" className="storefront-action" href="/register">
+                    注册账户
+                  </Button>
+                )}
+              </div>
+            </div>
+            {error && (
+              <div className="storefront-alert-wrap">
+                <Alert
+                  type="warning"
+                  title={error}
+                  action={<Button onClick={() => void reload()}>重试</Button>}
+                  className="storefront-alert"
+                />
+              </div>
             )}
           </div>
-          {error && (
-            <div className="storefront-alert-wrap">
-              <Alert
-                type="warning"
-                title={error}
-                action={<Button onClick={() => void reload()}>重试</Button>}
-                className="storefront-alert"
-              />
+        </section>
+
+        {!!routes.length && (
+          <section
+            id="routes"
+            className="storefront-section storefront-routes-band"
+            aria-labelledby="storefront-routes-heading"
+          >
+            <div className="storefront-container">
+              <div className="storefront-section-head">
+                <span className="section-head-icon" aria-hidden="true">
+                  <GlobalOutlined />
+                </span>
+                <h2 id="storefront-routes-heading">线路与网络</h2>
+              </div>
+              <div
+                className="storefront-routes-grid"
+                style={{ '--route-cols': routeColumns(routes.length) } as CSSProperties}
+              >
+                {routes.map((item, index) => (
+                  <article key={index} className="storefront-route-card">
+                    {item.region && (
+                      <span className="route-tag">
+                        <i aria-hidden="true" />
+                        {item.region}
+                      </span>
+                    )}
+                    <h3>{item.title}</h3>
+                    {item.description && <p>{item.description}</p>}
+                  </article>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
+          </section>
+        )}
+
+        {!!features.length && (
+          <section
+            id="features"
+            className="storefront-section storefront-features-band"
+            aria-labelledby="storefront-features-heading"
+          >
+            <div className="storefront-container">
+              <div className="storefront-section-head">
+                <span className="section-head-icon" aria-hidden="true">
+                  <AppstoreOutlined />
+                </span>
+                <h2 id="storefront-features-heading">功能特性</h2>
+              </div>
+              <div
+                className="storefront-features-grid"
+                style={{ '--feature-cols': featureColumns(features.length) } as CSSProperties}
+              >
+                {features.map((item, index) => (
+                  <article key={index} className="storefront-feature-card">
+                    <div className="feature-card-head">
+                      <span className="feature-card-icon" aria-hidden="true">
+                        {featureIcons[index % featureIcons.length]}
+                      </span>
+                      <h3>{item.title}</h3>
+                    </div>
+                    {item.description && <p>{item.description}</p>}
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
+
       <footer className="storefront-footer">
         <div className="storefront-footer-inner">
           <span>
