@@ -1,17 +1,14 @@
 import { Alert, App, Form, Switch } from 'antd'
-import { api, errorText, useData } from '../api'
+import { errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 
 export default function ReminderPreferences() {
-  const { data, error, loading, reload } = useData<Row>('/extensions/access/preferences')
+  const { data, error, loading, reload } = useRpc<Row>('access/preferences.get')
   const { message } = App.useApp()
   if (error) return <Alert type="error" title={error} />
   async function update(key: string, value: boolean) {
     try {
-      await api('/extensions/access/preferences', {
-        method: 'PATCH',
-        body: { [key]: value },
-      })
+      await rpc('access/preferences.update', { [key]: value })
       reload()
     } catch (e) {
       message.error(errorText(e))

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, Button, Form, Input, Radio } from 'antd'
-import { api, errorText } from '../api'
+import { errorText, rpc } from '../api'
 import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 import { useBrandTitle } from '../branding'
@@ -19,15 +19,12 @@ export default function Setup({ onCreated }: { onCreated: () => Promise<void> })
     setError('')
     try {
       if (!created) {
-        await api('/setup', {
-          method: 'POST',
-          body: { ...values, publicUrl: window.location.origin },
-        })
+        await rpc('core/setup.init', { ...values, publicUrl: window.location.origin })
         setCreated(true)
       }
-      await api('/auth/login', {
-        method: 'POST',
-        body: { email: values.email, password: values.password },
+      await rpc('core/auth.login', {
+        email: values.email,
+        password: values.password,
       })
       await onCreated()
       navigate('/setup', { replace: true })

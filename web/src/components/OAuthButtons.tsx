@@ -2,7 +2,7 @@ import type { useHumanChallenge } from './HumanChallenge'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, App, Button, Empty, Form, Input, Space, Spin, Typography } from 'antd'
 import { GithubOutlined, GoogleOutlined, LinkOutlined } from '@ant-design/icons'
-import { api, errorText } from '../api'
+import { errorText, rpc } from '../api'
 
 interface Provider {
   id: string
@@ -47,7 +47,7 @@ export function OAuthButtons({
   const automaticStarted = useRef(false)
   useEffect(() => {
     const controller = new AbortController()
-    api<Provider[]>('/extensions/oauth/providers', { signal: controller.signal })
+    rpc<Provider[]>('oauth/providers.list', undefined, { signal: controller.signal })
       .then(setProviders)
       .catch(() => {})
     return () => controller.abort()
@@ -76,18 +76,15 @@ export function OAuthButtons({
         .replaceAll('=', '')
       const flow: OAuthFlow = { proof, purpose, redirectPath, createdAt: Date.now() }
       sessionStorage.setItem(oauthFlowKey, JSON.stringify(flow))
-      const result = await api<{ authorizationUrl: string }>('/extensions/oauth/authorize', {
-        method: 'POST',
-        body: {
-          providerId: provider.id,
-          purpose,
-          proof,
-          redirectPath: /^\/user(?:\/|\?|$)/.test(redirectPath) ? redirectPath : '/user',
-          challengeToken: challenge?.token,
-          ...(purpose === 'login'
-            ? { referral: new URLSearchParams(window.location.search).get('ref') || undefined }
-            : {}),
-        },
+      const result = await rpc<{ authorizationUrl: string }>('oauth/authorize', {
+        providerId: provider.id,
+        purpose,
+        proof,
+        redirectPath: /^\/user(?:\/|\?|$)/.test(redirectPath) ? redirectPath : '/user',
+        challengeToken: challenge?.token,
+        ...(purpose === 'login'
+          ? { referral: new URLSearchParams(window.location.search).get('ref') || undefined }
+          : {}),
       })
       const url = new URL(result.authorizationUrl)
       if (url.protocol !== 'https:') throw new Error('授权地址无效，请联系管理员')
@@ -145,7 +142,7 @@ export function OAuthBindings() {
   const [form] = Form.useForm()
   async function reload() {
     try {
-      setBindings(await api<Binding[]>('/extensions/oauth/bindings'))
+      setBindings(await rpc<Binding[]>('oauth/bindings.list'))
       setError('')
     } catch (e) {
       setError(errorText(e))
@@ -212,9 +209,9 @@ export function OAuthBindings() {
                         : undefined
                       setBusy(binding.id)
                       try {
-                        await api(`/extensions/oauth/bindings/${encodeURIComponent(binding.id)}`, {
-                          method: 'DELETE',
-                          body,
+                        await rpc('oauth/bindings.delete', {
+                          id: binding.id,
+                          ...(body || {}),
                         })
                         await reload()
                         message.success('已解除绑定')

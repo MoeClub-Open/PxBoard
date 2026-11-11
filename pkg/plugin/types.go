@@ -21,6 +21,7 @@ type Manifest struct {
 	Events              []string            `json:"events,omitempty"`
 	Pages               []Page              `json:"pages"`
 	PublicPaths         []string            `json:"publicPaths,omitempty"`
+	PublicProcedures    []string            `json:"publicProcedures,omitempty"`
 	PublicRouteTarget   string              `json:"publicRouteTarget,omitempty"`
 	ImportRules         []ImportRule        `json:"importRules,omitempty"`
 	RequiredImportRules map[string][]string `json:"requiredImportRules,omitempty"`
@@ -44,7 +45,8 @@ type AuthForm struct {
 	Modes      []string          `json:"modes,omitempty"`
 	Key        string            `json:"key"`
 	Title      string            `json:"title"`
-	Path       string            `json:"path"`
+	Path       string            `json:"path,omitempty"`
+	Procedure  string            `json:"procedure,omitempty"`
 	Fields     []Field           `json:"fields"`
 	Query      map[string]string `json:"query,omitempty"`
 	Capability string            `json:"capability,omitempty"`
@@ -65,11 +67,13 @@ type SharedPage struct {
 	SelectorLabel string `json:"selectorLabel,omitempty"`
 }
 type Actor struct {
-	ID     string `json:"id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
-	Plugin string `json:"plugin,omitempty"`
-	Scope  string `json:"scope,omitempty"`
+	ID        string `json:"id"`
+	Email     string `json:"email,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Role      string `json:"role"`
+	Plugin    string `json:"plugin,omitempty"`
+	Scope     string `json:"scope,omitempty"`
+	MachineID int64  `json:"machineId,omitempty"`
 }
 type Request struct {
 	Host    string              `json:"host,omitempty"`

@@ -2,7 +2,7 @@ import { useCurrency } from '../currency'
 import { useState } from 'react'
 import { Alert, App, Button, Empty, Input, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { CopyOutlined, ReloadOutlined } from '@ant-design/icons'
-import { absoluteURL, api, errorText, useData } from '../api'
+import { absoluteURL, errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { date } from './PortalCommerce'
@@ -47,13 +47,15 @@ export default function PortalReferrals() {
   const { me, plugins } = useSession()
   const { message, modal } = App.useApp()
   const enabled = plugins.some((plugin) => plugin.id === 'affiliate' && plugin.enabled)
-  const summary = useData<Summary>(enabled ? '/extensions/affiliate/summary' : null, 15)
-  const commissions = useData<Row[]>(
-    enabled ? '/extensions/affiliate/commissions?mine=1' : null,
+  const summary = useRpc<Summary>(enabled ? 'affiliate/summary.get' : null, undefined, 15)
+  const commissions = useRpc<Row[]>(
+    enabled ? 'affiliate/commissions.list' : null,
+    { mine: true },
     15,
   )
-  const withdrawals = useData<Row[]>(
-    enabled ? '/extensions/affiliate/withdrawals?mine=1' : null,
+  const withdrawals = useRpc<Row[]>(
+    enabled ? 'affiliate/withdrawals.list' : null,
+    { mine: true },
     15,
   )
   const [method, setMethod] = useState<Method>()
@@ -72,10 +74,7 @@ export default function PortalReferrals() {
   async function cancel(row: Row) {
     setCanceling(String(row.id))
     try {
-      await api(`/extensions/affiliate/withdrawals/${encodeURIComponent(row.id)}/cancel`, {
-        method: 'POST',
-        body: {},
-      })
+      await rpc('affiliate/withdrawals.cancel', { id: row.id })
       refresh()
       message.success('申请已撤回')
     } catch (e) {
@@ -88,10 +87,7 @@ export default function PortalReferrals() {
   async function transfer(row: Row) {
     setCanceling(String(row.id))
     try {
-      const result = await api<Row>(
-        `/extensions/affiliate/withdrawals/${encodeURIComponent(row.id)}/transfer`,
-        { method: 'POST', body: {} },
-      )
+      const result = await rpc<Row>('affiliate/withdrawals.transfer', { id: row.id })
       refresh()
       if (result.status === 'approved') message.success('已转入余额')
       else message.info('正在转入余额，请稍后查看')

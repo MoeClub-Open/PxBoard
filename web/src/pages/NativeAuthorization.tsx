@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { Alert, Button, Spin } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
-import { api, errorText, useData } from '../api'
+import { errorText, rpc, useRpc } from '../api'
 import type { User } from '../api'
 import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 
 export function NativeAuthorization({ user }: { user: User }) {
   const id = new URLSearchParams(window.location.search).get('request') || ''
-  const { data, error, loading } = useData<{ name: string; approved: boolean }>(
-    `/auth/native/${encodeURIComponent(id)}`,
+  const { data, error, loading } = useRpc<{ name: string; approved: boolean }>(
+    id ? 'core/auth.authorizeStatus' : null,
+    { id },
   )
   const [busy, setBusy] = useState(false)
   const [approved, setApproved] = useState(false)
@@ -17,7 +18,7 @@ export function NativeAuthorization({ user }: { user: User }) {
   async function approve() {
     setBusy(true)
     try {
-      await api(`/auth/native/${encodeURIComponent(id)}/approve`, { method: 'POST', body: {} })
+      await rpc('core/auth.authorizeApprove', { id })
       setApproved(true)
     } catch (e) {
       setFailure(errorText(e))
@@ -66,10 +67,7 @@ export function BrowserAuthorization({ onLogin }: { onLogin: () => Promise<void>
     started.current = true
     const token = window.location.hash.slice(1)
     window.history.replaceState(null, '', window.location.pathname)
-    void api<{ redirectPath: string }>('/auth/browser-link/complete', {
-      method: 'POST',
-      body: { token },
-    })
+    void rpc<{ redirectPath: string }>('core/auth.browserExchange', { token })
       .then(async (result) => {
         await onLogin()
         navigate(result.redirectPath, { replace: true })

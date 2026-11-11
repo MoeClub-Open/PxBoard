@@ -2,7 +2,7 @@ import { useCurrency } from '../currency'
 import { useState } from 'react'
 import { Alert, Button, InputNumber, Table, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
-import { useData } from '../api'
+import { useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import Checkout from './Checkout'
@@ -12,8 +12,8 @@ export function PortalWallet() {
   const { money, currencyName, currencySymbol } = useCurrency()
   const { plugins } = useSession()
   const wallet = useWallet()
-  const channels = useData<Row[]>(
-    plugins.some((p) => p.id === 'payments' && p.enabled) ? '/extensions/payments/channels' : null,
+  const channels = useRpc<Row[]>(
+    plugins.some((p) => p.id === 'payments' && p.enabled) ? 'payments/channels.list' : null,
   )
   const [amount, setAmount] = useState<number | null>(50)
   const [recharge, setRecharge] = useState<number>()

@@ -20,7 +20,7 @@ import {
   MenuOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { api } from '../api'
+import { rpc } from '../api'
 import { useSession } from '../context'
 import { Brand } from '../components/Brand'
 import { AppearanceButton } from '../appearance'
@@ -178,7 +178,7 @@ export default function PortalLayout({
   useBrandTitle(current?.label || '用户中心')
   async function logout() {
     try {
-      await api('/auth/logout', { method: 'POST' })
+      await rpc('core/auth.logout')
       onLogout()
       navigate('/login')
     } catch {

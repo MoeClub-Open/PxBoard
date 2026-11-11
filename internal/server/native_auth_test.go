@@ -28,44 +28,44 @@ func TestNativeAuthorization(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := (&Server{Store: db, Plugins: plugins.New(db, filepath.Join(dir, "plugins"), "http://127.0.0.1"), PublicURL: "https://panel.test"}).Handler()
-	call := func(path, token string, body any, status int) map[string]any {
+	call := func(method, token string, body any, status int) any {
 		t.Helper()
 		raw, _ := json.Marshal(body)
-		r := httptest.NewRequest("POST", "/api/v1"+path, strings.NewReader(string(raw)))
+		r := httptest.NewRequest("POST", "/rpc/v1/core/"+method, strings.NewReader(string(raw)))
 		if token != "" {
 			r.Header.Set("Authorization", "Bearer "+token)
 		}
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
 		if w.Code != status {
-			t.Fatalf("%s: got %d: %s", path, w.Code, w.Body)
+			t.Fatalf("%s: got %d: %s", method, w.Code, w.Body)
 		}
-		var result struct{ Data map[string]any }
+		var result struct{ Data any }
 		_ = json.Unmarshal(w.Body.Bytes(), &result)
 		return result.Data
 	}
 	proof := "client-verifier-with-at-least-32-random-characters"
-	flow := call("/auth/native", "", map[string]string{"name": "Client", "challenge": digest(proof)}, 200)
+	flow := call("auth.authorizeCreate", "", map[string]string{"name": "Client", "challenge": digest(proof)}, 200).(map[string]any)
 	id := flow["id"].(string)
-	call("/auth/native/"+id+"/token", "", map[string]string{"proof": "wrong"}, 403)
-	if call("/auth/native/"+id+"/token", "", map[string]string{"proof": proof}, 200)["status"] != "pending" {
+	call("auth.authorizeExchange", "", map[string]string{"id": id, "proof": "wrong"}, 403)
+	if call("auth.authorizeExchange", "", map[string]string{"id": id, "proof": proof}, 200).(map[string]any)["status"] != "pending" {
 		t.Fatal("unapproved client received a session")
 	}
-	call("/auth/native/"+id+"/approve", "", map[string]string{}, 401)
-	call("/auth/native/"+id+"/approve", "browser-session", map[string]string{}, 200)
-	result := call("/auth/native/"+id+"/token", "", map[string]string{"proof": proof}, 200)
+	call("auth.authorizeApprove", "", map[string]string{"id": id}, 401)
+	call("auth.authorizeApprove", "browser-session", map[string]string{"id": id}, 200)
+	result := call("auth.authorizeExchange", "", map[string]string{"id": id, "proof": proof}, 200).(map[string]any)
 	token := result["token"].(string)
-	call("/auth/native/"+id+"/token", "", map[string]string{"proof": proof}, 410)
-	call("/auth/browser-link", token, map[string]string{"redirectPath": "https://other.test"}, 400)
-	call("/auth/browser-link", token, map[string]string{"redirectPath": "/admin"}, 400)
-	link := call("/auth/browser-link", token, map[string]string{"redirectPath": "/user/plans"}, 200)
+	call("auth.authorizeExchange", "", map[string]string{"id": id, "proof": proof}, 410)
+	call("auth.browserLink", token, map[string]string{"redirectPath": "https://other.test"}, 400)
+	call("auth.browserLink", token, map[string]string{"redirectPath": "/admin"}, 400)
+	link := call("auth.browserLink", token, map[string]string{"redirectPath": "/user/plans"}, 200).(map[string]any)
 	secret := strings.Split(link["url"].(string), "#")[1]
-	if call("/auth/browser-link/complete", "", map[string]string{"token": secret}, 200)["redirectPath"] != "/user/plans" {
+	if call("auth.browserExchange", "", map[string]string{"token": secret}, 200).(map[string]any)["redirectPath"] != "/user/plans" {
 		t.Fatal("browser destination changed")
 	}
-	call("/auth/browser-link/complete", "", map[string]string{"token": secret}, 410)
-	call("/auth/logout", token, map[string]string{}, 200)
-	request := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	call("auth.browserExchange", "", map[string]string{"token": secret}, 410)
+	call("auth.logout", token, map[string]string{}, 200)
+	request := httptest.NewRequest(http.MethodPost, "/rpc/v1/core/account.me", strings.NewReader("{}"))
 	request.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, request)

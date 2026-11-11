@@ -1,7 +1,7 @@
 import { useCurrency } from '../currency'
 import { useRef, useState } from 'react'
 import { Alert, App, Button, Descriptions, Form, Input, InputNumber, Modal, Space } from 'antd'
-import { api, errorText } from '../api'
+import { errorText, rpc } from '../api'
 
 export type Method = 'wallet' | 'cash'
 function cents(value: string) {
@@ -50,14 +50,11 @@ export default function AffiliateWithdrawal({
     setBusy(true)
     setError('')
     try {
-      const result = await api<{ status: string }>('/extensions/affiliate/withdrawals', {
-        method: 'POST',
-        body: {
-          amount,
-          method,
-          requestId: requestId.current,
-          ...(method === 'cash' ? { payoutAccount: values.payoutAccount?.trim() } : {}),
-        },
+      const result = await rpc<{ status: string }>('affiliate/withdrawals.create', {
+        amount,
+        method,
+        requestId: requestId.current,
+        ...(method === 'cash' ? { payoutAccount: values.payoutAccount?.trim() } : {}),
       })
       onClose()
       onSubmitted()

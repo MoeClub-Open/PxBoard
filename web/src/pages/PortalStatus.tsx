@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Alert, Button, Empty, Input, Space, Table, Tag, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
-import { useData } from '../api'
+import { useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 
@@ -14,11 +14,12 @@ const states: Record<string, { label: string; color: string }> = {
 
 export default function PortalStatus() {
   const { me } = useSession()
-  const status = useData<Row[]>(
-    `/extensions/nodes/status${me.role === 'admin' ? '?scope=mine' : ''}`,
+  const status = useRpc<Row[]>(
+    'nodes/status.list',
+    me.role === 'admin' ? { scope: 'mine' } : undefined,
     10,
   )
-  const display = useData<{ fields: string[] }>('/extensions/nodes/status/display')
+  const display = useRpc<{ fields: string[] }>('nodes/status.display')
   const [search, setSearch] = useState('')
   const rows = status.data || []
   const visible = rows.filter((server) =>

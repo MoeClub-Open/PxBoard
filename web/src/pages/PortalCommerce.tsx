@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert, App, Button, Empty, Table } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useData } from '../api'
+import { useRpc } from '../api'
 import type { Row } from '../api'
 import Checkout from './Checkout'
 import { availablePeriods, periodLabel } from '../planPeriods'
@@ -17,7 +17,7 @@ export function PortalPlans() {
   const navigate = useNavigate()
   const { message } = App.useApp()
   const [query, setQuery] = useSearchParams()
-  const plans = useData<Row[]>('/extensions/commerce/plans?scope=mine')
+  const plans = useRpc<Row[]>('commerce/plans.list', { scope: 'mine' })
   const [selected, setSelected] = useState<Row>()
   const openedPlan = useRef<string | null>(null)
   const requestedPlan = query.get('plan')

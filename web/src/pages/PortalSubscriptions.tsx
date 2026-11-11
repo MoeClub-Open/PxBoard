@@ -22,7 +22,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
-import { absoluteURL, api, errorText, useData } from '../api'
+import { absoluteURL, errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { date } from './PortalShared'
@@ -31,9 +31,9 @@ import { ChallengeNotice, HumanChallenge, useHumanChallenge } from '../component
 export function PortalSubscriptions() {
   const { me, plugins } = useSession()
   const { message, modal } = App.useApp()
-  const links = useData<Row[]>('/extensions/subscriptions/links?mine=1')
-  const accounts = useData<Row[]>('/extensions/access/accounts?mine=1', 5)
-  const settings = useData<Row>('/extensions/subscriptions/settings/public')
+  const links = useRpc<Row[]>('subscriptions/links.list', { mine: true })
+  const accounts = useRpc<Row[]>('access/accounts.list', { mine: true }, 5)
+  const settings = useRpc<Row>('subscriptions/settings.public')
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
   const [verifying, setVerifying] = useState<Row>()
@@ -61,7 +61,7 @@ export function PortalSubscriptions() {
     }
     setBusy(true)
     try {
-      await api('/extensions/subscriptions/links', { method: 'POST', body: values })
+      await rpc('subscriptions/links.create', values)
       setCreating(false)
       form.resetFields()
       links.reload()
@@ -74,9 +74,8 @@ export function PortalSubscriptions() {
   }
   async function action(link: Row, kind: 'rotate' | 'delete') {
     try {
-      await api(`/extensions/subscriptions/links/${link.id}${kind === 'rotate' ? '/rotate' : ''}`, {
-        method: kind === 'rotate' ? 'POST' : 'DELETE',
-        ...(kind === 'rotate' ? { body: {} } : {}),
+      await rpc(kind === 'rotate' ? 'subscriptions/links.rotate' : 'subscriptions/links.delete', {
+        id: link.id,
       })
       links.reload()
       message.success(kind === 'rotate' ? '订阅链接已重置' : '订阅链接已删除')
@@ -88,9 +87,9 @@ export function PortalSubscriptions() {
     if (!verifying || !challenge.token) return
     setBusy(true)
     try {
-      await api(`/extensions/subscriptions/links/${verifying.id}/verify`, {
-        method: 'POST',
-        body: { challengeToken: challenge.token },
+      await rpc('subscriptions/links.verify', {
+        id: verifying.id,
+        challengeToken: challenge.token,
       })
       setVerifying(undefined)
       links.reload()

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Alert, Spin } from 'antd'
-import { api, errorText } from '../api'
+import { errorText, rpc } from '../api'
 
 type Provider = 'turnstile' | 'hcaptcha' | 'recaptcha'
 type Action = 'login' | 'register' | 'reset' | 'oauth'
@@ -73,7 +73,7 @@ export function useHumanChallenge() {
   const [generation, setGeneration] = useState(0)
   useEffect(() => {
     const controller = new AbortController()
-    api<Policy>('/auth/challenge', { signal: controller.signal })
+    rpc<Policy>('core/auth.challenge', undefined, { signal: controller.signal })
       .then(setPolicy)
       .catch((e) => {
         if (e.name !== 'AbortError') setError(errorText(e))

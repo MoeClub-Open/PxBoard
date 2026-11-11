@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Alert, App, Button, Empty, Space, Table, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
-import { api, errorText, useData } from '../api'
+import { errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import Checkout from './Checkout'
@@ -13,11 +13,11 @@ export function PortalOrders() {
   const { money } = useCurrency()
   const { me } = useSession()
   const { message, modal } = App.useApp()
-  const orders = useData<Row[]>('/extensions/commerce/orders?mine=1', 10)
+  const orders = useRpc<Row[]>('commerce/orders.list', { mine: true }, 10)
   const [selected, setSelected] = useState<Row>()
   async function cancel(row: Row) {
     try {
-      await api(`/extensions/commerce/orders/${row.id}/cancel`, { method: 'POST', body: {} })
+      await rpc('commerce/orders.cancel', { id: row.id })
       orders.reload()
       message.success('订单已取消')
     } catch (e) {

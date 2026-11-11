@@ -1,5 +1,5 @@
 import { Tag } from 'antd'
-import { useData } from '../api'
+import { useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 
@@ -28,7 +28,7 @@ export function OrderStatus({ value }: { value: string }) {
 }
 export function useWallet(enabled = true) {
   const { me } = useSession()
-  const data = useData<Row[]>(enabled ? '/extensions/commerce/ledger?mine=1' : null)
+  const data = useRpc<Row[]>(enabled ? 'commerce/ledger.list' : null, { mine: true })
   const rows = (data.data || []).filter((row) => row.userId === me.id)
   return {
     ...data,

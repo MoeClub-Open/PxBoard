@@ -14,8 +14,10 @@ func TestPublicRoutePaths(t *testing.T) {
 			t.Fatalf("accepted %q", value)
 		}
 	}
-	route = Record{"path": "/api"}
-	if _, err := PublicRoutePaths(route); err == nil {
-		t.Fatal("accepted reserved path")
+	for _, reserved := range []string{"/api", "/rpc", "/files"} {
+		route = Record{"path": reserved}
+		if _, err := PublicRoutePaths(route); err == nil {
+			t.Fatalf("accepted reserved path %s", reserved)
+		}
 	}
 }

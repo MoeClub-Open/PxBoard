@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api } from './api'
+import { rpc } from './api'
 import { initialPublicSite } from './publicSite'
 
 type Currency = { currencyName: string; currencySymbol: string }
@@ -13,7 +13,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   )
   const reload = useCallback(async () => {
     try {
-      setCurrency(await api<Currency>('/extensions/commerce/public/currency'))
+      setCurrency(await rpc<Currency>('commerce/public.currency'))
     } catch {}
   }, [])
   useEffect(() => {

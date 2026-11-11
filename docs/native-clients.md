@@ -1,40 +1,50 @@
 # 原生客户端接入
 
-客户端直接使用 PxBoard 接口，不需要 Xboard 兼容层。认证由核心提供；访问权益、节点配置和商业页面继续属于各自插件。
+原生客户端（桌面端与移动端 XBClient）与网页前端共用同一套 `/rpc/v1` 接口契约，不再通过抓取 YAML 订阅文件或专用兼容接口拼装数据。所有请求使用 `POST /rpc/v1/{service}/{method}` 或 `POST /rpc/v1/$batch`，携带 `Authorization: Bearer <token>`。
 
-## 浏览器授权登录
+## 登录与认证
 
-此方式复用站点现有的密码、第三方登录、人机验证和动态验证码。客户端不接触用户密码或第三方提供方密钥。
+客户端同时支持应用内直接登录与系统浏览器授权登录：
+
+### 直接邮箱密码登录
+
+1. 调用 `POST /rpc/v1/core/auth.challenge` 检查当前站点是否要求登录人机验证。
+2. 未要求验证时，客户端直接调用 `POST /rpc/v1/core/auth.login`，输入 `{"email":"...","password":"...","code":"可选动态验证码"}`；若账号启用了动态验证码且尚未填写，返回 `error.code = "mfa_required"`，提示输入 6 位验证码后重提。
+3. 登录成功返回 `{id, email, name, role, token, expiresAt}`，后续请求携带 `Authorization: Bearer <token>`。
+4. 若站点开启了登录人机验证或用户选择第三方账号登录，自动切换至下方系统浏览器授权流程。
+
+### 系统浏览器授权登录
+
+此方式复用站点现有的密码、第三方登录、人机验证和动态验证码，客户端不接触第三方提供方密钥：
 
 1. 客户端生成至少 32 字节随机校验串 `proof`，计算其 UTF-8 字节的 SHA-256 小写十六进制 `challenge`。
-2. `POST /api/v1/auth/native`，提交 `{"name":"客户端名称","challenge":"..."}`。响应包含 `id`、`authorizationUrl`、`expiresAt` 和 `intervalSeconds`。
+2. 调用 `POST /rpc/v1/core/auth.authorizeCreate`，提交 `{"name":"客户端名称","challenge":"..."}`。响应包含 `id`、`authorizationUrl`、`expiresAt` 和 `intervalSeconds`。
 3. 使用系统浏览器打开 `authorizationUrl`。用户在站点登录后，明确点击允许客户端登录。网址中的申请编号不是会话凭据。
-4. 按响应间隔调用 `POST /api/v1/auth/native/{id}/token`，提交 `{"proof":"..."}`。未批准时 `status=pending`；批准后返回 `status=approved`、`token`、`user` 和有效期。
+4. 按响应间隔调用 `POST /rpc/v1/core/auth.authorizeExchange`，提交 `{"id":"...","proof":"..."}`。未批准时 `status=pending`；批准后返回 `status=approved`、`token`、`user` 和有效期。
 5. 后续请求携带 `Authorization: Bearer <token>`。授权申请只能兑换一次；错误校验串不能领取会话。申请 10 分钟过期，登录会话 7 天过期。
 
-取消或过期后重新发起申请，不将校验串或会话凭据写入网址。客户端切换站点或面板类型时须清除旧会话及节点缓存，保留设备设置。
+客户端可先通过 `POST /rpc/v1/$batch` 一次读取 `core/setup.get` 与 `oauth/providers.list`；用户点击特定第三方服务时，在 `authorizationUrl` 查询参数追加 `provider=<服务配置ID>`。
 
-客户端可以先读取 `/api/v1/setup` 的 `extensions`；启用了 `oauth` 时，通过 `/api/v1/extensions/oauth/providers` 获取可用的第三方登录服务。用户点击服务后，在返回的 `authorizationUrl` 查询参数中追加 `provider=<服务配置ID>`。这是登录服务选择提示，不是授权凭据；未登录的浏览器会在本站进入所选服务的授权，有人机验证时先完成验证，登录后仍须明确批准客户端访问。浏览器已有站点会话时直接确认当前账户。普通浏览器登录不携带该参数。
+`core/auth.authorizeStatus` 为浏览器确认页提供客户端名称和批准状态，`core/auth.authorizeApprove` 由已登录的浏览器会话完成批准。
 
-所有第三方授权均在系统浏览器完成。PxBoard 客户端继续通过校验串领取自己的会话，不使用 XBoard OAuth 插件的应用 scheme、`verify` 或 `token2Login` 接口。一个客户端同时包含两种面板支持时，应各自维护独立适配器，由站点配置选择，不能在请求失败时混用另一种面板的接口。
+## 客户端配置与业务聚合
 
-`GET /api/v1/auth/native/{id}` 为浏览器提供客户端名称和批准状态，不返回账号或会话。`POST /api/v1/auth/native/{id}/approve` 必须使用已登录的站点会话。
+客户端启动或刷新时，使用 `POST /rpc/v1/$batch` 一次合并读取：
 
-## 账号、流量与节点
+- `core/account.me`：当前用户身份与站点模式。
+- `core/plugins.list`：当前可用插件与前台页面能力。
+- `subscriptions/client.profile`（支持传入 `{"knownRevision":"..."}`）：返回 `{unchanged, revision, account, blockReason, nodes, routing, links, settings}`。
+  - `account` 始终返回账户流量、总额度、`unlimited`、到期时间与状态；即使到期、超额或暂停（`blockReason` 非空），接口仍以 HTTP 200 返回完整账户信息与空节点列表，确保客户端正常展示账户状态与续费入口。
+  - `nodes` 为 Aerion 原生结构化 JSON 节点数组（含 Flux、AnyTLS、Mieru、Sudoku、VLESS、VMess、Trojan、Shadowsocks、Hysteria2、TUIC 等），无需解析 Clash YAML。
+  - `routing` 为已剔除二进制 `.mrs` 规则提供器的分流规则与规则集结构，可直接传给 Aerion 内核。
+- `commerce/wallet.get` 与 `support/announcements.list`（按已启用插件按需合并）。
 
-- `GET /api/v1/me`：当前身份。
-- `GET /api/v1/plugins`：按已启用插件显示可用功能。
-- `GET /api/v1/extensions/access/accounts?mine=1`：当前用户的权益、流量、期限和有效状态。管理员客户端也须带 `mine=1`。
-- `GET /api/v1/extensions/subscriptions/configuration?format=clash`：当前账号的完整 Mihomo 配置；客户端从同一份配置读取节点和分流规则，无需重复请求专用节点格式。
-
-配置接口始终要求身份认证，只返回当前账号有权使用的节点，同时检查父节点权限、期限、配额和暂停状态。此接口不依赖公开订阅令牌，不更改用户已有的订阅链接、验证状态或客户端绑定。公开订阅链接继续遵守原有的人机验证、浏览器隐藏和绑定设置。
+客户端内的套餐选购、订单结算、余额明细、兑换码、工单、推广返佣与修改密码直接调用与网页端完全一致的 `commerce/*`、`payments/*`、`redeem/*`、`support/*`、`affiliate/*` 与 `core/account.changePassword` 过程。
 
 ## 打开用户前台
 
-客户端可复用站点的套餐、订单、支付、兑换码、工单和账户设置：
+当需要跳转到外部收银台或网页端时：
 
-`POST /api/v1/auth/browser-link`，使用客户端会话认证，提交 `{"redirectPath":"/user/plans"}`。返回的 `url` 只指向本站用户前台；在系统浏览器打开即可。
+`POST /rpc/v1/core/auth.browserLink`，提交 `{"redirectPath":"/user/orders"}`，返回的 `url` 在系统浏览器打开后通过 `core/auth.browserExchange` 自动兑换浏览器会话。
 
-链接有效期为 1 分钟，只能使用一次。临时凭据放在片段中，浏览器页面立即移除片段后，通过 `POST /api/v1/auth/browser-link/complete` 兑换浏览器会话；不允许跳转后台或外部网站。不要记录或分享返回的链接。
-
-`POST /api/v1/auth/logout` 同时支持 Cookie 会话和 Bearer 会话。退出登录后当前会话立即失效。
+`POST /rpc/v1/core/auth.logout` 同时支持 Cookie 会话和 Bearer 会话，退出登录后当前会话立即失效。

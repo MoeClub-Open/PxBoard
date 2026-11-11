@@ -28,7 +28,7 @@ import {
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
 import type { Plugin, Row } from '../api'
-import { api, configurationChanged, errorText, useData } from '../api'
+import { configurationChanged, errorText, rpc, useRpc } from '../api'
 import { useSession } from '../context'
 
 interface Catalog {
@@ -67,7 +67,7 @@ const permissionLabel = (p: string) =>
 
 export function Sources() {
   const { message, modal } = App.useApp()
-  const { data, error, loading, reload } = useData<Row[]>('/sources')
+  const { data, error, loading, reload } = useRpc<Row[]>('core/sources.list')
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
@@ -80,7 +80,7 @@ export function Sources() {
     }
     setBusy(true)
     try {
-      await api('/sources', { method: 'POST', body: b })
+      await rpc('core/sources.create', b)
       message.success('已添加插件源')
       setOpen(false)
       form.resetFields()
@@ -128,7 +128,7 @@ export function Sources() {
                 checked={v}
                 onChange={async (enabled) => {
                   try {
-                    await api(`/sources/${row.id}`, { method: 'PATCH', body: { enabled } })
+                    await rpc('core/sources.update', { id: row.id, enabled })
                     reload()
                   } catch (e) {
                     message.error(errorText(e))
@@ -154,7 +154,7 @@ export function Sources() {
                     cancelText: '取消',
                     onOk: async () => {
                       try {
-                        await api(`/sources/${row.id}`, { method: 'DELETE' })
+                        await rpc('core/sources.remove', { id: row.id })
                         reload()
                       } catch (e) {
                         message.error(errorText(e))
@@ -207,9 +207,7 @@ function Installed() {
   async function action(id: string, operation: string) {
     setBusy(id)
     try {
-      await api(`/plugins/${id}${operation === 'remove' ? '' : `/${operation}`}`, {
-        method: operation === 'remove' ? 'DELETE' : 'POST',
-      })
+      await rpc('core/plugins.action', { id, action: operation })
       await refresh()
       configurationChanged()
       message.success('操作完成')
@@ -309,7 +307,7 @@ function Installed() {
 function Marketplace() {
   const { message, modal } = App.useApp()
   const { plugins, refresh } = useSession()
-  const { data, error, loading, reload } = useData<Catalog>('/plugins/catalog')
+  const { data, error, loading, reload } = useRpc<Catalog>('core/plugins.catalog')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('全部')
   const [detail, setDetail] = useState<Plugin | null>(null)
@@ -326,9 +324,9 @@ function Marketplace() {
     if (!detail) return
     setBusy(true)
     try {
-      await api('/plugins/install', {
-        method: 'POST',
-        body: { id: detail.id, sourceId: detail.sourceId },
+      await rpc('core/plugins.install', {
+        id: detail.id,
+        sourceId: detail.sourceId,
       })
       await refresh()
       configurationChanged()
@@ -344,7 +342,7 @@ function Marketplace() {
     setBundleBusy(bundle.id)
     try {
       for (const id of bundle.plugins) {
-        await api('/plugins/install', { method: 'POST', body: { id, sourceId: bundle.sourceId } })
+        await rpc('core/plugins.install', { id, sourceId: bundle.sourceId })
       }
       await refresh()
       configurationChanged()

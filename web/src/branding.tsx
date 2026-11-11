@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api, ApiError } from './api'
+import { rpcBatch } from './api'
 import { initialPublicSite } from './publicSite'
 
 interface BrandConfig {
@@ -17,14 +17,16 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
   const [custom, setCustom] = useState<Partial<BrandConfig>>(() => initialPublicSite()?.site || {})
   const previousName = useRef(defaults.name)
   const reload = useCallback(async () => {
-    const [setup, branding] = await Promise.allSettled([
-      api<{ name?: string }>('/setup'),
-      api<BrandConfig>('/extensions/branding/public'),
-    ])
-    if (setup.status === 'fulfilled') setFallbackName(setup.value.name || defaults.name)
-    if (branding.status === 'fulfilled') setCustom(branding.value)
-    else if (branding.reason instanceof ApiError && branding.reason.code === 'Not Found')
-      setCustom({})
+    try {
+      const batch = await rpcBatch([
+        { key: 'setup', service: 'core', method: 'setup.get' },
+        { key: 'branding', service: 'branding', method: 'public.get' },
+      ])
+      if (batch.setup?.status < 400 && batch.setup.data)
+        setFallbackName(batch.setup.data.name || defaults.name)
+      if (batch.branding?.status < 400 && batch.branding.data) setCustom(batch.branding.data)
+      else if (batch.branding?.status === 404) setCustom({})
+    } catch {}
   }, [])
   const brand = {
     name: custom.name || fallbackName,

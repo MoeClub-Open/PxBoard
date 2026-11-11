@@ -89,6 +89,19 @@ export interface View {
   resources: Resource[]
 }
 
+export interface BatchCall {
+  key: string
+  service: string
+  method: string
+  input?: Record<string, any>
+}
+
+export interface BatchItemResult<T = any> {
+  status: number
+  data?: T
+  error?: { code?: string; message?: string }
+}
+
 export class ApiError extends Error {
   code: string
   constructor(message: string, code: string) {
@@ -97,19 +110,78 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T = any>(
-  path: string,
-  options: { method?: string; body?: any; signal?: AbortSignal } = {},
+function splitTarget(
+  target: string,
+  input?: Record<string, any>,
+): { service: string; method: string; payload: Record<string, any> } {
+  const qIndex = target.indexOf('?')
+  const rawTarget = qIndex >= 0 ? target.slice(0, qIndex) : target
+  const search = qIndex >= 0 ? target.slice(qIndex + 1) : ''
+  const slash = rawTarget.indexOf('/')
+  if (slash <= 0 || slash === rawTarget.length - 1) {
+    throw new Error(`无效的 RPC 目标：${target}`)
+  }
+  const service = rawTarget.slice(0, slash).trim()
+  const method = rawTarget.slice(slash + 1).trim().replaceAll('/', '.')
+  const payload: Record<string, any> = {}
+  if (search) {
+    const params = new URLSearchParams(search)
+    params.forEach((value, key) => {
+      if (value !== '') payload[key] = value
+    })
+  }
+  if (input) {
+    for (const [key, value] of Object.entries(input)) {
+      if (value !== undefined) payload[key] = value
+    }
+  }
+  return { service, method, payload }
+}
+
+export function pluginResourceTarget(
+  pluginId: string,
+  endpoint: string,
+  verb?: string,
+  extra?: Record<string, any>,
+): { target: string; input: Record<string, any> } {
+  const qIndex = endpoint.indexOf('?')
+  const rawPath = qIndex >= 0 ? endpoint.slice(0, qIndex) : endpoint
+  const search = qIndex >= 0 ? endpoint.slice(qIndex + 1) : ''
+  const input: Record<string, any> = {}
+  if (search) {
+    const params = new URLSearchParams(search)
+    params.forEach((value, key) => {
+      if (value !== '') input[key] = value
+    })
+  }
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value !== undefined) input[key] = value
+    }
+  }
+  if (rawPath.startsWith('/')) {
+    const resource = rawPath.replace(/^\/+|\/+$/g, '').replaceAll('/', '.')
+    const method = verb ? `${resource}.${verb}` : resource
+    return { target: `${pluginId}/${method}`, input }
+  }
+  return { target: rawPath, input }
+}
+
+export async function rpc<T = any>(
+  target: string,
+  input?: Record<string, any>,
+  options: { signal?: AbortSignal } = {},
 ): Promise<T> {
-  const res = await fetch(path.startsWith('/api/') ? path : `/api/v1${path}`, {
-    method: options.method || 'GET',
+  const { service, method, payload } = splitTarget(target, input)
+  const res = await fetch(`/rpc/v1/${encodeURIComponent(service)}/${method}`, {
+    method: 'POST',
     credentials: 'same-origin',
     signal: options.signal,
-    headers: options.body === undefined ? undefined : { 'Content-Type': 'application/json' },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   })
   const json = await res.json().catch(() => null)
-  if (res.status === 401 && !path.includes('/auth/'))
+  if (res.status === 401 && !(service === 'core' && method.startsWith('auth.')))
     window.dispatchEvent(new Event('px:unauthenticated'))
   if (!res.ok)
     throw new ApiError(json?.error?.message || `请求失败（${res.status}）`, json?.error?.code || '')
@@ -117,18 +189,51 @@ export async function api<T = any>(
   return json.data as T
 }
 
-export function useData<T>(path: string | null, pollIntervalSeconds = 0) {
+export async function rpcBatch(
+  calls: BatchCall[],
+  options: { signal?: AbortSignal } = {},
+): Promise<Record<string, BatchItemResult>> {
+  const res = await fetch('/rpc/v1/$batch', {
+    method: 'POST',
+    credentials: 'same-origin',
+    signal: options.signal,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      calls: calls.map((call) => ({
+        key: call.key,
+        service: call.service,
+        method: call.method,
+        input: call.input || {},
+      })),
+    }),
+  })
+  const json = await res.json().catch(() => null)
+  if (!res.ok)
+    throw new ApiError(json?.error?.message || `请求失败（${res.status}）`, json?.error?.code || '')
+  if (!json || !('data' in json)) throw new Error('服务器返回格式有误')
+  return json.data as Record<string, BatchItemResult>
+}
+
+export function useRpc<T>(
+  target: string | null,
+  input?: Record<string, any>,
+  pollIntervalSeconds = 0,
+) {
   const [data, setData] = useState<T | undefined>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [version, setVersion] = useState(0)
+  const serializedInput = input ? JSON.stringify(input) : ''
   const reload = useCallback(() => setVersion((v) => v + 1), [])
   useEffect(() => {
-    if (!path || !pollIntervalSeconds) return
+    if (!target || !pollIntervalSeconds) return
     const controller = new AbortController()
+    const parsedInput = serializedInput
+      ? (JSON.parse(serializedInput) as Record<string, any>)
+      : undefined
     const timer = setInterval(() => {
       if (!document.hidden)
-        api<T>(path, { signal: controller.signal })
+        rpc<T>(target, parsedInput, { signal: controller.signal })
           .then((value) => {
             if (!controller.signal.aborted) {
               setData(value)
@@ -143,17 +248,20 @@ export function useData<T>(path: string | null, pollIntervalSeconds = 0) {
       clearInterval(timer)
       controller.abort()
     }
-  }, [path, pollIntervalSeconds])
+  }, [target, serializedInput, pollIntervalSeconds])
   useEffect(() => {
-    if (!path) {
+    if (!target) {
       setLoading(false)
       return
     }
     const controller = new AbortController()
+    const parsedInput = serializedInput
+      ? (JSON.parse(serializedInput) as Record<string, any>)
+      : undefined
     setLoading(true)
     setError('')
     setData(undefined)
-    api<T>(path, { signal: controller.signal })
+    rpc<T>(target, parsedInput, { signal: controller.signal })
       .then(setData)
       .catch((e) => {
         if (e.name !== 'AbortError') setError(e.message)
@@ -162,7 +270,7 @@ export function useData<T>(path: string | null, pollIntervalSeconds = 0) {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [path, version])
+  }, [target, serializedInput, version])
   return { data, loading, error, reload }
 }
 export const errorText = (e: unknown) => (e instanceof Error ? e.message : '操作失败')

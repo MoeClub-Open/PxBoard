@@ -2,15 +2,17 @@ import { useCurrency } from '../currency'
 import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import { useData, type Field, type Row } from '../api'
+import { pluginResourceTarget, useRpc, type Field, type Row } from '../api'
 import { officialControl } from '../official/fields'
 
 function RemoteSelect({
   field,
+  pluginId,
   value,
   onChange,
 }: {
   field: Field
+  pluginId?: string
   value?: string
   onChange?: (value: string) => void
 }) {
@@ -20,12 +22,15 @@ function RemoteSelect({
     const timer = setTimeout(() => setQuery(search), 250)
     return () => clearTimeout(timer)
   }, [search])
-  const endpoint = field.optionsEndpoint
-  const url =
-    endpoint && field.optionsSearch
-      ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}q=${encodeURIComponent(query)}&id=${encodeURIComponent(value || '')}`
-      : endpoint
-  const { data, loading, error } = useData<Row[]>(url || null)
+  const resolved = field.optionsEndpoint
+    ? pluginResourceTarget(
+        pluginId || 'core',
+        field.optionsEndpoint,
+        undefined,
+        field.optionsSearch ? { q: query, id: value || '' } : undefined,
+      )
+    : null
+  const { data, loading, error } = useRpc<Row[]>(resolved?.target || null, resolved?.input)
   return (
     <Select
       value={value}
@@ -46,14 +51,19 @@ function RemoteSelect({
 
 function GroupSelect({
   field,
+  pluginId,
   value = [],
   onChange,
 }: {
   field: Field
+  pluginId?: string
   value?: string[]
   onChange?: (value: string[]) => void
 }) {
-  const { data, loading, error } = useData<Row[]>(field.optionsEndpoint || null)
+  const resolved = field.optionsEndpoint
+    ? pluginResourceTarget(pluginId || 'nodes', field.optionsEndpoint)
+    : null
+  const { data, loading, error } = useRpc<Row[]>(resolved?.target || null, resolved?.input)
   const options = (data || []).map((row) => ({
     label: row.name,
     value: row.id,
@@ -92,7 +102,7 @@ function fieldValue(row: Row | undefined, key: string) {
   return key.split('.').reduce<any>((value, part) => value?.[part], row)
 }
 
-function fieldItem(f: Field, symbol: string) {
+function fieldItem(f: Field, symbol: string, pluginId?: string) {
   if (f.type === 'hidden')
     return (
       <Form.Item key={f.key} name={f.key} hidden>
@@ -121,10 +131,11 @@ function fieldItem(f: Field, symbol: string) {
       />
     )
   else if (f.type === 'boolean') control = <Switch />
-  else if (f.type === 'groups') control = <GroupSelect field={f} />
+  else if (f.type === 'groups') control = <GroupSelect field={f} pluginId={pluginId} />
   else if (f.type === 'multiselect')
     control = <Select mode="multiple" options={f.options || []} allowClear />
-  else if (f.type === 'select' && f.optionsEndpoint) control = <RemoteSelect field={f} />
+  else if (f.type === 'select' && f.optionsEndpoint)
+    control = <RemoteSelect field={f} pluginId={pluginId} />
   else if (f.type === 'select')
     control = (
       <Select
@@ -155,7 +166,15 @@ function fieldItem(f: Field, symbol: string) {
   )
 }
 
-export function Fields({ fields, row }: { fields: Field[]; row?: Row }) {
+export function Fields({
+  fields,
+  row,
+  pluginId,
+}: {
+  fields: Field[]
+  row?: Row
+  pluginId?: string
+}) {
   const { currencySymbol } = useCurrency()
   return fields.map((original) => {
     const field = original.optionsEndpoint?.includes('{id}')
@@ -181,6 +200,7 @@ export function Fields({ fields, row }: { fields: Field[]; row?: Row }) {
               label: getFieldValue('type') === 'fixed' ? '优惠金额' : '优惠比例（%）',
             },
             currencySymbol,
+            pluginId,
           )
         }
       </Form.Item>
@@ -193,11 +213,11 @@ export function Fields({ fields, row }: { fields: Field[]; row?: Row }) {
         }
       >
         {({ getFieldsValue }) =>
-          visible(field, getFieldsValue(true)) ? fieldItem(field, currencySymbol) : null
+          visible(field, getFieldsValue(true)) ? fieldItem(field, currencySymbol, pluginId) : null
         }
       </Form.Item>
     ) : (
-      fieldItem(field, currencySymbol)
+      fieldItem(field, currencySymbol, pluginId)
     )
   })
 }

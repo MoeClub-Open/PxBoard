@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Alert, Button, Spin } from 'antd'
 import type { Plugin, User } from './api'
-import { api, configurationChanged } from './api'
+import { ApiError, configurationChanged, rpc, rpcBatch } from './api'
 import { SessionContext } from './context'
 import SharedPluginPage, { PluginPageRoute } from './components/SharedPluginPage'
 import Shell from './components/Shell'
@@ -43,7 +43,7 @@ function Workspace() {
     const path = location.pathname
     let active = true
     setGuestAdminPath('')
-    api<AuthInfo>(`/setup?entry=${encodeURIComponent(path)}`)
+    rpc<AuthInfo>('core/setup.get', { entry: path })
       .then((info) => {
         if (active && info.adminEntry) setGuestAdminPath(path)
       })
@@ -53,14 +53,29 @@ function Workspace() {
     }
   }, [me, initialized, location.pathname])
   const refresh = useCallback(async () => {
-    const [user, installed, setup] = await Promise.all([
-      api<User>('/me'),
-      api<Plugin[]>('/plugins'),
-      api<AuthInfo>('/setup'),
+    const batch = await rpcBatch([
+      { key: 'user', service: 'core', method: 'account.me' },
+      { key: 'plugins', service: 'core', method: 'plugins.list' },
+      { key: 'setup', service: 'core', method: 'setup.get' },
     ])
-    setMe(user)
-    setPlugins(installed)
-    setSite(setup)
+    if (batch.setup?.status < 400 && batch.setup.data) {
+      setSite(batch.setup.data as AuthInfo)
+    }
+    if (batch.user?.status === 401) {
+      setMe(null)
+      throw new ApiError(
+        batch.user.error?.message || '请先登录',
+        batch.user.error?.code || 'Unauthorized',
+      )
+    }
+    if (batch.user?.status >= 400 || !batch.user?.data) {
+      throw new ApiError(
+        batch.user?.error?.message || '读取账户失败',
+        batch.user?.error?.code || '',
+      )
+    }
+    setMe(batch.user.data as User)
+    setPlugins((batch.plugins?.data as Plugin[]) || [])
   }, [])
   useEffect(() => {
     const expired = () => setMe(null)
@@ -71,7 +86,7 @@ function Workspace() {
     const update = () => {
       if (me) void refresh().catch(() => {})
       else
-        void api<AuthInfo>('/setup')
+        void rpc<AuthInfo>('core/setup.get')
           .then(setSite)
           .catch(() => {})
     }
@@ -93,16 +108,21 @@ function Workspace() {
     let alive = true
     ;(async () => {
       try {
-        const setup = await api<AuthInfo>('/setup')
+        const batch = await rpcBatch([
+          { key: 'setup', service: 'core', method: 'setup.get' },
+          { key: 'user', service: 'core', method: 'account.me' },
+          { key: 'plugins', service: 'core', method: 'plugins.list' },
+        ])
         if (!alive) return
+        if (batch.setup?.status >= 400 || !batch.setup?.data) {
+          throw new Error(batch.setup?.error?.message || '连接服务器失败')
+        }
+        const setup = batch.setup.data as AuthInfo
         setInitialized(!!setup.initialized)
         setSite(setup)
-        if (setup.initialized) {
-          try {
-            await refresh()
-          } catch (e) {
-            if (e instanceof Error && e.message !== '请先登录') throw e
-          }
+        if (setup.initialized && batch.user?.status < 400 && batch.user.data) {
+          setMe(batch.user.data as User)
+          setPlugins((batch.plugins?.data as Plugin[]) || [])
         }
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : '连接服务器失败')

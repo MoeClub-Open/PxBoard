@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Alert, Button, Collapse, Empty, Input, Modal, Spin } from 'antd'
-import { useData } from '../api'
+import { useRpc } from '../api'
 import type { Row } from '../api'
 
 export function PortalHelp() {
-  const articles = useData<Row[]>('/extensions/support/articles')
+  const articles = useRpc<Row[]>('support/articles.list')
   const [search, setSearch] = useState('')
   const rows = (articles.data || []).filter(
     (row) =>
@@ -52,7 +52,7 @@ export function PortalHelp() {
 }
 
 export function PortalAnnouncements() {
-  const articles = useData<Row[]>('/extensions/support/announcements')
+  const articles = useRpc<Row[]>('support/announcements.list')
   const [selected, setSelected] = useState<Row>()
   const rows = (articles.data || []).filter((row) => row.published).slice(0, 5)
   return (

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
-import { api } from './api'
+import { rpc } from './api'
 import type { Row } from './api'
 
 export interface PublicDocument {
@@ -41,7 +41,7 @@ export function PublicSiteProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('')
   const reload = useCallback(async () => {
     try {
-      setData(await api<PublicDocument>('/site'))
+      setData(await rpc<PublicDocument>('core/site.get'))
       setError('')
     } catch (e) {
       setError(e instanceof Error ? e.message : '站点信息读取失败')

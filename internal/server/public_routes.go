@@ -130,9 +130,7 @@ func (s *Server) publicRoute(w http.ResponseWriter, r *http.Request) bool {
 		if value == "" || strings.Contains(value, "/") {
 			continue
 		}
-		r.SetPathValue("plugin", route.owner)
-		r.SetPathValue("path", strings.TrimPrefix(route.target, "/")+"/"+value)
-		s.extension(w, r)
+		s.serveExternalPlugin(w, r, route.owner, strings.TrimSuffix(route.target, "/")+"/"+value, false)
 		return true
 	}
 	return false

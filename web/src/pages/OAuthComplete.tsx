@@ -5,7 +5,7 @@ import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 import { oauthFlowKey } from '../components/OAuthButtons'
 import type { OAuthFlow } from '../components/OAuthButtons'
-import { api, ApiError, errorText } from '../api'
+import { ApiError, errorText, rpc } from '../api'
 import type { User } from '../api'
 import { loginDestination } from '../adminPath'
 
@@ -56,30 +56,25 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
     try {
       if (callback.mode === 'register' && !loginTicket.current) {
         setRegistration(
-          await api('/extensions/oauth/registration', {
-            method: 'POST',
-            body: { ticket, proof: flow.proof },
-          }),
+          await rpc('oauth/registration', { ticket, proof: flow.proof }),
         )
         return
       }
       if (!completed.current) {
         if (callback.mode === 'bind') {
-          await api('/extensions/oauth/complete-binding', {
-            method: 'POST',
-            body: { ticket, proof: flow.proof },
-          })
+          await rpc('oauth/completeBinding', { ticket, proof: flow.proof })
           completed.current = { redirectPath: flow.redirectPath }
         } else {
-          completed.current = await api<{ redirectPath: string }>('/auth/external/complete', {
-            method: 'POST',
-            body: { ticket: loginTicket.current, proof: flow.proof, code },
+          completed.current = await rpc<{ redirectPath: string }>('core/auth.externalComplete', {
+            ticket: loginTicket.current,
+            proof: flow.proof,
+            code,
           })
         }
       }
       if (callback.mode !== 'bind') await onLogin()
       sessionStorage.removeItem(oauthFlowKey)
-      const user = await api<User>('/me')
+      const user = await rpc<User>('core/account.me')
       const redirect =
         callback.mode === 'bind'
           ? '/user/account'
@@ -101,9 +96,10 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
     setError('')
     try {
       if (!loginTicket.current) {
-        const result = await api<{ ticket: string }>('/extensions/oauth/complete-registration', {
-          method: 'POST',
-          body: { ticket: callback.ticket, proof: callback.flow.proof, ...values },
+        const result = await rpc<{ ticket: string }>('oauth/completeRegistration', {
+          ticket: callback.ticket,
+          proof: callback.flow.proof,
+          ...values,
         })
         loginTicket.current = result.ticket
         setRegistration(null)

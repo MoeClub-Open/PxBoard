@@ -3,7 +3,7 @@ import type { ClipboardEvent } from 'react'
 import { App, Button, Input, Modal, Space, Upload } from 'antd'
 import { FileImageOutlined, LinkOutlined, VideoCameraOutlined } from '@ant-design/icons'
 import type { TextAreaRef } from 'antd/es/input/TextArea'
-import { api, errorText } from '../api'
+import { errorText, rpc } from '../api'
 import { TicketMarkdown } from './TicketMarkdown'
 
 type Props = {
@@ -54,10 +54,7 @@ export function TicketEditor({ value = '', onChange, onUploadingChange }: Props)
         reader.onerror = () => reject(new Error('图片读取失败'))
         reader.readAsDataURL(file)
       })
-      const result = await api<{ url: string }>('/extensions/support/attachments', {
-        method: 'POST',
-        body: { data },
-      })
+      const result = await rpc<{ url: string }>('support/attachments.create', { data })
       setPreview(false)
       insert(`![图片](${result.url})`)
     } catch (e) {

@@ -56,7 +56,7 @@ func TestCustomAdminPath(t *testing.T) {
 	if got := call("GET", "/private-entry", "", "").Code; got != 200 {
 		t.Fatalf("new admin route: %d", got)
 	}
-	public := call("GET", "/api/v1/setup", "", "").Body.String()
+	public := call("POST", "/rpc/v1/core/setup.get", "", "{}").Body.String()
 	if strings.Contains(public, "private-entry") {
 		t.Fatal("setup exposed admin path")
 	}
@@ -65,23 +65,23 @@ func TestCustomAdminPath(t *testing.T) {
 			AdminEntry bool `json:"adminEntry"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(call("GET", "/api/v1/setup?entry=%2Fprivate-entry%2Fsettings", "", "").Body.Bytes(), &result); err != nil || !result.Data.AdminEntry {
+	if err := json.Unmarshal(call("POST", "/rpc/v1/core/setup.get", "", `{"entry":"/private-entry/settings"}`).Body.Bytes(), &result); err != nil || !result.Data.AdminEntry {
 		t.Fatal("entry not recognized", err)
 	}
-	if got := call("GET", "/api/v1/me", "member-session", "").Body.String(); strings.Contains(got, "private-entry") {
+	if got := call("POST", "/rpc/v1/core/account.me", "member-session", "{}").Body.String(); strings.Contains(got, "private-entry") {
 		t.Fatal("member saw admin path")
 	}
-	if got := call("GET", "/api/v1/me", "admin-session", "").Body.String(); !strings.Contains(got, "private-entry") {
+	if got := call("POST", "/rpc/v1/core/account.me", "admin-session", "{}").Body.String(); !strings.Contains(got, "private-entry") {
 		t.Fatal("admin did not receive admin path")
 	}
-	if got := call("GET", "/api/v1/settings", "", "").Code; got != 401 {
+	if got := call("POST", "/rpc/v1/core/settings.get", "", "{}").Code; got != 401 {
 		t.Fatalf("anonymous settings: %d", got)
 	}
-	invalid := call("PATCH", "/api/v1/settings", "admin-session", `{"name":"changed","adminPath":"/user"}`)
+	invalid := call("POST", "/rpc/v1/core/settings.update", "admin-session", `{"name":"changed","adminPath":"/user"}`)
 	if invalid.Code != 400 || db.Setting("name", "") != "" {
 		t.Fatal("invalid path changed settings")
 	}
-	saved := call("PATCH", "/api/v1/settings", "admin-session", `{"adminPath":"/manage-456"}`)
+	saved := call("POST", "/rpc/v1/core/settings.update", "admin-session", `{"adminPath":"/manage-456"}`)
 	if saved.Code != 200 || db.Setting("adminPath", "") != "/manage-456" {
 		t.Fatal("valid path not saved")
 	}

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, App, Button, Empty, Form, Segmented, Spin } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
-import { api, errorText, useData } from '../api'
+import { errorText, rpc, useRpc } from '../api'
 import type { Field, Row } from '../api'
 import { Fields, formValues, serialize } from '../components/Fields'
 import { AppearanceButton } from '../appearance'
@@ -15,6 +15,7 @@ export interface AuthProvider {
   key: string
   title: string
   path: string
+  procedure?: string
   fields: Field[]
   query?: Record<string, string>
 }
@@ -33,7 +34,7 @@ export default function Register() {
   useBrandTitle('注册')
   const challenge = useHumanChallenge()
   const [query] = useSearchParams()
-  const { data, error: loadError, loading } = useData<AuthInfo>('/setup')
+  const { data, error: loadError, loading } = useRpc<AuthInfo>('core/setup.get')
   const [selected, setSelected] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -115,12 +116,9 @@ export default function Register() {
                 setBusy(true)
                 setError('')
                 try {
-                  await api(provider.path, {
-                    method: 'POST',
-                    body: {
-                      ...serialize(provider.fields, values),
-                      challengeToken: challenge.token,
-                    },
+                  await rpc(provider.procedure || provider.path, {
+                    ...serialize(provider.fields, values),
+                    challengeToken: challenge.token,
                   })
                   message.success('账户已创建，请登录')
                   navigate(loginPath)

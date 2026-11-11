@@ -12,7 +12,7 @@ import {
   Space,
   Typography,
 } from 'antd'
-import { api, errorText, redirectToPayment, useData } from '../api'
+import { errorText, redirectToPayment, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { date, OrderStatus, useWallet } from './PortalShared'
@@ -31,8 +31,8 @@ export default function Checkout({
   const { plugins } = useSession()
   const { message } = App.useApp()
   const wallet = useWallet()
-  const channels = useData<Row[]>(
-    plugins.some((p) => p.id === 'payments' && p.enabled) ? '/extensions/payments/channels' : null,
+  const channels = useRpc<Row[]>(
+    plugins.some((p) => p.id === 'payments' && p.enabled) ? 'payments/channels.list' : null,
   )
   const enabledChannels = (channels.data || []).filter((row) => row.enabled !== false)
   const [order, setOrder] = useState<Row | undefined>(intent.order)
@@ -66,9 +66,10 @@ export default function Checkout({
     setQuote(undefined)
     setQuoteError('')
     const timer = window.setTimeout(() => {
-      api<Row>('/extensions/commerce/orders/quote', {
-        method: 'POST',
-        body: { planId: intent.plan?.id, periodId, coupon: coupon.trim() },
+      rpc<Row>('commerce/orders.quote', {
+        planId: intent.plan?.id,
+        periodId,
+        coupon: coupon.trim(),
       })
         .then((data) => {
           if (current) setQuote(data)
@@ -105,15 +106,14 @@ export default function Checkout({
           ? { kind: 'recharge', amount: intent.rechargeAmount }
           : { planId: intent.plan?.id, periodId, coupon: coupon.trim() }
         setOrder(
-          await api<Row>('/extensions/commerce/orders', {
-            method: 'POST',
-            body: { ...body, requestId: requestId.current },
+          await rpc<Row>('commerce/orders.create', {
+            ...body,
+            requestId: requestId.current,
           }),
         )
       } else if (method === 'wallet' || (!recharge && Number(order.amount) === 0)) {
-        const result = await api<Row>(`/extensions/commerce/orders/${order.id}/pay`, {
-          method: 'POST',
-          body: {},
+        const result = await rpc<Row>('commerce/orders.pay', {
+          id: order.id,
         })
         if (result.status === 'fulfilled') {
           complete()
@@ -122,9 +122,9 @@ export default function Checkout({
           message.info('订单正在处理，可在我的订单查看结果')
         }
       } else {
-        const result = await api<Row>('/extensions/payments/checkout', {
-          method: 'POST',
-          body: { orderId: order.id, channelId: method },
+        const result = await rpc<Row>('payments/checkout', {
+          orderId: order.id,
+          channelId: method,
         })
         redirectToPayment(result.redirectUrl)
       }

@@ -2,7 +2,7 @@ import { useCurrency } from '../currency'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, App, Button, Empty, Form, Input, Space, Table, Tag, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
-import { api, errorText, useData } from '../api'
+import { errorText, rpc, useRpc } from '../api'
 import { useSession } from '../context'
 import { date } from './PortalShared'
 
@@ -24,8 +24,9 @@ export default function PortalRedeem() {
   const { message } = App.useApp()
   const enabled = plugins.some((plugin) => plugin.id === 'redeem' && plugin.enabled)
   const [polling, setPolling] = useState(false)
-  const claims = useData<Claim[]>(
-    enabled ? '/extensions/redeem/claims?mine=1' : null,
+  const claims = useRpc<Claim[]>(
+    enabled ? 'redeem/claims.list' : null,
+    { mine: true },
     polling ? 5 : 0,
   )
   const [form] = Form.useForm<{ code: string }>()
@@ -68,9 +69,9 @@ export default function PortalRedeem() {
     setBusy(true)
     setError('')
     try {
-      const result = await api<Result>('/extensions/redeem/redeem', {
-        method: 'POST',
-        body: { code, requestId: request.current.id },
+      const result = await rpc<Result>('redeem/redeem.create', {
+        code,
+        requestId: request.current.id,
       })
       if (result.status === 'redeemed') {
         message.success(result.message || '兑换成功')

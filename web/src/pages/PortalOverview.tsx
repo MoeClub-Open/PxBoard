@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Alert, Button, Empty, Progress, Space, Spin, Tag, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useCurrency } from '../currency'
-import { useData, type Row } from '../api'
+import { useRpc, type Row } from '../api'
 import { useSession } from '../context'
 import { date, useWallet } from './PortalShared'
 import { PortalAnnouncements } from './PortalHelp'
@@ -10,10 +10,11 @@ import { PortalAnnouncements } from './PortalHelp'
 export default function PortalOverview({ business }: { business: boolean }) {
   const { money } = useCurrency()
   const { me, plugins } = useSession()
-  const accounts = useData<Row[]>(
+  const accounts = useRpc<Row[]>(
     plugins.some((p) => p.id === 'access' && p.enabled)
-      ? '/extensions/access/accounts?mine=1'
+      ? 'access/accounts.list'
       : null,
+    { mine: true },
     5,
   )
   const redeem = plugins.some(

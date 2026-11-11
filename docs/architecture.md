@@ -86,7 +86,7 @@ SDK 将请求还原为标准 `http.Request`，插件可以使用普通 HTTP 路�
 
 ## 节点接口与状态
 
-NodeRS 机器接口位于 `/api/v1/extensions/nodes/machines/{machineId}`，使用 `X-Machine-Key`。节点配置分为监听、传输、安全和协议选项，用户凭据分为 UUID 和连接密码。流量提交包含唯一批次编号，NodeRS 本地保存待确认批次，节点插件和访问插件分别执行去重处理。
+NodeRS 机器接口统一位于 `POST /rpc/v1/nodes/server.*`（`server.bootstrap`、`server.pull`、`server.traffic`、`server.telemetry`、`server.ackConfig`），使用 `Authorization: Bearer <machineKey>`。`server.pull` 通过 `knownRevision` 摘要在单次调用内返回整机节点配置、授权用户与待执行面板迁移指令，未变化时直接返回 `unchanged: true`。流量提交包含唯一批次编号，NodeRS 本地保存待确认批次，节点插件和访问插件分别执行去重处理。
 
 机器、节点和数字账户编号具有不同用途，不能用核心用户字符串 ID 代替。迁移保留源数字编号，目标编号冲突会阻断。
 

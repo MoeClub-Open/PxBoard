@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { App, Button, Form, Modal, Space, Table, Tag } from 'antd'
 import type { Field, Resource, Row } from '../api'
-import { api, configurationChanged, errorText } from '../api'
+import { configurationChanged, errorText, pluginResourceTarget, rpc } from '../api'
 import { Fields, formValues, serialize } from './Fields'
 
 const inheritedKeys = [
@@ -27,6 +27,7 @@ export default function NodeAddresses({
   parent,
   nodes,
   resource,
+  pluginId,
   endpoint,
   onClose,
   onChange,
@@ -35,6 +36,7 @@ export default function NodeAddresses({
   parent: Row
   nodes: Row[]
   resource: Resource
+  pluginId: string
   endpoint: string
   onClose: () => void
   onChange: () => void
@@ -76,10 +78,15 @@ export default function NodeAddresses({
     )
     setBusy(true)
     try {
-      await api(creating ? endpoint : `${endpoint}/${encodeURIComponent(String(editor!.id))}`, {
-        method: creating ? 'POST' : 'PATCH',
-        body: creating ? { ...inherited, ...values, parentId: parent.id, enabled: false } : values,
-      })
+      const call = pluginResourceTarget(
+        pluginId,
+        endpoint,
+        creating ? 'create' : 'update',
+        creating
+          ? { ...inherited, ...values, parentId: parent.id, enabled: false }
+          : { ...values, id: String(editor!.id) },
+      )
+      await rpc(call.target, call.input)
       configurationChanged()
       message.success('已保存')
       setEditor(null)
@@ -99,7 +106,8 @@ export default function NodeAddresses({
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
-          await api(`${endpoint}/${encodeURIComponent(String(row.id))}`, { method: 'DELETE' })
+          const call = pluginResourceTarget(pluginId, endpoint, 'delete', { id: String(row.id) })
+          await rpc(call.target, call.input)
           configurationChanged()
           message.success('已删除')
           onChange()
@@ -180,7 +188,7 @@ export default function NodeAddresses({
         destroyOnHidden
       >
         <Form form={form} layout="vertical" requiredMark={false} className="editor-form">
-          <Fields fields={fields} row={editor || undefined} />
+          <Fields fields={fields} row={editor || undefined} pluginId={pluginId} />
         </Form>
       </Modal>
     </>

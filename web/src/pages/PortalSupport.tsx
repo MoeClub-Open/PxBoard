@@ -15,7 +15,7 @@ import {
   Tag,
 } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
-import { api, errorText, useData } from '../api'
+import { errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { date } from './PortalShared'
@@ -26,8 +26,9 @@ import '../tickets.css'
 export function PortalSupport({ admin = false }: { admin?: boolean }) {
   const { me } = useSession()
   const { message, modal } = App.useApp()
-  const tickets = useData<Row[]>(
-    admin ? '/extensions/support/tickets' : '/extensions/support/tickets?mine=1',
+  const tickets = useRpc<Row[]>(
+    'support/tickets.list',
+    admin ? undefined : { mine: true },
     10,
   )
   const [creating, setCreating] = useState(false)
@@ -53,7 +54,7 @@ export function PortalSupport({ admin = false }: { admin?: boolean }) {
     }
     setBusy(true)
     try {
-      const row = await api<Row>('/extensions/support/tickets', { method: 'POST', body: values })
+      const row = await rpc<Row>('support/tickets.create', values)
       setCreating(false)
       form.resetFields()
       setSelected(row.id)
@@ -67,7 +68,7 @@ export function PortalSupport({ admin = false }: { admin?: boolean }) {
   }
   async function close() {
     try {
-      await api(`/extensions/support/tickets/${selected}/close`, { method: 'POST', body: {} })
+      await rpc('support/tickets.close', { id: selected })
       tickets.reload()
       message.success('工单已关闭')
     } catch (e) {
@@ -218,9 +219,9 @@ export function PortalSupport({ admin = false }: { admin?: boolean }) {
                 onFinish={async (values) => {
                   setBusy(true)
                   try {
-                    await api(`/extensions/support/tickets/${current.id}/reply`, {
-                      method: 'POST',
-                      body: values,
+                    await rpc('support/tickets.reply', {
+                      id: current.id,
+                      ...values,
                     })
                     replyForm.resetFields()
                     tickets.reload()

@@ -14,13 +14,13 @@ import {
   Typography,
 } from 'antd'
 import { DeleteOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { api, errorText, useData } from '../api'
+import { errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { OAuthBindings } from '../components/OAuthButtons'
 import ReminderPreferences from '../components/ReminderPreferences'
 function Tokens() {
-  const { data, error, loading, reload } = useData<Row[]>('/tokens')
+  const { data, error, loading, reload } = useRpc<Row[]>('core/tokens.list')
   const { message, modal } = App.useApp()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -34,7 +34,7 @@ function Tokens() {
     }
     setBusy(true)
     try {
-      const token = await api('/tokens', { method: 'POST', body: values })
+      const token = await rpc('core/tokens.create', values)
       setOpen(false)
       form.resetFields()
       reload()
@@ -102,7 +102,7 @@ function Tokens() {
                     cancelText: '取消',
                     onOk: async () => {
                       try {
-                        await api(`/tokens/${row.id}`, { method: 'DELETE' })
+                        await rpc('core/tokens.revoke', { id: row.id })
                         reload()
                       } catch (e) {
                         message.error(errorText(e))
@@ -175,7 +175,7 @@ export default function Account() {
                   onFinish={async (values) => {
                     setBusy(true)
                     try {
-                      await api('/me/password', { method: 'POST', body: values })
+                      await rpc('core/account.changePassword', values)
                       message.success('密码已更新，请重新登录')
                       window.location.assign('/login')
                     } catch (e) {

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Alert, Button, Form, Input } from 'antd'
 import { ArrowLeftOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
-import { api, ApiError, errorText, useData } from '../api'
+import { ApiError, errorText, rpc, useRpc } from '../api'
 import type { AuthInfo } from './Register'
 import type { User } from '../api'
 import { loginDestination } from '../adminPath'
@@ -16,7 +16,7 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
   const challenge = useHumanChallenge()
   const { name } = useBrand()
   useBrandTitle('登录')
-  const { data: auth } = useData<AuthInfo>('/setup')
+  const { data: auth } = useRpc<AuthInfo>('core/setup.get')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [mfa, setMfa] = useState(false)
@@ -41,12 +41,9 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
     setBusy(true)
     setError('')
     try {
-      await api('/auth/login', {
-        method: 'POST',
-        body: { ...values, challengeToken: challenge.token },
-      })
+      await rpc('core/auth.login', { ...values, challengeToken: challenge.token })
       await onLogin()
-      const user = await api<User>('/me')
+      const user = await rpc<User>('core/account.me')
       navigate(user.needsOnboarding ? '/setup' : loginDestination(next, user), { replace: true })
     } catch (e) {
       if (e instanceof ApiError && e.code === 'mfa_required') setMfa(true)
@@ -180,9 +177,10 @@ export function Reset({ request = false }: { request?: boolean }) {
               setBusy(true)
               setError('')
               try {
-                await api(`/auth/${request ? 'reset-request' : 'reset'}`, {
-                  method: 'POST',
-                  body: { ...values, token: query.get('token'), challengeToken: challenge.token },
+                await rpc(request ? 'core/auth.resetRequest' : 'core/auth.resetPassword', {
+                  ...values,
+                  token: query.get('token'),
+                  challengeToken: challenge.token,
                 })
                 setDone(true)
               } catch (e) {

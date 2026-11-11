@@ -13,7 +13,7 @@ func validAdminPath(value string) bool {
 		return false
 	}
 	switch strings.ToLower(value) {
-	case "/api", "/user", "/auth", "/login", "/register", "/forgot", "/reset", "/account", "/assets", "/health", "/setup":
+	case "/api", "/rpc", "/files", "/user", "/auth", "/login", "/register", "/forgot", "/reset", "/account", "/assets", "/health", "/setup":
 		return false
 	}
 	return true

@@ -173,7 +173,15 @@ func (s *Server) publicAuth(r *http.Request) ([]plugin.AuthForm, []string, bool)
 				continue
 			}
 			form.Key = p.ID + ":" + form.Key
-			form.Path = "/api/v1/extensions/" + p.ID + form.Path
+			proc := form.Procedure
+			if proc == "" {
+				proc = plugin.NormalizeProcedure(form.Path)
+			}
+			if !strings.Contains(proc, "/") {
+				proc = p.ID + "/" + proc
+			}
+			form.Procedure = proc
+			form.Path = proc
 			forms = append(forms, form)
 		}
 	}
@@ -263,7 +271,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	var a plugin.Actor
 	var hash, status string
-	e := s.Store.DB.QueryRow("SELECT id,email,role,password,status FROM users WHERE email=?", strings.ToLower(strings.TrimSpace(b.Email))).Scan(&a.ID, &a.Email, &a.Role, &hash, &status)
+	e := s.Store.DB.QueryRow("SELECT id,email,name,role,password,status FROM users WHERE email=?", strings.ToLower(strings.TrimSpace(b.Email))).Scan(&a.ID, &a.Email, &a.Name, &a.Role, &hash, &status)
 	valid, mfa := false, false
 	if e == nil && status == "active" {
 		valid, mfa = s.verifyUser(a.ID, hash, b.Password, b.Code)
@@ -276,13 +284,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		plugin.Fail(w, 401, "邮箱或密码不正确")
 		return
 	}
-	token, _, e := store.CreateSession(s.Store.DB, a.ID)
+	token, expires, e := store.CreateSession(s.Store.DB, a.ID)
 	if bad(w, e) {
 		return
 	}
 	s.cookie(w, token, store.SessionMaxAge)
 	s.Store.Log(a.Email, "auth.login", a.ID)
-	plugin.JSON(w, a)
+	plugin.JSON(w, plugin.Record{"id": a.ID, "email": a.Email, "name": a.Name, "role": a.Role, "token": token, "expiresAt": expires})
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	token := requestToken(r)

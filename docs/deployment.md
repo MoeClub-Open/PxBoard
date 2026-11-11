@@ -169,7 +169,7 @@ panel.example.com {
 }
 ```
 
-保留 `/api/v1/...` 和 `/user/...` 的原始路径，由 PxBoard 提供接口和前端路由。HTTPS 公开地址会使登录 Cookie 使用安全标志。登录、注册与密码找回接口可以在反向代理设置适合实际业务的请求速率限制。
+保留 `/rpc/v1/...`、`/files/...`、`/s/...`、`/api/v1/extensions/...`（OAuth 与支付回调）和 `/user/...` 的原始路径，由 PxBoard 提供接口和前端路由。若反向代理按路径分流 API 域名，请确保 `/rpc/v1/` 与 `/files/` 均转发至面板监听端口。HTTPS 公开地址会使登录 Cookie 使用安全标志。
 
 插件以面板服务的系统用户权限运行。生产环境使用专用系统用户，并限制其数据目录访问权限。插件安装源只需要向面板服务器提供访问，不需要暴露为用户前台的一部分。
 
@@ -263,7 +263,7 @@ key = "replace-with-machine-key"
 machine_id = 1
 ```
 
-机器密钥通过 `X-Machine-Key` 请求头传递。流量批次持久保存在 NodeRS 工作目录，网络失败后用同一批次重试；迁移或移动节点时一并保留该目录。完整的 NodeRS 安装、证书、协议和维护说明见所使用 NodeRS 仓库的 `docs/zh/pxboard.md`。
+NodeRS 通过 `POST /rpc/v1/nodes/server.*` 与 `Authorization: Bearer <machineKey>` 同面板通信。流量批次持久保存在 NodeRS 工作目录，网络失败后用同一批次重试；迁移或移动节点时一并保留该目录。完整的 NodeRS 安装、证书、协议和维护说明见所使用 NodeRS 仓库的 `docs/zh/pxboard.md`。
 
 NodeRS 统一使用原仓库的 [v0.1.49 或更新版本](https://github.com/MoeclubM/NodeRS/releases)，同一安装包支持 Xboard、PxBoard 与认证后的配置迁移；配合当前 `0.0.1` 核心与节点插件使用。此前安装组织适配版的节点，按 [发布源切换说明](https://github.com/MoeclubM/NodeRS/blob/main/docs/zh/install.md#从组织适配版升级) 完成一次升级。管理员入口、源 Xboard 桥接与回退操作见 [NodeRS 配置管理](../../PxBoard-Plugins/docs/noders-management.md)。
 

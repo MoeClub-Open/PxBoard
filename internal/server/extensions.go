@@ -2,60 +2,47 @@ package server
 
 import (
 	"database/sql"
-	"encoding/json"
 	"github.com/MoeClub-Open/PxBoard/internal/store"
 	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
 	"io"
 	"net/http"
-	"slices"
 	"strings"
 )
 
-func (s *Server) extension(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("plugin")
+func (s *Server) serveExternalPlugin(w http.ResponseWriter, r *http.Request, id, path string, requireMember bool) {
 	p, e := s.Plugins.Get(id)
 	if e != nil || !p.Enabled {
 		plugin.Fail(w, 404, "插件未启用")
 		return
 	}
-	path := "/" + r.PathValue("path")
-	if strings.HasPrefix(path, "/_") {
+	if strings.HasPrefix(path, "/_") || strings.HasPrefix(path, "/internal/") || path == "/internal" {
 		forbidden(w, "内部接口不可公开访问")
 		return
 	}
 	a, ok := s.authenticate(r)
-	public := false
-	for _, prefix := range p.PublicPaths {
-		if path == prefix || strings.HasPrefix(path, prefix+"/") {
-			public = true
+	if requireMember {
+		if !ok {
+			plugin.Fail(w, 401, "请先登录")
+			return
 		}
-	}
-	if !ok && !public {
-		plugin.Fail(w, 401, "请先登录")
-		return
-	}
-	if a.Role == "service" && !s.Plugins.Permission(a.Plugin, "call:"+id) {
-		forbidden(w, "插件未获跨插件调用权限")
-		return
-	}
-	if !ok {
-		a = plugin.Actor{Role: "guest"}
-	}
-	if a.Scope == "read" && r.Method != "GET" {
-		forbidden(w, "此 API 密钥仅允许读取")
-		return
-	}
-	if strings.HasPrefix(path, "/ui/") {
-		allowed := false
-		caps := s.pageCapabilities(r, p.Manifest, a.Role)
-		for _, page := range p.Pages {
-			if page.ID == strings.TrimPrefix(path, "/ui/") && pageAllowed(page, a.Role, caps) {
-				allowed = true
+		if a.Role != "member" && a.Role != "admin" {
+			forbidden(w, "权限不足")
+			return
+		}
+	} else {
+		public := false
+		for _, prefix := range p.PublicPaths {
+			if path == prefix || strings.HasPrefix(path, prefix+"/") {
+				public = true
+				break
 			}
 		}
-		if !allowed {
-			forbidden(w, "无权访问此页面")
+		if !public {
+			plugin.Fail(w, 404, "接口不存在")
 			return
+		}
+		if !ok || (a.Role != "member" && a.Role != "admin") {
+			a = plugin.Actor{Role: "guest"}
 		}
 	}
 	if r.URL.RawQuery != "" {
@@ -65,32 +52,6 @@ func (s *Server) extension(w http.ResponseWriter, r *http.Request) {
 	if bad(w, e) {
 		return
 	}
-	if r.Method == "POST" && public && a.Role != "service" {
-		requestPath := "/" + r.PathValue("path")
-		action := ""
-		for _, form := range p.Auth {
-			if form.Path == requestPath {
-				action = "register"
-				break
-			}
-		}
-		if action == "" && requestPath == "/authorize" && slices.Contains(p.Permissions, "auth:login") {
-			action = "oauth"
-		}
-		if action != "" {
-			var challenge struct{ Purpose, ChallengeToken string }
-			if json.Unmarshal(body, &challenge) != nil {
-				plugin.Fail(w, 400, "请求格式无效")
-				return
-			}
-			if action != "oauth" || challenge.Purpose != "bind" {
-				if !s.verifyChallenge(w, r, action, challenge.ChallengeToken) {
-					return
-				}
-			}
-		}
-	}
-
 	headers := r.Header.Clone()
 	headers.Del("Authorization")
 	headers.Del("Cookie")
@@ -115,6 +76,49 @@ func (s *Server) runtime(w http.ResponseWriter, r *http.Request) {
 	}
 	path := r.PathValue("path")
 	switch {
+	case strings.HasPrefix(path, "call/"):
+		rest := strings.TrimPrefix(path, "call/")
+		parts := strings.SplitN(rest, "/", 2)
+		target := parts[0]
+		subPath := "/"
+		if len(parts) == 2 {
+			subPath = "/" + parts[1]
+		}
+		if target == "" {
+			plugin.Fail(w, 400, "缺少目标插件标识")
+			return
+		}
+		if !s.Plugins.Permission(a.Plugin, "call:"+target) {
+			forbidden(w, "插件未获跨插件调用权限")
+			return
+		}
+		p, e := s.Plugins.Get(target)
+		if e != nil || !p.Enabled {
+			plugin.Fail(w, 404, "插件未启用")
+			return
+		}
+		if r.URL.RawQuery != "" {
+			subPath += "?" + r.URL.RawQuery
+		}
+		body, e := io.ReadAll(r.Body)
+		if bad(w, e) {
+			return
+		}
+		headers := r.Header.Clone()
+		headers.Del("Authorization")
+		headers.Del("Cookie")
+		res, e := s.Plugins.Call(r.Context(), target, plugin.Request{Method: r.Method, Path: subPath, Body: body, Headers: headers, Actor: a, Host: r.Host})
+		if e != nil {
+			plugin.Fail(w, 503, e.Error())
+			return
+		}
+		for k, v := range res.Headers {
+			if k != "Set-Cookie" && k != "Access-Control-Allow-Origin" {
+				w.Header()[k] = v
+			}
+		}
+		w.WriteHeader(res.Status)
+		_, _ = w.Write(res.Body)
 	case path == "challenge" && r.Method == "GET", path == "challenge/verify" && r.Method == "POST":
 		s.runtimeChallenge(w, r, a)
 	case path == "auth/grants" && r.Method == "POST":

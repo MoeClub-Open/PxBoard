@@ -12,16 +12,18 @@ import {
   Spin,
   Typography,
 } from 'antd'
-import { api, errorText } from '../api'
+import { errorText, pluginResourceTarget, rpc } from '../api'
 import type { Row } from '../api'
 
 export default function MailCampaignEditor({
   campaign,
+  pluginId,
   endpoint,
   onClose,
   onSaved,
 }: {
   campaign: Row
+  pluginId: string
   endpoint: string
   onClose: () => void
   onSaved: () => void
@@ -38,14 +40,15 @@ export default function MailCampaignEditor({
     form.setFieldsValue({ audience: 'all', ...campaign })
     if (!campaign.id) return
     setBusy(true)
-    api<Row>(`${endpoint}/${campaign.id}`)
+    const getCall = pluginResourceTarget(pluginId, endpoint, 'get', { id: campaign.id })
+    rpc<Row>(getCall.target, getCall.input)
       .then((data) => {
         setRow(data)
         form.setFieldsValue(data)
       })
       .catch((e) => setError(errorText(e)))
       .finally(() => setBusy(false))
-  }, [campaign, endpoint, form])
+  }, [campaign, endpoint, form, pluginId])
   async function save(andPreview: boolean) {
     let values: Row
     try {
@@ -56,17 +59,18 @@ export default function MailCampaignEditor({
     setBusy(true)
     setError('')
     try {
-      const saved = await api<Row>(row.id ? `${endpoint}/${row.id}` : endpoint, {
-        method: row.id ? 'PATCH' : 'POST',
-        body: values,
-      })
+      const saveCall = pluginResourceTarget(
+        pluginId,
+        endpoint,
+        row.id ? 'update' : 'create',
+        row.id ? { ...values, id: row.id } : values,
+      )
+      const saved = await rpc<Row>(saveCall.target, saveCall.input)
       setRow(saved)
       onSaved()
       if (andPreview) {
-        const result = await api<Row>(`${endpoint}/${saved.id}/preview`, {
-          method: 'POST',
-          body: {},
-        })
+        const previewCall = pluginResourceTarget(pluginId, endpoint, 'preview', { id: saved.id })
+        const result = await rpc<Row>(previewCall.target, previewCall.input)
         setPreview(result)
         setRow({ ...saved, status: 'ready', total: result.total })
         onSaved()
@@ -87,7 +91,11 @@ export default function MailCampaignEditor({
       okText: '开始发送',
       cancelText: '取消',
       onOk: async () => {
-        await api(`${endpoint}/${row.id}/start`, { method: 'POST', body: { total: preview.total } })
+        const startCall = pluginResourceTarget(pluginId, endpoint, 'start', {
+          id: row.id,
+          total: preview.total,
+        })
+        await rpc(startCall.target, startCall.input)
         message.success('任务已开始，可在列表查看进度或暂停')
         onSaved()
         onClose()

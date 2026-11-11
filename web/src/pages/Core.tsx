@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Alert, App, Button, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { api, configurationChanged, errorText, useData } from '../api'
+import { configurationChanged, errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
 import { useSession } from '../context'
 import { activityLabel } from './Overview'
@@ -24,8 +24,9 @@ export function Users() {
     }, 250)
     return () => clearTimeout(timer)
   }, [search])
-  const { data, loading, error, reload } = useData<{ items: Row[]; total: number }>(
-    `/users?limit=${pageSize}&offset=${(page - 1) * pageSize}&q=${encodeURIComponent(query)}`,
+  const { data, loading, error, reload } = useRpc<{ items: Row[]; total: number }>(
+    'core/users.list',
+    { limit: pageSize, offset: (page - 1) * pageSize, q: query },
   )
   const [editor, setEditor] = useState<Row | null>(null)
   const [busy, setBusy] = useState(false)
@@ -44,10 +45,10 @@ export function Users() {
     }
     setBusy(true)
     try {
-      await api(`/users${editor?.id ? `/${editor.id}` : ''}`, {
-        method: editor?.id ? 'PATCH' : 'POST',
-        body,
-      })
+      await rpc(
+        editor?.id ? 'core/users.update' : 'core/users.create',
+        editor?.id ? { ...body, id: editor.id } : body,
+      )
       message.success('已保存')
       setEditor(null)
       reload()
@@ -198,7 +199,7 @@ export function Users() {
 export function Settings() {
   const { message } = App.useApp()
   const { refresh, plugins, me } = useSession()
-  const { data, loading, error } = useData<Row>('/settings')
+  const { data, loading, error } = useRpc<Row>('core/settings.get')
   const [busy, setBusy] = useState(false)
   if (loading) return null
   return (
@@ -216,7 +217,7 @@ export function Settings() {
           onFinish={async (body) => {
             setBusy(true)
             try {
-              await api('/settings', { method: 'PATCH', body })
+              await rpc('core/settings.update', body)
               configurationChanged()
               if (body.adminPath && body.adminPath !== data?.adminPath) {
                 window.location.replace(`${body.adminPath}/settings`)
@@ -286,7 +287,7 @@ export function Settings() {
 }
 
 export function Activity() {
-  const { data, loading, error, reload } = useData<Row[]>('/activity')
+  const { data, loading, error, reload } = useRpc<Row[]>('core/activity.list')
   return (
     <>
       <div className="page-heading">
@@ -318,7 +319,7 @@ export function Activity() {
 }
 export function Jobs() {
   const { message } = App.useApp()
-  const { data, loading, error, reload } = useData<Row[]>('/jobs')
+  const { data, loading, error, reload } = useRpc<Row[]>('core/jobs.list')
   return (
     <>
       <div className="page-heading">
@@ -354,7 +355,7 @@ export function Jobs() {
                 type="link"
                 onClick={async () => {
                   try {
-                    await api(`/jobs/${row.id}/retry`, { method: 'POST' })
+                    await rpc('core/jobs.retry', { id: row.id })
                     message.success('已重新加入队列')
                     reload()
                   } catch (e) {

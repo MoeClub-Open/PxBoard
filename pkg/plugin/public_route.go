@@ -41,7 +41,7 @@ func PublicRoutePaths(route Record) ([]string, error) {
 		full := prefix + "/" + path
 		first := strings.ToLower(strings.Split(strings.TrimPrefix(full, "/"), "/")[0])
 		switch first {
-		case "api", "user", "auth", "login", "register", "forgot", "reset", "account", "assets", "health", "setup", "admin":
+		case "api", "rpc", "files", "user", "auth", "login", "register", "forgot", "reset", "account", "assets", "health", "setup", "admin":
 			return nil, fmt.Errorf("订阅路径与已有页面冲突")
 		}
 		paths = append(paths, full)

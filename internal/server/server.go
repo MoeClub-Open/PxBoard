@@ -2,14 +2,18 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/json"
 	"fmt"
 	"github.com/MoeClub-Open/PxBoard/internal/plugins"
 	"github.com/MoeClub-Open/PxBoard/internal/store"
 	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -36,56 +40,31 @@ func actor(r *http.Request) plugin.Actor {
 }
 func (s *Server) Handler() http.Handler {
 	m := http.NewServeMux()
-	m.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
-		plugin.JSON(w, plugin.Record{"status": "ok", "version": Version, "pluginApi": "1.0"})
-	})
-	m.HandleFunc("GET /api/v1/setup", s.setupStatus)
-	m.HandleFunc("POST /api/v1/setup", s.setup)
-	m.HandleFunc("GET /api/v1/site", s.publicSite)
-	m.HandleFunc("POST /api/v1/onboarding/complete", s.require(s.completeOnboarding, true))
+	m.HandleFunc("POST /rpc/v1/$batch", s.rpcBatch)
+	m.HandleFunc("GET /rpc/v1/schema.json", s.rpcSchema)
+	m.HandleFunc("POST /rpc/v1/{service}/{method...}", s.rpc)
+	m.HandleFunc("/rpc/", func(w http.ResponseWriter, r *http.Request) { plugin.Fail(w, 404, "接口不存在") })
 	m.HandleFunc("GET /robots.txt", s.robots)
 	m.HandleFunc("GET /sitemap.xml", s.sitemap)
-	m.HandleFunc("GET /api/v1/auth/challenge", s.challengeConfig)
-	m.HandleFunc("POST /api/v1/auth/login", s.login)
-	m.HandleFunc("POST /api/v1/auth/native", s.nativeRequest)
-	m.HandleFunc("GET /api/v1/auth/native/{id}", s.nativeStatus)
-	m.HandleFunc("POST /api/v1/auth/native/{id}/approve", s.require(s.nativeApprove, false))
-	m.HandleFunc("POST /api/v1/auth/native/{id}/token", s.nativeToken)
-	m.HandleFunc("POST /api/v1/auth/browser-link", s.require(s.browserLink, false))
-	m.HandleFunc("POST /api/v1/auth/browser-link/complete", s.completeBrowserLink)
-	m.HandleFunc("POST /api/v1/auth/external/complete", s.completeExternalLogin)
-	m.HandleFunc("POST /api/v1/auth/logout", s.logout)
-	m.HandleFunc("POST /api/v1/auth/reset-request", s.resetRequest)
-	m.HandleFunc("POST /api/v1/auth/reset", s.resetPassword)
-	m.HandleFunc("GET /api/v1/me", s.require(s.me, false))
-	m.HandleFunc("POST /api/v1/me/password", s.require(s.changePassword, false))
-	m.HandleFunc("GET /api/v1/tokens", s.require(s.tokens, false))
-	m.HandleFunc("POST /api/v1/tokens", s.require(s.tokens, false))
-	m.HandleFunc("DELETE /api/v1/tokens/{id}", s.require(s.tokens, false))
-	m.HandleFunc("GET /api/v1/overview", s.require(s.overview, false))
-	m.HandleFunc("GET /api/v1/settings", s.require(s.settings, true))
-	m.HandleFunc("PATCH /api/v1/settings", s.require(s.settings, true))
-	m.HandleFunc("GET /api/v1/mode", s.require(s.workspaceMode, true))
-	m.HandleFunc("POST /api/v1/mode", s.require(s.workspaceMode, true))
-	m.HandleFunc("GET /api/v1/users", s.require(s.users, true))
-	m.HandleFunc("GET /api/v1/users/options", s.require(s.userOptions, true))
-	m.HandleFunc("POST /api/v1/users", s.require(s.users, true))
-	m.HandleFunc("PATCH /api/v1/users/{id}", s.require(s.users, true))
-	m.HandleFunc("GET /api/v1/plugins", s.require(s.listPlugins, false))
-	m.HandleFunc("GET /api/v1/plugins/catalog", s.require(s.catalog, true))
-	m.HandleFunc("POST /api/v1/plugins/install", s.require(s.install, true))
-	m.HandleFunc("POST /api/v1/plugins/{id}/{action}", s.require(s.pluginAction, true))
-	m.HandleFunc("DELETE /api/v1/plugins/{id}", s.require(s.pluginAction, true))
-	m.HandleFunc("GET /api/v1/sources", s.require(s.sources, true))
-	m.HandleFunc("POST /api/v1/sources", s.require(s.sources, true))
-	m.HandleFunc("PATCH /api/v1/sources/{id}", s.require(s.sources, true))
-	m.HandleFunc("DELETE /api/v1/sources/{id}", s.require(s.sources, true))
-	m.HandleFunc("GET /api/v1/activity", s.require(s.activity, true))
-	m.HandleFunc("GET /api/v1/jobs", s.require(s.jobs, true))
-	m.HandleFunc("POST /api/v1/jobs/{id}/retry", s.require(s.retryJob, true))
-	m.HandleFunc("/api/v1/extensions/{plugin}/{path...}", s.extension)
 	m.HandleFunc("/api/v1/runtime/{path...}", s.runtime)
-	m.HandleFunc("GET /api/v1/openapi.json", s.openapi)
+	m.HandleFunc("GET /api/v1/extensions/subscriptions/s/{token}", func(w http.ResponseWriter, r *http.Request) {
+		s.serveExternalPlugin(w, r, "subscriptions", "/s/"+url.PathEscape(r.PathValue("token")), false)
+	})
+	m.HandleFunc("GET /api/v1/extensions/oauth/callback/{provider}", func(w http.ResponseWriter, r *http.Request) {
+		s.serveExternalPlugin(w, r, "oauth", "/callback/"+url.PathEscape(r.PathValue("provider")), false)
+	})
+	m.HandleFunc("GET /api/v1/extensions/payments/webhooks/{id}", func(w http.ResponseWriter, r *http.Request) {
+		s.serveExternalPlugin(w, r, "payments", "/webhooks/"+url.PathEscape(r.PathValue("id")), false)
+	})
+	m.HandleFunc("POST /api/v1/extensions/payments/webhooks/{id}", func(w http.ResponseWriter, r *http.Request) {
+		s.serveExternalPlugin(w, r, "payments", "/webhooks/"+url.PathEscape(r.PathValue("id")), false)
+	})
+	m.HandleFunc("GET /files/{plugin}/{path...}", func(w http.ResponseWriter, r *http.Request) {
+		s.serveExternalPlugin(w, r, r.PathValue("plugin"), "/"+r.PathValue("path"), true)
+	})
+	m.HandleFunc("GET /api/v1/extensions/support/attachments/{id}", func(w http.ResponseWriter, r *http.Request) {
+		s.serveExternalPlugin(w, r, "support", "/attachments/"+url.PathEscape(r.PathValue("id")), true)
+	})
 	m.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { plugin.Fail(w, 404, "接口不存在") })
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if s.publicRoute(w, r) {
@@ -123,7 +102,7 @@ func (s *Server) Handler() http.Handler {
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
-		if r.Method != "GET" && r.Method != "HEAD" {
+		if r.Method != "GET" && r.Method != "HEAD" && r.Header.Get("Authorization") == "" {
 			origin := r.Header.Get("Origin")
 			if origin != "" {
 				expected := s.PublicURL
@@ -148,7 +127,11 @@ func (s *Server) Handler() http.Handler {
 	})
 }
 func requestToken(r *http.Request) string {
-	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	auth := r.Header.Get("Authorization")
+	token := ""
+	if strings.HasPrefix(auth, "Bearer ") {
+		token = strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
+	}
 	if token == "" {
 		if c, e := r.Cookie("px_session"); e == nil {
 			token = c.Value
@@ -157,7 +140,11 @@ func requestToken(r *http.Request) string {
 	return token
 }
 func (s *Server) authenticate(r *http.Request) (plugin.Actor, bool) {
+	hasBearer := strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ")
 	token := requestToken(r)
+	if token == "" {
+		return plugin.Actor{}, false
+	}
 	if token != "" {
 		if id, ok := s.Plugins.Authenticate(token); ok {
 			return plugin.Actor{Role: "service", Plugin: id}, true
@@ -167,8 +154,60 @@ func (s *Server) authenticate(r *http.Request) (plugin.Actor, bool) {
 		return s.tokenActor(token)
 	}
 	var a plugin.Actor
-	e := s.Store.DB.QueryRow("SELECT u.id,u.email,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at>? AND u.status='active'", token, store.Now()).Scan(&a.ID, &a.Email, &a.Role)
-	return a, e == nil
+	e := s.Store.DB.QueryRow("SELECT u.id,u.email,u.name,u.role FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at>? AND u.status='active'", token, store.Now()).Scan(&a.ID, &a.Email, &a.Name, &a.Role)
+	if e == nil {
+		return a, true
+	}
+	if hasBearer {
+		return s.machineActor(token)
+	}
+	return plugin.Actor{}, false
+}
+func (s *Server) machineActor(token string) (plugin.Actor, bool) {
+	var matchNumber int64
+	secret := token
+	if strings.HasPrefix(token, "pxm_") {
+		parts := strings.SplitN(strings.TrimPrefix(token, "pxm_"), ".", 2)
+		if len(parts) != 2 || parts[1] == "" {
+			return plugin.Actor{}, false
+		}
+		num, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil || num <= 0 {
+			return plugin.Actor{}, false
+		}
+		matchNumber = num
+		secret = parts[1]
+	}
+	if secret == "" {
+		return plugin.Actor{}, false
+	}
+	rows, err := s.Store.DB.Query("SELECT id,data FROM documents WHERE namespace='nodes' AND collection='machines'")
+	if err != nil {
+		return plugin.Actor{}, false
+	}
+	defer rows.Close()
+	var matched plugin.Actor
+	found := false
+	for rows.Next() {
+		var docID, raw string
+		if rows.Scan(&docID, &raw) != nil {
+			continue
+		}
+		var row plugin.Record
+		if json.Unmarshal([]byte(raw), &row) != nil || !plugin.Bool(row, "enabled") {
+			continue
+		}
+		num := int64(plugin.Number(row, "number"))
+		if num <= 0 || (matchNumber > 0 && num != matchNumber) {
+			continue
+		}
+		key := plugin.Text(row, "key")
+		if key != "" && subtle.ConstantTimeCompare([]byte(key), []byte(secret)) == 1 {
+			matched = plugin.Actor{ID: docID, Name: plugin.Text(row, "name"), Role: "machine", MachineID: num}
+			found = true
+		}
+	}
+	return matched, found
 }
 func (s *Server) require(next http.HandlerFunc, admin bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +216,7 @@ func (s *Server) require(next http.HandlerFunc, admin bool) http.HandlerFunc {
 			plugin.Fail(w, 401, "请先登录")
 			return
 		}
-		if a.Role == "service" || (admin && a.Role != "admin") || (a.Scope == "read" && r.Method != "GET") {
+		if a.Role == "service" || a.Role == "machine" || (admin && a.Role != "admin") || (a.Scope == "read" && r.Method != "GET") {
 			plugin.Fail(w, 403, "权限不足")
 			return
 		}

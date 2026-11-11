@@ -8,7 +8,7 @@ import {
   LinkOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
-import { useData } from '../api'
+import { useRpc } from '../api'
 import type { Plugin, Row } from '../api'
 import { useSession } from '../context'
 import { adminURL } from '../adminPath'
@@ -19,7 +19,7 @@ const modeLabels: Record<string, string> = {
 }
 function Summary({ plugin }: { plugin: Plugin }) {
   const { currencyName } = useCurrency()
-  const { data, loading, error, reload } = useData<Row[]>(`/extensions/${plugin.id}/summary`)
+  const { data, loading, error, reload } = useRpc<Row[]>(`${plugin.id}/summary.get`)
   return (
     <div className="summary-row">
       <h2>{plugin.name}</h2>
@@ -50,8 +50,8 @@ function Summary({ plugin }: { plugin: Plugin }) {
 }
 export default function Overview() {
   const { me, plugins } = useSession()
-  const { data, error } = useData<Row>('/overview')
-  const { data: activity } = useData<Row[]>(me.role === 'admin' ? '/activity' : null)
+  const { data, error } = useRpc<Row>('core/overview.get')
+  const { data: activity } = useRpc<Row[]>(me.role === 'admin' ? 'core/activity.list' : null)
   const status = plugins.filter((p) => p.error)
   const summaries = plugins.filter(
     (p) => p.enabled && p.summary && p.pages.some((page) => page.roles.includes(me.role)),

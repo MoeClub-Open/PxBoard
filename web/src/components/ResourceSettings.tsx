@@ -1,16 +1,16 @@
 import { App, Button, Form, Modal, Spin } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
 import { useState } from 'react'
-import { api, errorText, type Resource } from '../api'
+import { errorText, pluginResourceTarget, rpc, type Resource } from '../api'
 import { Fields, formValues, serialize } from './Fields'
 
 export function ResourceSettings({
   settings,
-  base,
+  pluginId,
   onSaved,
 }: {
   settings: NonNullable<Resource['settings']>
-  base: string
+  pluginId: string
   onSaved: () => void
 }) {
   const { message } = App.useApp()
@@ -18,15 +18,13 @@ export function ResourceSettings({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
-  const endpoint = settings.endpoint.startsWith('/api/')
-    ? settings.endpoint
-    : base + settings.endpoint
   async function show() {
     setOpen(true)
     setLoading(true)
     form.resetFields()
     try {
-      form.setFieldsValue(formValues(settings.fields, await api(endpoint)))
+      const call = pluginResourceTarget(pluginId, settings.endpoint, 'get')
+      form.setFieldsValue(formValues(settings.fields, await rpc(call.target, call.input)))
     } catch (error) {
       message.error(errorText(error))
       setOpen(false)
@@ -43,7 +41,13 @@ export function ResourceSettings({
     }
     setSaving(true)
     try {
-      await api(endpoint, { method: 'PATCH', body: serialize(settings.fields, values) })
+      const call = pluginResourceTarget(
+        pluginId,
+        settings.endpoint,
+        'update',
+        serialize(settings.fields, values),
+      )
+      await rpc(call.target, call.input)
       message.success('已保存')
       setOpen(false)
       onSaved()
@@ -72,7 +76,7 @@ export function ResourceSettings({
       >
         <Spin spinning={loading}>
           <Form form={form} layout="vertical">
-            <Fields fields={settings.fields} />
+            <Fields fields={settings.fields} pluginId={pluginId} />
           </Form>
         </Spin>
       </Modal>

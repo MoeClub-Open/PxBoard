@@ -63,7 +63,7 @@ func Serve(handler http.Handler) error {
 			return err
 		}
 		path := strings.SplitN(req.Path, "?", 2)[0]
-		if req.Path == "/_health" || paths[req.Method+" "+path] {
+		if isConcurrentRequest(req.Method, path, paths) {
 			concurrent <- struct{}{}
 			workers.Add(1)
 			go func() { defer workers.Done(); defer func() { <-concurrent }(); run(req) }()
@@ -71,6 +71,25 @@ func Serve(handler http.Handler) error {
 			serial <- req
 		}
 	}
+}
+func isConcurrentRequest(method, path string, custom map[string]bool) bool {
+	if path == "/_health" || custom[method+" "+path] {
+		return true
+	}
+	if method == "POST" && strings.HasPrefix(path, "/_rpc/") {
+		return IsReadProcedure(strings.TrimPrefix(path, "/_rpc/"))
+	}
+	if method == "GET" {
+		return strings.HasPrefix(path, "/internal/") ||
+			strings.HasPrefix(path, "/ui/") ||
+			strings.HasPrefix(path, "/s/") ||
+			strings.HasPrefix(path, "/attachments/") ||
+			path == "/summary" ||
+			path == "/_capabilities" ||
+			path == "/_site" ||
+			path == "/_challenge"
+	}
+	return false
 }
 func dispatch(handler http.Handler, req Request) (res Response) {
 	res.ID = req.ID

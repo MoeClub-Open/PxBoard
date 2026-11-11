@@ -27,12 +27,19 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import type { Action, Field, Resource, Row, View } from '../api'
-import { absoluteURL, api, errorText, redirectToPayment, useData } from '../api'
+import {
+  absoluteURL,
+  configurationChanged,
+  errorText,
+  pluginResourceTarget,
+  redirectToPayment,
+  rpc,
+  useRpc,
+} from '../api'
 import { Fields, formValues, serialize } from './Fields'
 import { ResourceSettings } from './ResourceSettings'
 import { useSession } from '../context'
 import { useBrandTitle } from '../branding'
-import { configurationChanged } from '../api'
 import { officialCell } from '../official/fields'
 import { useResourcePresentation } from '../official/resourcePresentation'
 
@@ -277,12 +284,10 @@ function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map
   URL.revokeObjectURL(href)
 }
 
-function SingletonResource({ resource, base }: { resource: Resource; base: string }) {
+function SingletonResource({ resource, pluginId }: { resource: Resource; pluginId: string }) {
   const { message } = App.useApp()
-  const endpoint = resource.endpoint.startsWith('/api/')
-    ? resource.endpoint
-    : base + resource.endpoint
-  const { data, loading, error, reload } = useData<Row[]>(endpoint)
+  const listCall = pluginResourceTarget(pluginId, resource.endpoint, 'list')
+  const { data, loading, error, reload } = useRpc<Row[]>(listCall.target, listCall.input)
   const [busy, setBusy] = useState(false)
   const fields = resource.fields || []
   const row = data?.[0]
@@ -310,7 +315,13 @@ function SingletonResource({ resource, base }: { resource: Resource; base: strin
               onFinish={async (values) => {
                 setBusy(true)
                 try {
-                  await api(endpoint, { method: 'PATCH', body: serialize(fields, values) })
+                  const saveCall = pluginResourceTarget(
+                    pluginId,
+                    resource.endpoint,
+                    'update',
+                    serialize(fields, values),
+                  )
+                  await rpc(saveCall.target, saveCall.input)
                   configurationChanged()
                   message.success('已保存')
                   reload()
@@ -321,7 +332,7 @@ function SingletonResource({ resource, base }: { resource: Resource; base: strin
                 }
               }}
             >
-              <Fields fields={fields} row={row} />
+              <Fields fields={fields} row={row} pluginId={pluginId} />
               <Button type="primary" htmlType="submit" loading={busy}>
                 保存
               </Button>
@@ -335,17 +346,14 @@ function SingletonResource({ resource, base }: { resource: Resource; base: strin
 
 function ResourceTable({
   resource,
-  base,
+  pluginId,
   onChange,
 }: {
   resource: Resource
-  base: string
+  pluginId: string
   onChange: () => void
 }) {
   const { message, modal } = App.useApp()
-  const endpoint = resource.endpoint.startsWith('/api/')
-    ? resource.endpoint
-    : base + resource.endpoint
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
   const [search, setSearch] = useState('')
@@ -359,37 +367,37 @@ function ResourceTable({
     }, 250)
     return () => clearTimeout(timer)
   }, [search])
-  const params = new URLSearchParams()
+  const listExtra: Record<string, any> = {}
   if (resource.paginated) {
-    params.set('limit', String(pageSize))
-    params.set('offset', String((page - 1) * pageSize))
-    params.set('q', query)
+    listExtra.limit = pageSize
+    listExtra.offset = (page - 1) * pageSize
+    listExtra.q = query
   }
   for (const field of resource.filters || []) {
     const value = filterValues[field.key]
     if (field.type === 'daterange') {
-      if (value?.[0]) params.set(`${field.key}From`, value[0])
-      if (value?.[1]) params.set(`${field.key}To`, value[1])
+      if (value?.[0]) listExtra[`${field.key}From`] = value[0]
+      if (value?.[1]) listExtra[`${field.key}To`] = value[1]
     } else if (value !== undefined && value !== null && value !== '') {
-      params.set(field.key, String(value))
+      listExtra[field.key] = String(value)
     }
   }
-  const listURL = params.size
-    ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}${params}`
-    : endpoint
-  const { data, loading, error, reload } = useData<Row[] | { items: Row[]; total: number }>(
-    resource.columns.length ? listURL : null,
+  const listCall = pluginResourceTarget(pluginId, resource.endpoint, 'list', listExtra)
+  const { data, loading, error, reload } = useRpc<Row[] | { items: Row[]; total: number }>(
+    resource.columns.length ? listCall.target : null,
+    listCall.input,
     resource.pollIntervalSeconds,
   )
   const groupEndpoint = resource.columns.find((field) => field.type === 'groups')?.optionsEndpoint
-  const { data: groups } = useData<Row[]>(groupEndpoint || null)
+  const groupCall = groupEndpoint ? pluginResourceTarget(pluginId, groupEndpoint) : null
+  const { data: groups } = useRpc<Row[]>(groupCall?.target || null, groupCall?.input)
   const groupNames = new Map((groups || []).map((group) => [String(group.id), String(group.name)]))
   const [editor, setEditor] = useState<{ row?: Row; action?: Action } | null>(null)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
   const fields = editor?.action?.fields || resource.fields || []
   const allRows = Array.isArray(data) ? data : data?.items || []
-  const presentation = useResourcePresentation(resource, allRows, endpoint, reload, openEditor)
+  const presentation = useResourcePresentation(resource, allRows, pluginId, reload, openEditor)
   const rows = presentation.rows.filter(
     (row) =>
       resource.paginated ||
@@ -452,17 +460,19 @@ function ResourceTable({
     else message.success(result?.message || '操作完成')
   }
   async function runAction(row: Row, action: Action, values: Row = {}) {
-    const path = action.endpoint
-      ? action.endpoint.startsWith('/api/')
-        ? action.endpoint
-        : base + action.endpoint
-      : `${endpoint.split('?')[0]}/${row.id}/${action.key}`
     const bind = Object.fromEntries(
       Object.entries(action.bind || {}).map(([key, source]) => [key, row[source]]),
     )
+    const call = action.endpoint
+      ? pluginResourceTarget(pluginId, action.endpoint, 'create', { ...bind, ...values })
+      : pluginResourceTarget(pluginId, resource.endpoint, action.key, {
+          id: row.id,
+          ...bind,
+          ...values,
+        })
     setBusy(true)
     try {
-      complete(await api(path, { method: 'POST', body: { ...bind, ...values } }))
+      complete(await rpc(call.target, call.input))
     } catch (e) {
       message.error(errorText(e))
     } finally {
@@ -495,18 +505,13 @@ function ResourceTable({
     }
     setBusy(true)
     try {
-      complete(
-        await api(
-          editor?.row && !resource.singleton
-            ? `${endpoint.split('?')[0]}/${editor.row.id}`
-            : endpoint,
-          {
-            method: editor?.row ? 'PATCH' : 'POST',
-            body: values,
-          },
-        ),
-        true,
+      const call = pluginResourceTarget(
+        pluginId,
+        resource.endpoint,
+        editor?.row ? 'update' : 'create',
+        editor?.row && !resource.singleton ? { ...values, id: editor.row.id } : values,
       )
+      complete(await rpc(call.target, call.input), true)
     } catch (e) {
       message.error(errorText(e))
     } finally {
@@ -523,7 +528,7 @@ function ResourceTable({
         </div>
         <Space wrap>
           {resource.settings && (
-            <ResourceSettings settings={resource.settings} base={base} onSaved={reload} />
+            <ResourceSettings settings={resource.settings} pluginId={pluginId} onSaved={reload} />
           )}
           {resource.columns.length > 0 && (
             <>
@@ -564,7 +569,7 @@ function ResourceTable({
             setPage(1)
           }}
         >
-          <Fields fields={resource.filters} />
+          <Fields fields={resource.filters} pluginId={pluginId} />
           <Button
             onClick={() => {
               filterForm.resetFields()
@@ -673,14 +678,13 @@ function ResourceTable({
                                   okButtonProps: { danger: true },
                                   onOk: async () => {
                                     try {
-                                      await api(
-                                        resource.singleton
-                                          ? endpoint
-                                          : `${endpoint.split('?')[0]}/${row.id}`,
-                                        {
-                                          method: 'DELETE',
-                                        },
+                                      const delCall = pluginResourceTarget(
+                                        pluginId,
+                                        resource.endpoint,
+                                        'delete',
+                                        resource.singleton ? undefined : { id: row.id },
                                       )
+                                      await rpc(delCall.target, delCall.input)
                                       complete(undefined, true)
                                     } catch (e) {
                                       message.error(errorText(e))
@@ -726,7 +730,7 @@ function ResourceTable({
         }
       >
         <Form form={form} layout="vertical" requiredMark="optional" className="editor-form">
-          <Fields fields={fields} row={editor?.row} />
+          <Fields fields={fields} row={editor?.row} pluginId={pluginId} />
         </Form>
       </Modal>
     </section>
@@ -752,10 +756,13 @@ export default function ResourcePage({
       page.roles.includes(me.role) &&
       (!page.surface || page.surface === surface),
   )
-  const base = `/api/v1/extensions/${pluginId}`
-  const { data, loading, error, reload } = useData<View>(page ? `${base}/ui/${pageId}` : null)
+  const { data, loading, error, reload } = useRpc<View>(
+    page && pluginId && pageId ? `${pluginId}/ui.get` : null,
+    pageId ? { pageId } : undefined,
+  )
   useBrandTitle(data?.title || page?.title || '功能未开放', !hideHeading)
-  if (!page) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
+  if (!page || !pluginId)
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
   if (loading)
     return (
       <div className="page-loading">
@@ -802,9 +809,14 @@ export default function ResourcePage({
         const lists = data.resources.filter((resource) => !settings.includes(resource))
         const renderResource = (resource: Resource) =>
           resource.singleton && resource.editable ? (
-            <SingletonResource key={resource.key} resource={resource} base={base} />
+            <SingletonResource key={resource.key} resource={resource} pluginId={pluginId} />
           ) : (
-            <ResourceTable key={resource.key} resource={resource} base={base} onChange={() => {}} />
+            <ResourceTable
+              key={resource.key}
+              resource={resource}
+              pluginId={pluginId}
+              onChange={() => {}}
+            />
           )
         if (data.resources.length === 1) return renderResource(data.resources[0])
         const items = lists.map((resource) => ({

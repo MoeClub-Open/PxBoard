@@ -90,9 +90,10 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 | `permissions`  | 核心运行接口所需权限                                   |
 | `events`       | 订阅的事件类型                                         |
 | `pages`        | 管理或用户资源页面                                     |
-| `publicPaths`  | 允许未登录请求进入的完整路径或路径段前缀               |
-| `summary`      | 是否提供 `GET /summary` 指标数组                       |
-| `auth`         | 注册等公开表单入口                                     |
+| `publicProcedures` | 允许未登录请求调用的 RPC 过程名列表（如 `["public.get"]`） |
+| `publicPaths`  | 允许未登录请求进入的完整路径或路径段前缀（仅外部回调/订阅协议） |
+| `summary`      | 是否提供 `GET /summary`（RPC `summary.get`）指标数组 |
+| `auth`         | 注册等公开表单入口（可指定 `procedure`，如 `"register"`） |
 | `capabilities` | 需要按运行配置查询的能力名称                           |
 
 版本依赖支持三段版本及 `>=` 最低版本形式；需要指定版本序列时可写成 `>=1!0.0.1`，省略序列视为 0。核心先比较版本序列，再比较版本号；相同版本则使用同一来源的发布批次识别更新。旧声明不需要修改。声明中有公开路径并不表示所有方法都应允许匿名调用；仍须在插件中限制 HTTP 方法、输入和业务权限。核心不会公开扩展内部的 `/_...` 路径。
@@ -101,9 +102,9 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 
 ## HTTP 与身份
 
-插件路由通过 `/api/v1/extensions/{pluginId}/...` 对外提供。成功响应使用 `{"data": ...}`，错误使用 `{"error": {"code": "...", "message": "..."}}`。SDK 的 `JSON`、`Fail` 和 `FailCode` 可以生成对应响应。字段使用 camelCase。
+插件业务接口统一通过 `POST /rpc/v1/{pluginId}/{method}` 对外提供，核心验证身份后向插件内部发送 `POST /_rpc/{method}`。SDK 提供 `p.ServeRPC(mux, explicit, w, r)`：优先分发显式注册的 RPC 过程，未显式注册时自动将 `<resource>.<verb>` 映射到插件 `http.ServeMux` 的标准路由。只读过程（`.get`、`.list`、`.options`、`ui.get`、`summary.get`、`client.profile`、`server.pull` 等）由 SDK 并发工作池执行，写过程保持单队列串行执行。成功响应使用 `{"data": ...}`，错误使用 `{"error": {"code": "...", "message": "..."}}`。
 
-`p.Subject(r)` 返回核心验证后的身份。`p.Admin(r)` 检查管理员，`p.Service(r, "other-plugin")` 检查是否由指定插件调用。普通用户只能操作自己拥有的记录；页面导航、角色声明和前端按钮只是展示条件，不能代替后端所有权检查。
+`p.Subject(r)` 返回核心验证后的身份。`p.Admin(r)` 检查管理员，`p.Machine(r)` 检查服务器同步凭据身份，`p.Service(r, "other-plugin")` 检查是否由指定插件调用（跨插件调用使用 `c.Call` 或 `c.RPC`，走内部 `/api/v1/runtime/call/{id}/...`）。普通用户只能操作自己拥有的记录；页面导航、角色声明和前端按钮只是展示条件，不能代替后端所有权检查。
 
 公开接口只返回经过选择的公开字段。例如公开套餐可以返回名称、价格、额度和期限，不返回支付配置、原始迁移记录、内部限制或用户信息。
 
@@ -132,11 +133,11 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 少量列表设置可声明 `settings: {title, endpoint, fields}`，在列表工具栏显示设置按钮，使用弹窗读取、编辑。`GET <endpoint>` 返回单条配置对象，`PATCH <endpoint>` 保存表单。它不增加单独选项卡；接口权限仍由插件检查。需要完整设置页时继续使用单例资源。
 
 
-`Action.endpoint` 可以覆盖默认操作路径。`bind: {"orderId": "id"}` 将当前记录字段映射到操作请求，`when: {"status": ["pending"]}` 控制操作展示。调用其他插件的页面动作使用完整的 `/api/v1/extensions/...` 路径，目标接口仍须检查权限。
+`Action.endpoint` 可以覆盖默认操作目标。`bind: {"orderId": "id"}` 将当前记录字段映射到操作请求，`when: {"status": ["pending"]}` 控制操作展示。调用其他插件的页面动作使用 `<pluginId>/<method>` RPC 目标（如 `payments/checkout`），目标接口仍须检查权限。
 
 字段支持 `text`、`email`、`password`、`number`、`money`、`gib`、`boolean`、`select`、`datetime`、`textarea` 和 `hidden`。展示另支持 `status`、`tag`、`longtext`、`copy`、`link`。`money` 的接口值为整数分，界面以元输入与显示；`link` 可以是同源相对地址。
 
-下拉字段可以使用 `optionsEndpoint` 指向同源 API，例如 `/api/v1/extensions/payments/channels`，返回 `data: [{id, name}]`。浏览器以当前用户身份获取选项，避免页面提供方同步调用目标插件后又被目标插件反向调用。可用权限仍由目标接口判断。
+下拉字段可以使用 `optionsEndpoint` 指向跨服务 RPC 目标，例如 `payments/channels.list`、`nodes/groups.options` 或 `core/users.options`，返回 `data: [{id, name}]`。浏览器以当前用户身份获取选项，避免页面提供方同步调用目标插件后又被目标插件反向调用。可用权限仍由目标接口判断。
 
 字段可声明 `when`，例如 `{"key":"amount","type":"money","when":{"kind":["balance"]}}`。条件全部匹配时才显示、校验和提交该字段，值按字符串与选项匹配，适合兑换类型等互斥配置。隐藏的条件字段不会混入提交内容。
 
@@ -161,13 +162,13 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 
 ```json
 {
-  "publicPaths": ["/register"],
+  "publicProcedures": ["register"],
   "capabilities": ["auth.registration"],
   "auth": [
     {
       "key": "register",
       "title": "注册",
-      "path": "/register",
+      "procedure": "register",
       "modes": ["business"],
       "capability": "auth.registration",
       "fields": [
@@ -186,7 +187,7 @@ SDK 的 `Get(collection,id)` 只读取一条记录，`Query` 支持分页、等�
 
 `modes` 限制表单在自用或商业模式中的展示，省略表示不按模式筛选。`query` 可以将 URL 参数映射到表单字段，用于邀请码或推荐关系。`capability` 把表单绑定到实际运行状态。
 
-公开的 `GET /api/v1/setup` 同时返回 `extensions`，内容为已启用且正常运行的插件 ID 数组，不包含版本、权限或配置。前端依据可用模块决定入口，避免仅根据使用方式显示已停用的功能。插件和配置变更会通知当前及其他同源标签页刷新声明。
+公开过程 `POST /rpc/v1/core/setup.get` 同时返回 `extensions`，内容为已启用且正常运行的插件 ID 数组，不包含版本、权限或配置。前端依据可用模块决定入口，避免仅根据使用方式显示已停用的功能。插件和配置变更会通知当前及其他同源标签页刷新声明。
 
 声明了 `capabilities` 的插件提供内部 `GET /_capabilities`，返回能力名称到布尔值的映射。`auth.password-reset` 表示已配置可用的密码找回投递服务。表单的模式和能力筛选不能代替业务端点限制；插件应在公开注册处理器中执行相同的开放条件。
 
@@ -209,7 +210,7 @@ SDK 对应 `POST /api/v1/runtime/auth/grants`，请求字段为 `userId`、`proo
 插件把登录凭证返回当前浏览器后，由浏览器调用核心：
 
 ```http
-POST /api/v1/auth/external/complete
+POST /rpc/v1/core/auth.externalComplete
 Content-Type: application/json
 
 {"ticket":"一次性登录凭证","proof":"浏览器保存的随机原文"}

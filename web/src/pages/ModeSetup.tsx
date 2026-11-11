@@ -17,7 +17,7 @@ import {
   Typography,
 } from 'antd'
 import { CheckCircleOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons'
-import { api, errorText } from '../api'
+import { errorText, rpc } from '../api'
 import type { Row, User } from '../api'
 import { adminRoot } from '../adminPath'
 import { AppearanceButton } from '../appearance'
@@ -93,7 +93,7 @@ export default function ModeSetup({
   const { message } = App.useApp()
   const navigate = useNavigate()
   const load = useCallback(async () => {
-    const result = await api<ModeState>('/mode')
+    const result = await rpc<ModeState>('core/mode.get')
     setState(result)
     setError('')
     if (!form.getFieldValue('mode')) form.setFieldValue('mode', result.requestedMode || result.mode)
@@ -103,7 +103,7 @@ export default function ModeSetup({
 
   useEffect(() => {
     let active = true
-    Promise.all([api<ModeState>('/mode'), api<Row[]>('/sources')])
+    Promise.all([rpc<ModeState>('core/mode.get'), rpc<Row[]>('core/sources.list')])
       .then(([result, registered]) => {
         if (!active) return
         setState(result)
@@ -150,7 +150,7 @@ export default function ModeSetup({
         values.sourceId === 'custom'
           ? { mode: values.mode, sourceUrl: values.sourceUrl }
           : { mode: values.mode, sourceId: values.sourceId }
-      setState(await api<ModeState>('/mode', { method: 'POST', body }))
+      setState(await rpc<ModeState>('core/mode.apply', body))
     } catch (e) {
       setError(errorText(e))
     } finally {
@@ -162,7 +162,7 @@ export default function ModeSetup({
     setBusy(true)
     try {
       await onReady()
-      const target = path === 'admin' ? adminRoot(await api<User>('/me')) : path
+      const target = path === 'admin' ? adminRoot(await rpc<User>('core/account.me')) : path
       navigate(target, { replace: true })
     } catch (e) {
       message.error(errorText(e))

@@ -12,22 +12,24 @@ import {
   Tabs,
   Typography,
 } from 'antd'
-import { api, errorText, type Row, useData } from '../api'
+import { errorText, pluginResourceTarget, rpc, type Row, useRpc } from '../api'
 
 export default function MailTemplateEditor({
   template,
+  pluginId,
   endpoint,
   onClose,
   onSaved,
 }: {
   template: Row
+  pluginId: string
   endpoint: string
   onClose: () => void
   onSaved: () => void
 }) {
   const { message } = App.useApp()
-  const path = `${endpoint}/${encodeURIComponent(template.id)}`
-  const { data, loading, error } = useData<Row>(path)
+  const getCall = pluginResourceTarget(pluginId, endpoint, 'get', { id: template.id })
+  const { data, loading, error } = useRpc<Row>(getCall.target, getCall.input)
   const [form] = Form.useForm()
   const [tab, setTab] = useState('text')
   const [preview, setPreview] = useState<Row>()
@@ -67,10 +69,11 @@ export default function MailTemplateEditor({
     }
     setBusy(mode)
     try {
-      const result = await api(mode === 'preview' ? `${path}/preview` : path, {
-        method: mode === 'preview' ? 'POST' : 'PATCH',
-        body: values,
+      const call = pluginResourceTarget(pluginId, endpoint, mode === 'preview' ? 'preview' : 'update', {
+        ...values,
+        id: template.id,
       })
+      const result = await rpc(call.target, call.input)
       if (mode === 'preview') {
         setPreview(result)
         setTab('preview')

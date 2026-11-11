@@ -90,7 +90,13 @@ func (c *Client) Delete(collection, id string) error {
 	return c.Request("DELETE", "/api/v1/runtime/data/"+url.PathEscape(collection)+"/"+url.PathEscape(id), nil, nil)
 }
 func (c *Client) Call(id, method, path string, body, out any) error {
-	return c.Request(method, "/api/v1/extensions/"+id+path, body, out)
+	return c.Request(method, "/api/v1/runtime/call/"+id+path, body, out)
+}
+func (c *Client) RPC(id, method string, input, out any) error {
+	if input == nil {
+		input = Record{}
+	}
+	return c.Request("POST", "/rpc/v1/"+id+"/"+method, input, out)
 }
 func (c *Client) Emit(kind string, data Record) error {
 	return c.Request("POST", "/api/v1/runtime/events", Record{"type": kind, "data": data}, nil)

@@ -15,7 +15,7 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { api, errorText } from '../api'
+import { errorText, rpc } from '../api'
 import type { Plugin, Row, User } from '../api'
 import { adminRoot } from '../adminPath'
 import { AppearanceButton } from '../appearance'
@@ -38,14 +38,14 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
   const has = (id: string) => plugins.some((plugin) => plugin.id === id && plugin.enabled)
   useEffect(() => {
     let active = true
-    Promise.all([api<Row>('/settings'), api<Plugin[]>('/plugins')])
+    Promise.all([rpc<Row>('core/settings.get'), rpc<Plugin[]>('core/plugins.list')])
       .then(async ([core, installed]) => {
         const enabled = (id: string) =>
           installed.some((plugin) => plugin.id === id && plugin.enabled)
         const [brands, registration] = await Promise.all([
-          enabled('branding') ? api<Row[]>('/extensions/branding/settings') : Promise.resolve([]),
+          enabled('branding') ? rpc<Row[]>('branding/settings.list') : Promise.resolve([]),
           enabled('registration')
-            ? api<Row[]>('/extensions/registration/settings')
+            ? rpc<Row[]>('registration/settings.list')
             : Promise.resolve([]),
         ])
         if (!active) return
@@ -74,7 +74,7 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
       {
         key: 'nodes',
         label: '接入节点',
-        endpoint: '/extensions/nodes/nodes',
+        target: 'nodes/nodes.list',
         path: '/p/nodes/nodes',
         ready: (rows: Row[]) => rows.some((row) => row.enabled !== false),
       },
@@ -83,7 +83,7 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
             {
               key: 'commerce',
               label: '上架套餐',
-              endpoint: '/extensions/commerce/plans',
+              target: 'commerce/plans.list',
               path: '/p/commerce/plans',
               ready: (rows: Row[]) =>
                 rows.some(
@@ -97,22 +97,22 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
             {
               key: 'payments',
               label: '配置收款渠道',
-              endpoint: '/extensions/payments/channels',
+              target: 'payments/channels.list',
               path: '/p/payments/payments',
               ready: (rows: Row[]) => rows.some((row) => row.enabled !== false),
             },
             {
               key: 'notifications',
               label: '配置邮件服务',
-              endpoint: '/extensions/notifications/mail',
+              target: 'notifications/mail.list',
               path: '/p/notifications/notifications',
               ready: (rows: Row[]) => rows.some((row) => row.enabled && row.host && row.from),
             },
           ]
         : []),
     ].filter((item) => has(item.key))
-    const user = await api<User>('/me')
-    const results = await Promise.allSettled(definitions.map((item) => api<Row[]>(item.endpoint)))
+    const user = await rpc<User>('core/account.me')
+    const results = await Promise.allSettled(definitions.map((item) => rpc<Row[]>(item.target)))
     setChecks(
       definitions.map((item, index) => ({
         key: item.key,
@@ -129,21 +129,17 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
     setError('')
     try {
       if (has('branding'))
-        await api('/extensions/branding/settings', {
-          method: 'PATCH',
-          body: {
-            name: values.name,
-            heading: values.heading || '',
-            introduction: values.introduction || '',
-            seoTitle: values.seoTitle || '',
-            description: values.description || '',
-            indexingEnabled: !!values.indexingEnabled,
-          },
+        await rpc('branding/settings.update', {
+          name: values.name,
+          heading: values.heading || '',
+          introduction: values.introduction || '',
+          seoTitle: values.seoTitle || '',
+          description: values.description || '',
+          indexingEnabled: !!values.indexingEnabled,
         })
       if (has('registration'))
-        await api('/extensions/registration/settings', {
-          method: 'PATCH',
-          body: { enabled: !!values.registrationEnabled },
+        await rpc('registration/settings.update', {
+          enabled: !!values.registrationEnabled,
         })
       setDraft(values)
       await readiness()
@@ -159,9 +155,10 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
     setBusy(true)
     setError('')
     try {
-      const result = await api<Row>('/onboarding/complete', {
-        method: 'POST',
-        body: { name: draft.name, publicUrl: draft.publicUrl, adminPath: draft.adminPath },
+      const result = await rpc<Row>('core/onboarding.complete', {
+        name: draft.name,
+        publicUrl: draft.publicUrl,
+        adminPath: draft.adminPath,
       })
       setComplete({ ...result, publicUrl: draft.publicUrl })
       await onReady()

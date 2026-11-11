@@ -9,7 +9,7 @@ import MailCampaignEditor from '../components/MailCampaignEditor'
 export function useResourcePresentation(
   resource: Resource,
   data: Row[],
-  endpoint: string,
+  pluginId: string,
   reload: () => void,
   edit: (row: Row) => void,
 ) {
@@ -74,14 +74,16 @@ export function useResourcePresentation(
       campaigns && parent ? (
         <MailCampaignEditor
           campaign={parent}
-          endpoint={endpoint}
+          pluginId={pluginId}
+          endpoint={resource.endpoint}
           onClose={() => setParent(null)}
           onSaved={reload}
         />
       ) : mailTemplates && parent ? (
         <MailTemplateEditor
           template={parent}
-          endpoint={endpoint}
+          pluginId={pluginId}
+          endpoint={resource.endpoint}
           onClose={() => setParent(null)}
           onSaved={reload}
         />
@@ -90,7 +92,8 @@ export function useResourcePresentation(
           parent={parent}
           nodes={data}
           resource={resource}
-          endpoint={endpoint}
+          pluginId={pluginId}
+          endpoint={resource.endpoint}
           onClose={() => setParent(null)}
           onChange={reload}
           onEditParent={() => {

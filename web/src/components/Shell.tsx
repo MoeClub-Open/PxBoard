@@ -39,7 +39,7 @@ import {
   WalletOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
-import { api } from '../api'
+import { rpc } from '../api'
 import { useSession } from '../context'
 import { Brand } from './Brand'
 import { AppearanceButton } from '../appearance'
@@ -168,7 +168,7 @@ export default function Shell({
   useBrandTitle(current?.label || '管理后台')
   const logout = async () => {
     try {
-      await api('/auth/logout', { method: 'POST' })
+      await rpc('core/auth.logout')
       onLogout()
       navigate('/login')
     } catch {
