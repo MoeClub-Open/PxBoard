@@ -1,5 +1,5 @@
 import type { useHumanChallenge } from './HumanChallenge'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, App, Button, Empty, Form, Input, Space, Spin, Typography } from 'antd'
 import { GithubOutlined, GoogleOutlined, LinkOutlined } from '@ant-design/icons'
 import { api, errorText } from '../api'
@@ -32,16 +32,19 @@ export function OAuthButtons({
   registration = false,
   exclude = [],
   challenge,
+  preferredProviderId = '',
 }: {
   purpose?: 'login' | 'bind'
   redirectPath?: string
   registration?: boolean
   exclude?: string[]
   challenge?: ReturnType<typeof useHumanChallenge>
+  preferredProviderId?: string
 }) {
   const [providers, setProviders] = useState<Provider[]>([])
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const automaticStarted = useRef(false)
   useEffect(() => {
     const controller = new AbortController()
     api<Provider[]>('/extensions/oauth/providers', { signal: controller.signal })
@@ -52,7 +55,6 @@ export function OAuthButtons({
   const available = providers.filter(
     (provider) => !exclude.includes(provider.id) && (!registration || provider.allowRegistration),
   )
-  if (!available.length) return null
   async function authorize(provider: Provider) {
     if (
       purpose === 'login' &&
@@ -97,6 +99,15 @@ export function OAuthButtons({
       setBusy('')
     }
   }
+  useEffect(() => {
+    const provider = available.find((item) => item.id === preferredProviderId)
+    if (!provider || automaticStarted.current || challenge?.loading) return
+    if (challenge && (!challenge.policy || (challenge.required('oauth') && !challenge.token)))
+      return
+    automaticStarted.current = true
+    void authorize(provider)
+  }, [providers, preferredProviderId, challenge?.loading, challenge?.policy, challenge?.token])
+  if (!available.length) return null
   return (
     <Space orientation="vertical" size="middle" style={{ width: '100%', marginTop: 20 }}>
       {error && <Alert type="error" title={error} showIcon />}

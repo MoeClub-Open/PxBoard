@@ -22,6 +22,9 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
   const [mfa, setMfa] = useState(false)
   const [query] = useSearchParams()
   const next = query.get('redirect') || ''
+  const preferredProviderId = next.startsWith('/user/authorize?')
+    ? new URL(next, window.location.origin).searchParams.get('provider') || ''
+    : ''
   const registerPath = /^\/user(?:\/|\?|$)/.test(next)
     ? `/register?redirect=${encodeURIComponent(next)}`
     : '/register'
@@ -122,7 +125,11 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
             {auth?.passwordReset && <Link to="/forgot">忘记密码</Link>}
           </div>
         </Form>
-        <OAuthButtons redirectPath={next || '/user'} challenge={challenge} />
+        <OAuthButtons
+          redirectPath={next || '/user'}
+          preferredProviderId={preferredProviderId}
+          challenge={challenge}
+        />
       </main>
       <footer className="auth-footer">
         {name} <span>© {new Date().getFullYear()}</span>
