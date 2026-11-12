@@ -8,11 +8,12 @@
 
 JSON 字段使用 camelCase，时间使用 UTC RFC 3339，流量上报使用字节，商品与账本金额使用百分之一单位的整数。单次调用成功响应为 `{"data":...}`，失败为 `{"error":{"code":"...","message":"..."}}`，HTTP 状态表达成功、认证、权限与处理失败，每个响应带 `X-Request-ID`。
 
-除 `/rpc/v1/*` 外，对外仅保留第三方标准协议与二进制文件下载入口：
+除 `/rpc/v1/*` 外，对外仅保留在插件 `manifest.json` 的 `publicPaths` 中显式声明的外部回调路由与受权限保护的内联文件读取入口：
 
 - 通用订阅下载：`GET /s/{token}`（或自定义公开路由）与 `GET /api/v1/extensions/subscriptions/s/{token}`。
 - 第三方登录回调：`GET /api/v1/extensions/oauth/callback/{provider}`。
 - 支付网关异步通知：`GET|POST /api/v1/extensions/payments/webhooks/{channelId}`。
+- AdMob 激励广告 SSV 回调：`GET /api/v1/extensions/admob/ssv`。
 - 登录态内联文件读取：`GET /files/{plugin}/{path...}`（例如工单图片 `/files/support/attachments/{id}`）。
 - 核心与本地插件进程间的内部运行总线：`/api/v1/runtime/...`（仅限本机 `service` 运行令牌）。
 
@@ -29,7 +30,7 @@ JSON 字段使用 camelCase，时间使用 UTC RFC 3339，流量上报使用字�
 | 初始化 / 公开信息 | `setup.get`，`setup.init`，`site.get`，`onboarding.complete` |
 | 登录与会话 | `auth.challenge`，`auth.login`，`auth.logout`，`auth.externalComplete`，`account.me` |
 | 客户端与浏览器衔接 | `auth.authorizeCreate`，`auth.authorizeStatus`，`auth.authorizeApprove`，`auth.authorizeExchange`，`auth.browserLink`，`auth.browserExchange` |
-| 密码 | `account.changePassword`，`auth.resetRequest`，`auth.resetPassword` |
+| 密码与两步验证 | `account.changePassword`，`account.mfaSetup`，`account.mfaEnable`，`account.mfaDisable`，`auth.resetRequest`，`auth.resetPassword` |
 | API 密钥 | `tokens.list`，`tokens.create`，`tokens.revoke` |
 | 用户 | `users.list`，`users.options`，`users.create`，`users.update` |
 | 插件 | `plugins.list`，`plugins.catalog`，`plugins.install`，`plugins.action`，`plugins.remove` |
@@ -96,10 +97,11 @@ JSON 字段使用 camelCase，时间使用 UTC RFC 3339，流量上报使用字�
 | `commerce` | 公开 `public.currency`；`plans.*`、`coupons.*`、`orders.list`、`orders.quote`、`orders.create`、`orders.pay`、`orders.cancel`、`wallet.get`、`ledger.*` |
 | `affiliate` | `summary.get`、`commissions.list`、`withdrawals.list`、`withdrawals.create`、`withdrawals.transfer`、`withdrawals.cancel`；管理员 `profiles.*`、`settings.*` |
 | `payments` | `channels.*`、`checkout`、`transactions.*`；外部网关回调 `GET|POST /api/v1/extensions/payments/webhooks/{channelId}` |
+| `admob` | 用户 `reward.prepare`、`reward.pending`、`reward.history`；管理员 `settings.list`、`settings.update`、`logs.list`；Google SSV 回调 `GET /api/v1/extensions/admob/ssv` |
 | `audit` | `rules.*`、`logs.list` |
 | `support` | `tickets.list`、`tickets.create`、`tickets.reply`、`tickets.close`、`attachments.create`、`attachments.get`、`announcements.*`、`articles.*` |
 | `notifications` | `mail.*`、`templates.*`、`campaigns.*`、`notifications.*` |
-| `oauth` | 公开 `providers.list`、`authorize`、`registration`、`completeRegistration`；用户 `bindings.list`、`bindings.delete`、`completeBinding`；外部回调 `GET /api/v1/extensions/oauth/callback/{provider}` |
+| `oauth` | 公开 `providers.list`、`authorize`、`registration`、`completeRegistration`；用户 `bindings.list`、`bindings.delete`、`completeBinding`、`bindExchange`；外部回调 `GET /api/v1/extensions/oauth/callback/{provider}` |
 
 用户前台与原生客户端读取本人记录时传入 `{"mine":true}`（或 `{"scope":"mine"}`），管理员也只获取自己的记录；省略该参数时管理员可在后台管理全部记录。金额显示设置由 `commerce/public.currency` 与 `commerce/currency.*` 提供；它只改变显示，不进行汇率换算或更改支付渠道结算币种。`commerce/wallet.get` 直接返回当前账户可用余额与币种符号。
 

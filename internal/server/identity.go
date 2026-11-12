@@ -302,7 +302,7 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	a := actor(r)
 	var name string
 	_ = s.Store.DB.QueryRow("SELECT name FROM users WHERE id=?", a.ID).Scan(&name)
-	result := plugin.Record{"id": a.ID, "email": a.Email, "role": a.Role, "name": name, "siteName": s.Store.Setting("name", "PxBoard"), "mode": s.Store.Setting("mode", "personal")}
+	result := plugin.Record{"id": a.ID, "email": a.Email, "role": a.Role, "name": name, "mfaEnabled": s.hasMFA(a.ID), "siteName": s.Store.Setting("name", "PxBoard"), "mode": s.Store.Setting("mode", "personal")}
 	if a.Role == "admin" {
 		result["adminPath"] = s.adminPath()
 		result["needsOnboarding"] = !s.onboardingComplete()

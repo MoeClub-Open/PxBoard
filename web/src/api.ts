@@ -7,6 +7,7 @@ export interface User {
   email: string
   name: string
   role: 'admin' | 'member'
+  mfaEnabled?: boolean
   siteName: string
   mode: string
   adminPath?: string

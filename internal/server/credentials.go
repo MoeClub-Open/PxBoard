@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/hmac"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha3"
@@ -11,9 +12,14 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"github.com/MoeClub-Open/PxBoard/internal/store"
+	"github.com/MoeClub-Open/PxBoard/pkg/plugin"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -139,6 +145,115 @@ func (s *Server) verifyUser(id, encoded, password, code string) (bool, bool) {
 		}
 	}
 	return true, false
+}
+func (s *Server) hasMFA(userID string) bool {
+	var secret string
+	_ = s.Store.DB.QueryRow("SELECT COALESCE(mfa_secret,'') FROM user_credentials WHERE user_id=?", userID).Scan(&secret)
+	return strings.TrimSpace(secret) != ""
+}
+func (s *Server) mfaSetup(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	a := actor(r)
+	if s.hasMFA(a.ID) {
+		plugin.Fail(w, 409, "已启用两步验证，如需更换密钥请先关闭")
+		return
+	}
+	var rawSecret [20]byte
+	if _, err := rand.Read(rawSecret[:]); bad(w, err) {
+		return
+	}
+	secret := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(rawSecret[:])
+	expires := time.Now().Add(10 * time.Minute).UTC().Format(time.RFC3339)
+	payload, _ := json.Marshal(plugin.Record{"secret": secret, "expiresAt": expires})
+	if bad(w, s.Store.Set("mfa-setup:"+a.ID, string(payload))) {
+		return
+	}
+	issuer := strings.TrimSpace(s.Store.Setting("name", "PxBoard"))
+	if issuer == "" {
+		issuer = "PxBoard"
+	}
+	otpauth := "otpauth://totp/" + url.PathEscape(issuer+":"+a.Email) + "?secret=" + secret + "&issuer=" + url.QueryEscape(issuer)
+	plugin.JSON(w, plugin.Record{"secret": secret, "otpauthUrl": otpauth, "expiresAt": expires})
+}
+func (s *Server) mfaEnable(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	a := actor(r)
+	if s.hasMFA(a.ID) {
+		plugin.Fail(w, 409, "已启用两步验证")
+		return
+	}
+	var b struct{ Password, Code string }
+	if bad(w, plugin.Decode(r, &b)) {
+		return
+	}
+	var hash string
+	if s.Store.DB.QueryRow("SELECT password FROM users WHERE id=? AND status='active'", a.ID).Scan(&hash) != nil {
+		plugin.Fail(w, 403, "账户不存在或已停用")
+		return
+	}
+	if valid, _ := s.verifyUser(a.ID, hash, b.Password, ""); !valid {
+		plugin.Fail(w, 400, "当前登录密码不正确")
+		return
+	}
+	var raw string
+	var setup plugin.Record
+	if s.Store.DB.QueryRow("SELECT value FROM settings WHERE key=?", "mfa-setup:"+a.ID).Scan(&raw) != nil || json.Unmarshal([]byte(raw), &setup) != nil || plugin.Text(setup, "expiresAt") <= store.Now() {
+		plugin.Fail(w, 400, "两步验证初始化已失效，请重新获取密钥")
+		return
+	}
+	secret := plugin.Text(setup, "secret")
+	if !verifyTOTP(secret, strings.TrimSpace(b.Code)) {
+		plugin.FailCode(w, 400, "mfa_invalid", "动态验证码不正确")
+		return
+	}
+	tx, err := s.Store.DB.Begin()
+	if bad(w, err) {
+		return
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec("INSERT INTO user_credentials(user_id,algorithm,salt,mfa_secret) VALUES(?,'bcrypt','',?) ON CONFLICT(user_id) DO UPDATE SET mfa_secret=excluded.mfa_secret", a.ID, secret)
+	if bad(w, err) {
+		return
+	}
+	_, err = tx.Exec("DELETE FROM settings WHERE key=?", "mfa-setup:"+a.ID)
+	if bad(w, err) || bad(w, tx.Commit()) {
+		return
+	}
+	s.Store.Log(a.Email, "account.mfa-enabled", a.ID)
+	plugin.JSON(w, true)
+}
+func (s *Server) mfaDisable(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	a := actor(r)
+	if !s.hasMFA(a.ID) {
+		plugin.JSON(w, true)
+		return
+	}
+	var b struct{ Password, Code string }
+	if bad(w, plugin.Decode(r, &b)) {
+		return
+	}
+	var hash string
+	if s.Store.DB.QueryRow("SELECT password FROM users WHERE id=? AND status='active'", a.ID).Scan(&hash) != nil {
+		plugin.Fail(w, 403, "账户不存在或已停用")
+		return
+	}
+	valid, mfa := s.verifyUser(a.ID, hash, b.Password, strings.TrimSpace(b.Code))
+	if mfa {
+		plugin.FailCode(w, 400, "mfa_required", "请输入正确的 6 位动态验证码")
+		return
+	}
+	if !valid {
+		plugin.Fail(w, 400, "当前登录密码不正确")
+		return
+	}
+	_, err := s.Store.DB.Exec("UPDATE user_credentials SET mfa_secret='' WHERE user_id=?", a.ID)
+	if bad(w, err) {
+		return
+	}
+	_, _ = s.Store.DB.Exec("DELETE FROM settings WHERE key=?", "mfa-setup:"+a.ID)
+	s.Store.Log(a.Email, "account.mfa-disabled", a.ID)
+	plugin.JSON(w, true)
 }
 func verifyTOTP(secret, code string) bool {
 	if len(code) != 6 {

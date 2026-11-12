@@ -38,6 +38,7 @@ func IsReadProcedure(method string) bool {
 		"summary.get",
 		"client.profile",
 		"wallet.get",
+		"reward.history",
 		"server.bootstrap",
 		"server.pull",
 		"status.display",

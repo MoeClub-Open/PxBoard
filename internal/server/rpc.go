@@ -269,6 +269,18 @@ func (s *Server) dispatchCoreRPC(w http.ResponseWriter, r *http.Request, method 
 		if requireMember() {
 			s.changePassword(w, makeReq(http.MethodPost, "/me/password", nil))
 		}
+	case "account.mfaSetup":
+		if requireMember() {
+			s.mfaSetup(w, makeReq(http.MethodPost, "/me/mfa/setup", nil))
+		}
+	case "account.mfaEnable":
+		if requireMember() {
+			s.mfaEnable(w, makeReq(http.MethodPost, "/me/mfa/enable", nil))
+		}
+	case "account.mfaDisable":
+		if requireMember() {
+			s.mfaDisable(w, makeReq(http.MethodPost, "/me/mfa/disable", nil))
+		}
 	case "tokens.list":
 		if requireMember() {
 			s.tokens(w, makeReq(http.MethodGet, "/tokens", nil))

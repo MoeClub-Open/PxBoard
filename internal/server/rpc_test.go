@@ -1,17 +1,39 @@
 package server
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base32"
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/MoeClub-Open/PxBoard/internal/plugins"
 	"github.com/MoeClub-Open/PxBoard/internal/store"
 	p "github.com/MoeClub-Open/PxBoard/pkg/plugin"
 )
+
+func testTOTPCode(t *testing.T, secret string) string {
+	t.Helper()
+	key, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(strings.ToUpper(strings.TrimRight(secret, "=")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var msg [8]byte
+	binary.BigEndian.PutUint64(msg[:], uint64(time.Now().Unix()/30))
+	mac := hmac.New(sha1.New, key)
+	_, _ = mac.Write(msg[:])
+	sum := mac.Sum(nil)
+	off := sum[len(sum)-1] & 15
+	val := binary.BigEndian.Uint32(sum[off:off+4]) & 0x7fffffff
+	return fmt.Sprintf("%06d", val%1000000)
+}
 
 func TestUnifiedRPCAndBatchAndMachineAuth(t *testing.T) {
 	dir := t.TempDir()
@@ -104,6 +126,34 @@ func TestUnifiedRPCAndBatchAndMachineAuth(t *testing.T) {
 	}
 	if rpcCall("/rpc/v1/core/account.me", "0123456789abcdef0123456789abcdef", "{}").Code != 403 {
 		t.Fatal("machine key allowed core user procedure")
+	}
+
+	// MFA setup -> enable -> login requires MFA -> disable.
+	setupRec := rpcCall("/rpc/v1/core/account.mfaSetup", session, "{}")
+	if setupRec.Code != 200 {
+		t.Fatalf("mfaSetup failed: %d %s", setupRec.Code, setupRec.Body.String())
+	}
+	var mfaSetupData struct {
+		Data struct {
+			Secret     string `json:"secret"`
+			OtpauthURL string `json:"otpauthUrl"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(setupRec.Body.Bytes(), &mfaSetupData); err != nil || mfaSetupData.Data.Secret == "" || !strings.HasPrefix(mfaSetupData.Data.OtpauthURL, "otpauth://totp/") {
+		t.Fatalf("unexpected mfaSetup: %s", setupRec.Body.String())
+	}
+	totp := testTOTPCode(t, mfaSetupData.Data.Secret)
+	if rec := rpcCall("/rpc/v1/core/account.mfaEnable", session, fmt.Sprintf(`{"password":"password-123456","code":%q}`, totp)); rec.Code != 200 {
+		t.Fatalf("mfaEnable failed: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := rpcCall("/rpc/v1/core/auth.login", "", `{"email":"admin@test.invalid","password":"password-123456"}`); rec.Code != 401 || !strings.Contains(rec.Body.String(), "mfa_required") {
+		t.Fatalf("expected mfa_required on password-only login, got %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := rpcCall("/rpc/v1/core/auth.login", "", fmt.Sprintf(`{"email":"admin@test.invalid","password":"password-123456","code":%q}`, totp)); rec.Code != 200 {
+		t.Fatalf("login with MFA code failed: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := rpcCall("/rpc/v1/core/account.mfaDisable", session, fmt.Sprintf(`{"password":"password-123456","code":%q}`, totp)); rec.Code != 200 {
+		t.Fatalf("mfaDisable failed: %d %s", rec.Code, rec.Body.String())
 	}
 }
 

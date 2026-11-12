@@ -47,24 +47,23 @@ func (s *Server) Handler() http.Handler {
 	m.HandleFunc("GET /robots.txt", s.robots)
 	m.HandleFunc("GET /sitemap.xml", s.sitemap)
 	m.HandleFunc("/api/v1/runtime/{path...}", s.runtime)
-	m.HandleFunc("GET /api/v1/extensions/subscriptions/s/{token}", func(w http.ResponseWriter, r *http.Request) {
-		s.serveExternalPlugin(w, r, "subscriptions", "/s/"+url.PathEscape(r.PathValue("token")), false)
-	})
-	m.HandleFunc("GET /api/v1/extensions/oauth/callback/{provider}", func(w http.ResponseWriter, r *http.Request) {
-		s.serveExternalPlugin(w, r, "oauth", "/callback/"+url.PathEscape(r.PathValue("provider")), false)
-	})
-	m.HandleFunc("GET /api/v1/extensions/payments/webhooks/{id}", func(w http.ResponseWriter, r *http.Request) {
-		s.serveExternalPlugin(w, r, "payments", "/webhooks/"+url.PathEscape(r.PathValue("id")), false)
-	})
-	m.HandleFunc("POST /api/v1/extensions/payments/webhooks/{id}", func(w http.ResponseWriter, r *http.Request) {
-		s.serveExternalPlugin(w, r, "payments", "/webhooks/"+url.PathEscape(r.PathValue("id")), false)
-	})
 	m.HandleFunc("GET /files/{plugin}/{path...}", func(w http.ResponseWriter, r *http.Request) {
 		s.serveExternalPlugin(w, r, r.PathValue("plugin"), "/"+r.PathValue("path"), true)
 	})
 	m.HandleFunc("GET /api/v1/extensions/support/attachments/{id}", func(w http.ResponseWriter, r *http.Request) {
 		s.serveExternalPlugin(w, r, "support", "/attachments/"+url.PathEscape(r.PathValue("id")), true)
 	})
+	extensionPublic := func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("plugin")
+		prefix := "/api/v1/extensions/" + url.PathEscape(id)
+		subPath := strings.TrimPrefix(r.URL.EscapedPath(), prefix)
+		if subPath == "" || !strings.HasPrefix(subPath, "/") {
+			subPath = "/" + r.PathValue("path")
+		}
+		s.serveExternalPlugin(w, r, id, subPath, false)
+	}
+	m.HandleFunc("GET /api/v1/extensions/{plugin}/{path...}", extensionPublic)
+	m.HandleFunc("POST /api/v1/extensions/{plugin}/{path...}", extensionPublic)
 	m.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { plugin.Fail(w, 404, "接口不存在") })
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if s.publicRoute(w, r) {
