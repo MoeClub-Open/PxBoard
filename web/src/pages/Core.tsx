@@ -61,12 +61,7 @@ export function Users() {
   return (
     <>
       <div className="page-heading">
-        <div className="page-heading-title">
-          <h1>用户</h1>
-          {data?.total !== undefined && (
-            <span className="muted toolbar-count">共 {data.total} 条</span>
-          )}
-        </div>
+        <h1>用户</h1>
         <Space size={8} wrap>
           <Input.Search
             style={{ width: 220 }}
@@ -248,9 +243,9 @@ export function Settings() {
       >
         <Form.Item label="使用方式">
           <Space>
-            <span>
+            <Tag className="mode-tag">
               {{ personal: '自用', business: '商业运营' }[String(data?.mode)] || data?.mode}
-            </span>
+            </Tag>
             <Link to={adminURL('/admin/mode', me)}>切换使用方式</Link>
           </Space>
         </Form.Item>
@@ -320,10 +315,7 @@ export function Activity() {
   return (
     <>
       <div className="page-heading">
-        <div className="page-heading-title">
-          <h1>操作记录</h1>
-          {data && <span className="muted toolbar-count">共 {rows.length} 条</span>}
-        </div>
+        <h1>操作记录</h1>
         <Space size={8} wrap>
           <Input.Search
             placeholder="搜索操作或对象"
@@ -372,10 +364,7 @@ export function Jobs() {
   return (
     <>
       <div className="page-heading">
-        <div className="page-heading-title">
-          <h1>后台任务</h1>
-          {data && <span className="muted toolbar-count">共 {rows.length} 条</span>}
-        </div>
+        <h1>后台任务</h1>
         <Space size={8} wrap>
           <Input.Search
             placeholder="搜索事件或插件"

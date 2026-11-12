@@ -10,11 +10,10 @@ import { loginDestination } from '../adminPath'
 import { AppearanceButton } from '../appearance'
 import { Brand } from '../components/Brand'
 import { OAuthButtons } from '../components/OAuthButtons'
-import { useBrand, useBrandTitle } from '../branding'
+import { useBrandTitle } from '../branding'
 
 export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
   const challenge = useHumanChallenge()
-  const { name } = useBrand()
   useBrandTitle('登录')
   const { data: auth } = useRpc<AuthInfo>('core/setup.get')
   const [busy, setBusy] = useState(false)
@@ -62,7 +61,7 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
         <AppearanceButton />
       </header>
       <main className="auth-form">
-        <h1>登录 {name}</h1>
+        <h1>登录</h1>
         {error && <Alert type="error" title={error} showIcon className="page-notice" />}
         <Form layout="vertical" onFinish={submit} requiredMark={false}>
           <Form.Item
@@ -117,9 +116,6 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
           challenge={challenge}
         />
       </main>
-      <footer className="auth-footer">
-        {name} <span>© {new Date().getFullYear()}</span>
-      </footer>
     </div>
   )
 }

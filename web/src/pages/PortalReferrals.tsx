@@ -1,21 +1,6 @@
 import { useCurrency } from '../currency'
 import { useState } from 'react'
-import {
-  Alert,
-  App,
-  Button,
-  Card,
-  Col,
-  Empty,
-  Input,
-  Row as GridRow,
-  Space,
-  Statistic,
-  Table,
-  Tabs,
-  Tag,
-  Typography,
-} from 'antd'
+import { Alert, App, Button, Card, Empty, Input, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { CopyOutlined, ReloadOutlined } from '@ant-design/icons'
 import { absoluteURL, errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
@@ -111,7 +96,12 @@ export default function PortalReferrals() {
       setCanceling('')
     }
   }
-  if (!enabled) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="推广暂不可用" />
+  if (!enabled)
+    return (
+      <div className="surface-empty">
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="推广暂不可用" />
+      </div>
+    )
   return (
     <>
       <div className="page-heading">
@@ -172,40 +162,26 @@ export default function PortalReferrals() {
           </Button>
         </Space.Compact>
       </Card>
-      <GridRow gutter={[12, 12]} className="metrics-row">
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="可用佣金"
-              value={summary.data ? money(summary.data.availableAmount) : '—'}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="冻结佣金"
-              value={summary.data ? money(summary.data.pendingAmount) : '—'}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="累计佣金"
-              value={summary.data ? money(summary.data.totalAmount) : '—'}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="邀请人数"
-              value={summary.data ? Number(summary.data.invitedCount).toLocaleString('zh-CN') : '—'}
-            />
-          </Card>
-        </Col>
-      </GridRow>
+      <div className="metric-strip">
+        <div>
+          <span>可用佣金</span>
+          <strong>{summary.data ? money(summary.data.availableAmount) : '—'}</strong>
+        </div>
+        <div>
+          <span>冻结佣金</span>
+          <strong>{summary.data ? money(summary.data.pendingAmount) : '—'}</strong>
+        </div>
+        <div>
+          <span>累计佣金</span>
+          <strong>{summary.data ? money(summary.data.totalAmount) : '—'}</strong>
+        </div>
+        <div>
+          <span>邀请人数</span>
+          <strong>
+            {summary.data ? Number(summary.data.invitedCount).toLocaleString('zh-CN') : '—'}
+          </strong>
+        </div>
+      </div>
       <Tabs
         items={[
           {

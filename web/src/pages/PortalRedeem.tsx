@@ -104,7 +104,12 @@ export default function PortalRedeem() {
     }
   }
 
-  if (!enabled) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="兑换码暂不可用" />
+  if (!enabled)
+    return (
+      <div className="surface-empty">
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="兑换码暂不可用" />
+      </div>
+    )
   return (
     <>
       <div className="page-heading">

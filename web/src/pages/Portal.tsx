@@ -75,7 +75,9 @@ export function usePortalFeatures() {
 }
 type Features = ReturnType<typeof usePortalFeatures>
 export const unavailable = (
-  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
+  <div className="surface-empty">
+    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
+  </div>
 )
 
 export function subscriptionNavigation(features: Features): NavigationItem[] {

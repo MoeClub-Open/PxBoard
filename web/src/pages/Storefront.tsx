@@ -25,6 +25,8 @@ interface FeatureEntry {
   description?: string
 }
 
+const currentYear = new Date().getFullYear()
+
 const featureIcons = [
   <DesktopOutlined key="devices" />,
   <SafetyCertificateOutlined key="security" />,
@@ -60,7 +62,8 @@ export default function Storefront({
   const { data: document, error, reload } = usePublicSite()
   const content = document?.site.data
   const siteName = document?.site.name || 'PxBoard'
-  const heading = content?.heading || siteName
+  const rawHeading = String(content?.heading || '').trim()
+  const heading = rawHeading || siteName
   const introduction = String(content?.introduction || '')
   const routes = resolveRoutes(content)
   const features = resolveFeatures(content)
@@ -118,8 +121,8 @@ export default function Storefront({
                 {user ? '进入账户' : canRegister ? '注册账户' : '登录账户'}
               </Button>
               {canRegister && (
-                <Button type="text" className="storefront-action" href="/login">
-                  已有账户？登录
+                <Button className="storefront-action" href="/login">
+                  登录
                 </Button>
               )}
             </div>
@@ -192,7 +195,7 @@ export default function Storefront({
       <footer className="storefront-footer">
         <div className="storefront-footer-inner">
           <span>
-            © {new Date().getFullYear()} {siteName}
+            © {currentYear} {siteName}
           </span>
           {content?.footer && <p>{content.footer}</p>}
         </div>

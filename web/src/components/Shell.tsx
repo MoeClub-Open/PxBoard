@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   App,
   Avatar,
-  Breadcrumb,
   Button,
+  ConfigProvider,
   Drawer,
   Dropdown,
   Empty,
@@ -65,6 +65,22 @@ const icons: Record<string, ReactNode> = {
   mail: <MailOutlined />,
   database: <DatabaseOutlined />,
 }
+function normalizeSidebarGroup(group?: string) {
+  if (!group || group === '连接' || group === '安全') return '连接'
+  if (group === '运营' || group === '账户' || group === '服务') return '运营'
+  return '系统'
+}
+const sidebarMenuTheme = {
+  components: {
+    Menu: {
+      itemHeight: 28,
+      itemMarginInline: 6,
+      itemMarginBlock: 1,
+      itemBorderRadius: 6,
+      iconMarginInlineEnd: 8,
+    },
+  },
+}
 export default function Shell({
   onLogout,
   children,
@@ -117,7 +133,7 @@ export default function Shell({
                 key: `/admin/shared/${encodeURIComponent(page.shared.id)}`,
                 label: page.shared.title,
                 icon: icons[page.icon] || <AppstoreOutlined />,
-                group: page.group,
+                group: normalizeSidebarGroup(page.group),
               },
             ]
           }
@@ -126,25 +142,30 @@ export default function Shell({
               key: `/admin/p/${plugin.id}/${page.id}`,
               label: page.title,
               icon: icons[page.icon] || <AppstoreOutlined />,
-              group: page.group,
+              group: normalizeSidebarGroup(page.group),
             },
           ]
         }),
     )
-  const entries = [
-    { key: '/admin', label: '总览', icon: <DashboardOutlined />, group: '工作空间' },
+  const overviewEntry = {
+    key: adminURL('/admin', me),
+    label: '总览',
+    icon: <DashboardOutlined />,
+    group: '',
+  }
+  const groupedRaw = [
     ...pluginEntries,
     ...(me.role === 'admin'
       ? [
-          { key: '/admin/users', label: '用户', icon: <TeamOutlined />, group: '管理' },
-          { key: '/admin/plugins', label: '插件中心', icon: <AppstoreOutlined />, group: '管理' },
-          { key: '/admin/jobs', label: '后台任务', icon: <ApiOutlined />, group: '管理' },
-          { key: '/admin/activity', label: '操作记录', icon: <AuditOutlined />, group: '管理' },
-          { key: '/admin/settings', label: '系统设置', icon: <SettingOutlined />, group: '管理' },
+          { key: '/admin/users', label: '用户', icon: <TeamOutlined />, group: '系统' },
+          { key: '/admin/plugins', label: '插件中心', icon: <AppstoreOutlined />, group: '系统' },
+          { key: '/admin/jobs', label: '后台任务', icon: <ApiOutlined />, group: '系统' },
+          { key: '/admin/activity', label: '操作记录', icon: <AuditOutlined />, group: '系统' },
+          { key: '/admin/settings', label: '系统设置', icon: <SettingOutlined />, group: '系统' },
         ]
       : []),
-  ]
-  const mappedEntries = entries.map((entry) => ({ ...entry, key: adminURL(entry.key, me) }))
+  ].map((entry) => ({ ...entry, key: adminURL(entry.key, me) }))
+  const mappedEntries = [overviewEntry, ...groupedRaw]
   const accountEntry = {
     key: adminURL('/admin/account', me),
     label: '我的账户',
@@ -152,23 +173,29 @@ export default function Shell({
     group: '账户',
   }
   const allEntries = [...mappedEntries, accountEntry]
-  const groups = new Map<string, typeof entries>()
-  mappedEntries.forEach((e) => groups.set(e.group, [...(groups.get(e.group) || []), e]))
+  const groupOrder = ['连接', '运营', '系统']
   const items = collapsed
     ? mappedEntries
-    : [...groups.entries()].map(([label, children]) => ({
-        key: label,
-        type: 'group' as const,
-        label,
-        children,
-      }))
+    : [
+        overviewEntry,
+        ...groupOrder
+          .map((label) => ({
+            key: label,
+            type: 'group' as const,
+            label,
+            children: groupedRaw.filter((e) => e.group === label),
+          }))
+          .filter((g) => g.children.length > 0),
+      ]
   const menu = (
-    <Menu
-      mode="inline"
-      selectedKeys={[location.pathname]}
-      items={items}
-      onClick={({ key }) => navigate(key)}
-    />
+    <ConfigProvider theme={sidebarMenuTheme}>
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        items={items}
+        onClick={({ key }) => navigate(key)}
+      />
+    </ConfigProvider>
   )
   const current = allEntries.find((e) => e.key === location.pathname)
   useBrandTitle(current?.label || '管理后台')
@@ -186,7 +213,7 @@ export default function Shell({
     <>
       <Layout className="workspace">
         <Layout.Sider
-          width={200}
+          width={192}
           collapsed={collapsed}
           collapsedWidth={56}
           className="desktop-sider"
@@ -229,10 +256,25 @@ export default function Shell({
                 icon={<MenuUnfoldOutlined />}
                 onClick={() => setMobile(true)}
               />
-              <Breadcrumb
-                className="header-breadcrumb"
-                items={[{ title: brand.name }, { title: current?.label || '总览' }]}
-              />
+              <Link to={adminRoot(me)} className="mobile-brand" aria-label={brand.name}>
+                <Brand />
+              </Link>
+              <Button
+                type="text"
+                size="small"
+                className="command-button"
+                onClick={() => {
+                  setSearch('')
+                  setActiveIndex(0)
+                  setCommand(true)
+                }}
+              >
+                <Space size={6}>
+                  <SearchOutlined />
+                  <span>跳转页面</span>
+                </Space>
+                <kbd>Ctrl K</kbd>
+              </Button>
             </Space>
             <Space size={8}>
               {me.role === 'admin' && (
@@ -240,19 +282,6 @@ export default function Shell({
                   用户前台
                 </Button>
               )}
-              <Button
-                type="text"
-                size="small"
-                className="command-button"
-                icon={<SearchOutlined />}
-                onClick={() => {
-                  setSearch('')
-                  setActiveIndex(0)
-                  setCommand(true)
-                }}
-              >
-                跳转 <kbd>Ctrl K</kbd>
-              </Button>
               <AppearanceButton />
               <Dropdown
                 trigger={['click']}

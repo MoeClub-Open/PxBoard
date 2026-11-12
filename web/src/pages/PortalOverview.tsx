@@ -1,19 +1,5 @@
 import { Link } from 'react-router-dom'
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Empty,
-  Flex,
-  Progress,
-  Row as GridRow,
-  Space,
-  Spin,
-  Statistic,
-  Tag,
-  Typography,
-} from 'antd'
+import { Alert, Button, Card, Empty, Progress, Space, Spin, Tag, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useCurrency } from '../currency'
 import { useRpc, type Row } from '../api'
@@ -80,48 +66,47 @@ export default function PortalOverview({ business }: { business: boolean }) {
         </div>
       ) : accounts.error ? null : account ? (
         <>
-          <GridRow gutter={[12, 12]} className="metrics-row">
-            <Col xs={12} sm={business ? 8 : 12}>
-              <Card size="small">
-                <Statistic title="到期时间" value={date(account.expiresAt)} />
-              </Card>
-            </Col>
-            <Col xs={12} sm={business ? 8 : 12}>
-              <Card size="small">
-                <Statistic
-                  title="剩余流量"
-                  value={
-                    account.unlimited
-                      ? '不限量'
-                      : `${Math.max(0, quota - used).toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB`
-                  }
-                />
-              </Card>
-            </Col>
+          <div className="metric-strip">
+            <div>
+              <span>到期时间</span>
+              <strong>{date(account.expiresAt)}</strong>
+            </div>
+            <div>
+              <span>剩余流量</span>
+              <strong>
+                {account.unlimited
+                  ? '不限量'
+                  : `${Math.max(0, quota - used).toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB`}
+              </strong>
+            </div>
             {business && (
-              <Col xs={24} sm={8}>
-                <Card size="small">
-                  <Statistic
-                    title="账户余额"
-                    value={wallet.loading ? '—' : wallet.error ? '读取失败' : money(wallet.balance)}
-                  />
-                </Card>
-              </Col>
+              <div>
+                <span>账户余额</span>
+                <strong>
+                  {wallet.loading ? '—' : wallet.error ? '读取失败' : money(wallet.balance)}
+                </strong>
+              </div>
             )}
-          </GridRow>
-          <Card size="small" title="本周期流量" className="section-card">
-            <Flex vertical gap={6}>
-              <Typography.Text type="secondary">
+          </div>
+          <Card
+            size="small"
+            title="本周期流量"
+            extra={
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                 已使用 {used.toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB
                 {!account.unlimited && ` / ${quota.toLocaleString()} GB`}
               </Typography.Text>
-              {!account.unlimited && (
-                <Progress
-                  percent={quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 100}
-                  status={exhausted ? 'exception' : 'normal'}
-                />
-              )}
-            </Flex>
+            }
+            className="section-card"
+          >
+            {account.unlimited ? (
+              <Typography.Text type="secondary">当前套餐不限制流量额度</Typography.Text>
+            ) : (
+              <Progress
+                percent={quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 100}
+                status={exhausted ? 'exception' : 'normal'}
+              />
+            )}
           </Card>
           {!account.effective && (
             <Alert
@@ -152,27 +137,29 @@ export default function PortalOverview({ business }: { business: boolean }) {
           )}
         </>
       ) : (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            business
-              ? '还没有开通服务'
-              : redeem
-                ? '输入兑换码后即可获取访问权限'
-                : '尚未分配访问权限'
-          }
-        >
-          {business && (
-            <Link to="/user/plans">
-              <Button type="primary">选购套餐</Button>
-            </Link>
-          )}
-          {!business && redeem && (
-            <Link to="/user/redeem">
-              <Button type="primary">兑换码</Button>
-            </Link>
-          )}
-        </Empty>
+        <div className="surface-empty">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              business
+                ? '还没有开通服务'
+                : redeem
+                  ? '输入兑换码后即可获取访问权限'
+                  : '尚未分配访问权限'
+            }
+          >
+            {business && (
+              <Link to="/user/plans">
+                <Button type="primary">选购套餐</Button>
+              </Link>
+            )}
+            {!business && redeem && (
+              <Link to="/user/redeem">
+                <Button type="primary">兑换码</Button>
+              </Link>
+            )}
+          </Empty>
+        </div>
       )}
       {plugins.some((p) => p.id === 'support' && p.enabled) && <PortalAnnouncements />}
     </>

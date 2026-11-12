@@ -69,10 +69,15 @@ export default function MailTemplateEditor({
     }
     setBusy(mode)
     try {
-      const call = pluginResourceTarget(pluginId, endpoint, mode === 'preview' ? 'preview' : 'update', {
-        ...values,
-        id: template.id,
-      })
+      const call = pluginResourceTarget(
+        pluginId,
+        endpoint,
+        mode === 'preview' ? 'preview' : 'update',
+        {
+          ...values,
+          id: template.id,
+        },
+      )
       const result = await rpc(call.target, call.input)
       if (mode === 'preview') {
         setPreview(result)

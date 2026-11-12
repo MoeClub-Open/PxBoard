@@ -1,5 +1,5 @@
 import { useCurrency } from '../currency'
-import { Alert, Button, Card, Col, Empty, Row, Space, Statistic, Tag } from 'antd'
+import { Alert, Button, Card, Col, Empty, Row, Space, Tag } from 'antd'
 import { CheckCircleFilled, ExclamationCircleFilled, ReloadOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import { useRpc } from '../api'
@@ -11,11 +11,38 @@ const modeLabels: Record<string, string> = {
   personal: '自用',
   business: '商业运营',
 }
+function formatStat(value: unknown) {
+  if (typeof value === 'number') return value.toLocaleString('zh-CN')
+  if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value)) {
+    return Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 })
+  }
+  return String(value ?? '—')
+}
 function Summary({ plugin }: { plugin: Plugin }) {
   const { currencyName } = useCurrency()
+  const { me } = useSession()
   const { data, loading, error, reload } = useRpc<RecordRow[]>(`${plugin.id}/summary.get`)
+  const firstPage = plugin.pages.find(
+    (page) => page.roles.includes(me.role) && page.surface !== 'portal',
+  )
+  const href = firstPage
+    ? adminURL(
+        firstPage.shared
+          ? `/admin/shared/${encodeURIComponent(firstPage.shared.id)}`
+          : `/admin/p/${plugin.id}/${firstPage.id}`,
+        me,
+      )
+    : ''
   return (
-    <Card size="small" title={plugin.name} loading={loading}>
+    <div className="summary-panel">
+      <div className="summary-panel-head">
+        <span>{plugin.name}</span>
+        {href && (
+          <Link to={href} style={{ fontSize: 12, fontWeight: 400 }}>
+            查看
+          </Link>
+        )}
+      </div>
       {error ? (
         <span className="danger">
           {error}{' '}
@@ -23,20 +50,28 @@ function Summary({ plugin }: { plugin: Plugin }) {
             重试
           </Button>
         </span>
+      ) : loading && !data ? (
+        <span className="muted" style={{ fontSize: 12 }}>
+          加载中…
+        </span>
       ) : (
-        <Row gutter={[12, 8]}>
-          {data?.map((m) => (
-            <Col key={m.label} xs={8}>
-              <Statistic
-                title={m.label}
-                value={m.value}
-                suffix={m.unit === '元' ? currencyName : m.unit}
-              />
-            </Col>
-          ))}
-        </Row>
+        <div className="summary-panel-stats">
+          {data?.map((m) => {
+            const unit = m.unit === '元' ? currencyName : m.unit
+            const label = m.label === plugin.name ? '总计' : m.label
+            return (
+              <div key={m.label}>
+                <span>{label}</span>
+                <strong>
+                  {formatStat(m.value)}
+                  {unit ? ` ${unit}` : ''}
+                </strong>
+              </div>
+            )
+          })}
+        </div>
       )}
-    </Card>
+    </div>
   )
 }
 export default function Overview() {
@@ -68,44 +103,63 @@ export default function Overview() {
         </Space>
       </div>
       {error && <Alert type="error" title={error} showIcon className="page-notice" />}
+      {status.length > 0 && (
+        <Alert
+          type="error"
+          showIcon
+          className="page-notice"
+          title={`${status.length} 个插件运行异常：${status.map((p) => p.name).join('、')}`}
+          action={
+            me.role === 'admin' ? (
+              <Link to={adminURL('/admin/plugins?tab=installed', me)}>
+                <Button size="small" danger>
+                  处理
+                </Button>
+              </Link>
+            ) : undefined
+          }
+        />
+      )}
       {me.role === 'admin' && (
-        <Row gutter={[12, 12]} className="metrics-row">
-          {[
-            { label: '用户总数', value: data?.users ?? '—' },
-            {
-              label: '运行插件',
-              value: data?.enabled ?? '—',
-              suffix: `/ ${data?.plugins ?? 0}`,
-            },
-            { label: '待处理任务', value: data?.jobs ?? '—' },
-            {
-              label: '服务状态',
-              value: status.length ? '需处理' : '运行正常',
-              suffix: data ? `v${data.version}` : undefined,
-              danger: status.length > 0,
-            },
-          ].map((m) => (
-            <Col key={m.label} xs={12} lg={6}>
-              <Card size="small">
-                <Statistic
-                  title={m.label}
-                  value={m.value}
-                  suffix={m.suffix}
-                  styles={m.danger ? { content: { color: 'var(--px-error)' } } : undefined}
-                />
-              </Card>
-            </Col>
-          ))}
-        </Row>
+        <div className="metric-strip">
+          <div>
+            <span>用户总数</span>
+            <strong>
+              {typeof data?.users === 'number' ? data.users.toLocaleString('zh-CN') : '—'}
+            </strong>
+          </div>
+          <div>
+            <span>运行插件</span>
+            <strong>
+              {data?.enabled ?? '—'}
+              <small>/ {data?.plugins ?? 0}</small>
+            </strong>
+          </div>
+          <div>
+            <span>待处理任务</span>
+            <strong>
+              {Number(data?.jobs) > 0 ? (
+                <Link to={adminURL('/admin/jobs', me)}>{data?.jobs}</Link>
+              ) : (
+                (data?.jobs ?? '—')
+              )}
+            </strong>
+          </div>
+          <div>
+            <span>服务状态</span>
+            <strong className={status.length ? 'danger' : undefined}>
+              {status.length ? '需处理' : '运行正常'}
+              {data?.version ? <small>v{data.version}</small> : null}
+            </strong>
+          </div>
+        </div>
       )}
       {!!summaries.length && (
-        <Row gutter={[12, 12]} className="metrics-row">
+        <div className="summary-grid">
           {summaries.map((p) => (
-            <Col key={p.id} xs={24} md={12}>
-              <Summary plugin={p} />
-            </Col>
+            <Summary key={p.id} plugin={p} />
           ))}
-        </Row>
+        </div>
       )}
       <Row gutter={[12, 12]}>
         <Col xs={24} lg={me.role === 'admin' ? 12 : 24}>
@@ -114,32 +168,35 @@ export default function Overview() {
             title="插件状态"
             extra={
               me.role === 'admin' ? (
-                <Link to={adminURL('/admin/plugins', me)}>管理</Link>
+                <Link to={adminURL('/admin/plugins?tab=installed', me)}>管理</Link>
               ) : undefined
             }
           >
             {plugins.length ? (
-              <div className="data-list">
+              <div className="plugin-grid">
                 {plugins.map((p) => (
-                  <div className="data-row" key={p.id}>
-                    <div className="data-row-main">
+                  <div
+                    className="plugin-chip"
+                    key={p.id}
+                    title={p.error || `${p.name} v${p.version}`}
+                  >
+                    <div className="plugin-chip-main">
                       {p.error ? (
-                        <ExclamationCircleFilled className="danger data-row-icon" />
+                        <ExclamationCircleFilled className="danger" />
                       ) : (
-                        <CheckCircleFilled
-                          className={`${p.enabled ? 'success' : 'muted'} data-row-icon`}
-                        />
+                        <CheckCircleFilled className={p.enabled ? 'success' : 'muted'} />
                       )}
-                      <div className="data-row-copy">
-                        <strong>{p.name}</strong>
-                        <small className={p.error ? 'danger' : undefined}>
-                          {p.error || `v${p.version}`}
-                        </small>
-                      </div>
+                      <span>{p.name}</span>
                     </div>
-                    <Tag color={p.error ? 'error' : p.enabled ? 'success' : 'default'}>
-                      {p.error ? '异常' : p.enabled ? '运行中' : '已停用'}
-                    </Tag>
+                    {p.error ? (
+                      <Tag color="error" style={{ marginInlineEnd: 0 }}>
+                        异常
+                      </Tag>
+                    ) : !p.enabled ? (
+                      <Tag style={{ marginInlineEnd: 0 }}>停用</Tag>
+                    ) : (
+                      <code>v{p.version}</code>
+                    )}
                   </div>
                 ))}
               </div>
@@ -194,6 +251,11 @@ export function activityLabel(action: string) {
   return (
     {
       'auth.login': '登录面板',
+      'auth.external-login': '第三方登录',
+      'auth.native-login': '客户端登录',
+      'auth.native-approved': '授权客户端登录',
+      'account.mfa-enabled': '开启两步验证',
+      'account.mfa-disabled': '关闭两步验证',
       'plugin.install': '安装插件',
       'plugin.enable': '启用插件',
       'plugin.disable': '停用插件',
@@ -203,6 +265,8 @@ export function activityLabel(action: string) {
       'user.create': '创建用户',
       'user.update': '更新用户',
       'settings.update': '更新系统设置',
+      'workspace.mode': '切换使用方式',
+      'migration.commit': '提交数据迁移',
     }[action] || action
   )
 }

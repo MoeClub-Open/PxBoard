@@ -4,9 +4,9 @@ import {
   App,
   Button,
   Card,
-  Descriptions,
   Flex,
   Form,
+  Grid,
   Input,
   Modal,
   QRCode,
@@ -23,9 +23,16 @@ import type { Row } from '../api'
 import { useSession } from '../context'
 import { OAuthBindings } from '../components/OAuthButtons'
 import ReminderPreferences from '../components/ReminderPreferences'
-function Tokens() {
+type TabsConfig = {
+  activeKey: string
+  onChange: (key: string) => void
+  items: { key: string; label: string }[]
+}
+
+function Tokens({ tabs }: { tabs: TabsConfig }) {
   const { data, error, loading, reload } = useRpc<Row[]>('core/tokens.list')
   const { message, modal } = App.useApp()
+  const screens = Grid.useBreakpoint()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
@@ -63,18 +70,36 @@ function Tokens() {
   }
   return (
     <>
+      <Tabs
+        activeKey={tabs.activeKey}
+        onChange={tabs.onChange}
+        items={tabs.items}
+        tabBarExtraContent={
+          screens.md ? (
+            <Space size={8}>
+              <Button icon={<ReloadOutlined />} onClick={reload}>
+                刷新
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+                创建密钥
+              </Button>
+            </Space>
+          ) : undefined
+        }
+      />
+      {!screens.md && (
+        <div className="table-toolbar">
+          <Space size={8}>
+            <Button icon={<ReloadOutlined />} onClick={reload}>
+              刷新
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+              创建密钥
+            </Button>
+          </Space>
+        </div>
+      )}
       {error && <Alert type="error" title={error} showIcon className="page-notice" />}
-      <div className="table-toolbar">
-        <div>{data && <span className="muted toolbar-count">共 {data.length} 个密钥</span>}</div>
-        <Space size={8}>
-          <Button icon={<ReloadOutlined />} onClick={reload}>
-            刷新
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-            创建密钥
-          </Button>
-        </Space>
-      </div>
       <Table
         rowKey="id"
         size="small"
@@ -302,93 +327,96 @@ export default function Account() {
   const { me, plugins } = useSession()
   const { message } = App.useApp()
   const [busy, setBusy] = useState(false)
+  const [tab, setTab] = useState('tokens')
+  const hasAccess = plugins.some((plugin) => plugin.id === 'access' && plugin.enabled)
+  const hasOAuth = plugins.some((plugin) => plugin.id === 'oauth' && plugin.enabled)
+  const tabItems = [
+    { key: 'tokens', label: 'API 密钥' },
+    ...(hasAccess ? [{ key: 'reminders', label: '邮件提醒' }] : []),
+    { key: 'password', label: '登录密码' },
+    { key: 'mfa', label: '两步验证' },
+    ...(hasOAuth ? [{ key: 'oauth', label: '第三方登录' }] : []),
+  ]
   return (
     <>
       <div className="page-heading">
         <h1>我的账户</h1>
       </div>
-      <Card size="small" className="section-card">
-        <Descriptions
-          size="small"
-          column={{ xs: 1, sm: 3 }}
-          items={[
-            { key: 'name', label: '姓名', children: me.name || '—' },
-            { key: 'email', label: '邮箱', children: me.email },
-            {
-              key: 'mfa',
-              label: '两步验证',
-              children: (
-                <Tag color={me.mfaEnabled ? 'success' : 'default'}>
-                  {me.mfaEnabled ? '已启用' : '未启用'}
-                </Tag>
-              ),
-            },
-          ]}
-        />
-      </Card>
-      <Tabs
-        items={[
-          { key: 'tokens', label: 'API 密钥', children: <Tokens /> },
-          ...(plugins.some((plugin) => plugin.id === 'access' && plugin.enabled)
-            ? [{ key: 'reminders', label: '邮件提醒', children: <ReminderPreferences /> }]
-            : []),
-          {
-            key: 'password',
-            label: '登录密码',
-            children: (
-              <Card size="small" className="settings-card">
-                <Form
-                  layout="vertical"
-                  requiredMark={false}
-                  onFinish={async (values) => {
-                    setBusy(true)
-                    try {
-                      await rpc('core/account.changePassword', values)
-                      message.success('密码已更新，请重新登录')
-                      window.location.assign('/login')
-                    } catch (e) {
-                      message.error(errorText(e))
-                    } finally {
-                      setBusy(false)
-                    }
-                  }}
+      <div className="metric-strip">
+        <div>
+          <span>姓名</span>
+          <strong>{me.name || '—'}</strong>
+        </div>
+        <div>
+          <span>邮箱</span>
+          <strong style={{ fontSize: 15 }}>{me.email}</strong>
+        </div>
+        <div>
+          <span>两步验证</span>
+          <strong>
+            <Tag color={me.mfaEnabled ? 'success' : 'default'}>
+              {me.mfaEnabled ? '已启用' : '未启用'}
+            </Tag>
+          </strong>
+        </div>
+      </div>
+      {tab === 'tokens' ? (
+        <Tokens tabs={{ activeKey: tab, onChange: setTab, items: tabItems }} />
+      ) : (
+        <>
+          <Tabs activeKey={tab} onChange={setTab} items={tabItems} />
+          {tab === 'reminders' && <ReminderPreferences />}
+          {tab === 'password' && (
+            <Card size="small" className="settings-card">
+              <Form
+                layout="vertical"
+                requiredMark={false}
+                onFinish={async (values) => {
+                  setBusy(true)
+                  try {
+                    await rpc('core/account.changePassword', values)
+                    message.success('密码已更新，请重新登录')
+                    window.location.assign('/login')
+                  } catch (e) {
+                    message.error(errorText(e))
+                  } finally {
+                    setBusy(false)
+                  }
+                }}
+              >
+                <Form.Item
+                  name="currentPassword"
+                  label="当前密码"
+                  rules={[{ required: true, message: '请输入当前密码' }]}
                 >
+                  <Input.Password autoComplete="current-password" />
+                </Form.Item>
+                {me.mfaEnabled && (
                   <Form.Item
-                    name="currentPassword"
-                    label="当前密码"
-                    rules={[{ required: true, message: '请输入当前密码' }]}
+                    name="code"
+                    label="动态验证码"
+                    rules={[{ required: true, len: 6, message: '请输入 6 位动态验证码' }]}
                   >
-                    <Input.Password autoComplete="current-password" />
+                    <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
                   </Form.Item>
-                  {me.mfaEnabled && (
-                    <Form.Item
-                      name="code"
-                      label="动态验证码"
-                      rules={[{ required: true, len: 6, message: '请输入 6 位动态验证码' }]}
-                    >
-                      <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
-                    </Form.Item>
-                  )}
-                  <Form.Item
-                    name="password"
-                    label="新密码"
-                    rules={[{ required: true, min: 10, message: '密码至少 10 位' }]}
-                  >
-                    <Input.Password autoComplete="new-password" />
-                  </Form.Item>
-                  <Button type="primary" htmlType="submit" loading={busy}>
-                    更新密码
-                  </Button>
-                </Form>
-              </Card>
-            ),
-          },
-          { key: 'mfa', label: '两步验证', children: <TwoFactorAuth /> },
-          ...(plugins.some((plugin) => plugin.id === 'oauth' && plugin.enabled)
-            ? [{ key: 'oauth', label: '第三方登录', children: <OAuthBindings /> }]
-            : []),
-        ]}
-      />
+                )}
+                <Form.Item
+                  name="password"
+                  label="新密码"
+                  rules={[{ required: true, min: 10, message: '密码至少 10 位' }]}
+                >
+                  <Input.Password autoComplete="new-password" />
+                </Form.Item>
+                <Button type="primary" htmlType="submit" loading={busy}>
+                  更新密码
+                </Button>
+              </Form>
+            </Card>
+          )}
+          {tab === 'mfa' && <TwoFactorAuth />}
+          {tab === 'oauth' && <OAuthBindings />}
+        </>
+      )}
     </>
   )
 }

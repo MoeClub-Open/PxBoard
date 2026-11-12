@@ -42,10 +42,12 @@ export function PortalHelp() {
           }))}
         />
       ) : (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={search ? '没有找到相关文档' : '暂无使用文档'}
-        />
+        <div className="surface-empty">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={search ? '没有找到相关文档' : '暂无使用文档'}
+          />
+        </div>
       )}
     </>
   )

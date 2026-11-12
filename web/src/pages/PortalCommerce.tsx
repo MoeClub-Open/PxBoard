@@ -105,7 +105,8 @@ export function PortalPlans() {
           },
           {
             title: '',
-            width: 88,
+            width: 96,
+            align: 'right' as const,
             render: (_, row) => (
               <Button type="primary" size="small" onClick={() => setSelected(row)}>
                 选购

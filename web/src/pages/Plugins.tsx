@@ -3,17 +3,15 @@ import {
   Alert,
   App,
   Button,
-  Card,
   Checkbox,
-  Col,
   Descriptions,
   Drawer,
   Empty,
   Flex,
   Form,
+  Grid,
   Input,
   Modal,
-  Row,
   Select,
   Space,
   Switch,
@@ -67,8 +65,15 @@ const permissionLabel = (p: string) =>
         ? `发布 ${p.slice(5)} 事件`
         : p)
 
-export function Sources() {
+type TabsConfig = {
+  activeKey: string
+  onChange: (key: string) => void
+  items: { key: string; label: string }[]
+}
+
+export function Sources({ tabs }: { tabs?: TabsConfig } = {}) {
   const { message, modal } = App.useApp()
+  const screens = Grid.useBreakpoint()
   const { data, error, loading, reload } = useRpc<RecordRow[]>('core/sources.list')
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -95,17 +100,51 @@ export function Sources() {
   }
   return (
     <>
-      <div className="table-toolbar">
-        <div>{data && <span className="muted toolbar-count">共 {data.length} 个来源</span>}</div>
-        <Space size={8}>
-          <Button icon={<ReloadOutlined />} onClick={reload}>
-            刷新
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-            添加插件源
-          </Button>
-        </Space>
-      </div>
+      {tabs ? (
+        <>
+          <Tabs
+            activeKey={tabs.activeKey}
+            onChange={tabs.onChange}
+            items={tabs.items}
+            tabBarExtraContent={
+              screens.md ? (
+                <Space size={8}>
+                  <Button icon={<ReloadOutlined />} onClick={reload}>
+                    刷新
+                  </Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+                    添加插件源
+                  </Button>
+                </Space>
+              ) : undefined
+            }
+          />
+          {!screens.md && (
+            <div className="table-toolbar">
+              <Space size={8}>
+                <Button icon={<ReloadOutlined />} onClick={reload}>
+                  刷新
+                </Button>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+                  添加插件源
+                </Button>
+              </Space>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="table-toolbar">
+          <div />
+          <Space size={8}>
+            <Button icon={<ReloadOutlined />} onClick={reload}>
+              刷新
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+              添加插件源
+            </Button>
+          </Space>
+        </div>
+      )}
       {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       <Table
         rowKey="id"
@@ -209,9 +248,10 @@ export function Sources() {
   )
 }
 
-function Installed() {
+function Installed({ tabs }: { tabs: TabsConfig }) {
   const { plugins, refresh } = useSession()
   const { message, modal } = App.useApp()
+  const screens = Grid.useBreakpoint()
   const { data: catalog, reload: reloadCatalog } = useRpc<Catalog>('core/plugins.catalog')
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState('')
@@ -247,35 +287,67 @@ function Installed() {
   )
   return (
     <>
-      <div className="table-toolbar">
-        <div>
-          <span className="muted toolbar-count">共 {rows.length} 个插件</span>
+      <Tabs
+        activeKey={tabs.activeKey}
+        onChange={tabs.onChange}
+        items={tabs.items}
+        tabBarExtraContent={
+          screens.md ? (
+            <Space size={8} wrap>
+              <Input.Search
+                placeholder="搜索已安装插件"
+                allowClear
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ width: 200 }}
+              />
+              <Button
+                icon={<ReloadOutlined />}
+                loading={refreshing}
+                onClick={async () => {
+                  setRefreshing(true)
+                  try {
+                    reloadCatalog()
+                    await refresh()
+                  } finally {
+                    setRefreshing(false)
+                  }
+                }}
+              >
+                刷新
+              </Button>
+            </Space>
+          ) : undefined
+        }
+      />
+      {!screens.md && (
+        <div className="table-toolbar">
+          <Space size={8} wrap>
+            <Input.Search
+              placeholder="搜索已安装插件"
+              allowClear
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ width: 200 }}
+            />
+            <Button
+              icon={<ReloadOutlined />}
+              loading={refreshing}
+              onClick={async () => {
+                setRefreshing(true)
+                try {
+                  reloadCatalog()
+                  await refresh()
+                } finally {
+                  setRefreshing(false)
+                }
+              }}
+            >
+              刷新
+            </Button>
+          </Space>
         </div>
-        <Space size={8} wrap>
-          <Input.Search
-            placeholder="搜索已安装插件"
-            allowClear
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 200 }}
-          />
-          <Button
-            icon={<ReloadOutlined />}
-            loading={refreshing}
-            onClick={async () => {
-              setRefreshing(true)
-              try {
-                reloadCatalog()
-                await refresh()
-              } finally {
-                setRefreshing(false)
-              }
-            }}
-          >
-            刷新
-          </Button>
-        </Space>
-      </div>
+      )}
       <Table<Plugin>
         rowKey="id"
         size="small"
@@ -387,8 +459,9 @@ function Installed() {
   )
 }
 
-function Marketplace({ onOpenSources }: { onOpenSources: () => void }) {
-  const { message, modal } = App.useApp()
+function Marketplace({ tabs, onOpenSources }: { tabs: TabsConfig; onOpenSources: () => void }) {
+  const { message } = App.useApp()
+  const screens = Grid.useBreakpoint()
   const { plugins, refresh } = useSession()
   const { data, error, loading, reload } = useRpc<Catalog>('core/plugins.catalog')
   const [search, setSearch] = useState('')
@@ -396,7 +469,6 @@ function Marketplace({ onOpenSources }: { onOpenSources: () => void }) {
   const [detail, setDetail] = useState<Plugin | null>(null)
   const [trusted, setTrusted] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [bundleBusy, setBundleBusy] = useState('')
   const categories = [...new Set((data?.plugins || []).map((p) => p.category))]
   const results = (data?.plugins || []).filter(
     (p) =>
@@ -421,79 +493,57 @@ function Marketplace({ onOpenSources }: { onOpenSources: () => void }) {
       setBusy(false)
     }
   }
-  async function installBundle(bundle: RecordRow) {
-    setBundleBusy(bundle.id)
-    try {
-      for (const id of bundle.plugins) {
-        await rpc('core/plugins.install', { id, sourceId: bundle.sourceId })
-      }
-      await refresh()
-      configurationChanged()
-      message.success(`${bundle.name}功能已安装`)
-    } catch (e) {
-      await refresh()
-      message.error(errorText(e))
-    } finally {
-      setBundleBusy('')
-    }
-  }
   return (
     <>
-      {!!data?.bundles?.length && (
-        <Row gutter={[12, 12]} className="metrics-row">
-          {data.bundles.map((bundle) => (
-            <Col key={`${bundle.sourceId}/${bundle.id}`} xs={24} md={8}>
-              <Card
-                size="small"
-                title={bundle.name}
-                extra={
-                  <Button
-                    size="small"
-                    type="link"
-                    loading={bundleBusy === bundle.id}
-                    disabled={!!bundleBusy && bundleBusy !== bundle.id}
-                    onClick={() =>
-                      modal.confirm({
-                        title: `安装${bundle.name}组合？`,
-                        content: `包含：${bundle.plugins.join('、')}（来源：${bundle.sourceName}）`,
-                        okText: '信任并安装',
-                        cancelText: '取消',
-                        onOk: () => installBundle(bundle),
-                      })
-                    }
-                  >
-                    安装组合
-                  </Button>
-                }
-              >
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {bundle.description}
-                </Typography.Text>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+      <Tabs
+        activeKey={tabs.activeKey}
+        onChange={tabs.onChange}
+        items={tabs.items}
+        tabBarExtraContent={
+          screens.md ? (
+            <Space size={8} wrap>
+              <Input.Search
+                placeholder="搜索插件"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                allowClear
+                style={{ width: 200 }}
+              />
+              <Select
+                value={category}
+                onChange={setCategory}
+                options={['全部', ...categories].map((v) => ({ value: v, label: v }))}
+                style={{ width: 104 }}
+              />
+              <Button icon={<ReloadOutlined />} onClick={reload} loading={loading}>
+                刷新
+              </Button>
+            </Space>
+          ) : undefined
+        }
+      />
+      {!screens.md && (
+        <div className="table-toolbar">
+          <Space size={8} wrap>
+            <Input.Search
+              placeholder="搜索插件"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              allowClear
+              style={{ width: 200 }}
+            />
+            <Select
+              value={category}
+              onChange={setCategory}
+              options={['全部', ...categories].map((v) => ({ value: v, label: v }))}
+              style={{ width: 104 }}
+            />
+            <Button icon={<ReloadOutlined />} onClick={reload} loading={loading}>
+              刷新
+            </Button>
+          </Space>
+        </div>
       )}
-      <div className="table-toolbar">
-        <Space size={8} wrap>
-          <Input.Search
-            placeholder="搜索插件"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            allowClear
-            style={{ width: 220 }}
-          />
-          <Select
-            value={category}
-            onChange={setCategory}
-            options={['全部', ...categories].map((v) => ({ value: v, label: v }))}
-            style={{ width: 110 }}
-          />
-        </Space>
-        <Button icon={<ReloadOutlined />} onClick={reload} loading={loading}>
-          刷新
-        </Button>
-      </div>
       {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       {data?.sources
         .filter((s) => s.error)
@@ -672,25 +722,27 @@ function Marketplace({ onOpenSources }: { onOpenSources: () => void }) {
 
 export default function Plugins() {
   const [tab, setTab] = useState(new URLSearchParams(location.search).get('tab') || 'market')
+  const tabs: TabsConfig = {
+    activeKey: tab,
+    onChange: setTab,
+    items: [
+      { key: 'market', label: '发现插件' },
+      { key: 'installed', label: '已安装' },
+      { key: 'sources', label: '插件源' },
+    ],
+  }
   return (
     <>
       <div className="page-heading">
         <h1>插件中心</h1>
       </div>
-      <Tabs
-        activeKey={tab}
-        onChange={setTab}
-        destroyOnHidden
-        items={[
-          {
-            key: 'market',
-            label: '发现插件',
-            children: <Marketplace onOpenSources={() => setTab('sources')} />,
-          },
-          { key: 'installed', label: '已安装', children: <Installed /> },
-          { key: 'sources', label: '插件源', children: <Sources /> },
-        ]}
-      />
+      {tab === 'market' ? (
+        <Marketplace tabs={tabs} onOpenSources={() => setTab('sources')} />
+      ) : tab === 'installed' ? (
+        <Installed tabs={tabs} />
+      ) : (
+        <Sources tabs={tabs} />
+      )}
     </>
   )
 }

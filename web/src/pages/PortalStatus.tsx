@@ -1,17 +1,5 @@
 import { useState } from 'react'
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Empty,
-  Input,
-  Row as GridRow,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-} from 'antd'
+import { Alert, Button, Empty, Input, Space, Table, Tag } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useRpc } from '../api'
 import type { Row } from '../api'
@@ -43,7 +31,29 @@ export default function PortalStatus() {
   return (
     <>
       <div className="page-heading">
-        <h1>服务器状态</h1>
+        <div className="page-heading-title">
+          <h1>服务器状态</h1>
+          <div className="metric-pills">
+            <span className="metric-pill">
+              <span>可用</span>
+              <strong>{status.data ? rows.length : '—'}</strong>
+            </span>
+            {fields.includes('status') && (
+              <>
+                <span className="metric-pill">
+                  <span>在线</span>
+                  <strong>{status.data ? online : '—'}</strong>
+                </span>
+                <span className="metric-pill">
+                  <span>离线</span>
+                  <strong>
+                    {status.data ? rows.filter((server) => server.status !== 'online').length : '—'}
+                  </strong>
+                </span>
+              </>
+            )}
+          </div>
+        </div>
         <Space wrap>
           <Input.Search
             placeholder="搜索服务器或地区"
@@ -75,32 +85,6 @@ export default function PortalStatus() {
           className="portal-notice"
         />
       )}
-      <GridRow gutter={[12, 12]} className="metrics-row">
-        <Col xs={12} sm={8}>
-          <Card size="small">
-            <Statistic title="可用服务器" value={status.data ? rows.length : '—'} />
-          </Card>
-        </Col>
-        {fields.includes('status') && (
-          <Col xs={12} sm={8}>
-            <Card size="small">
-              <Statistic title="在线" value={status.data ? online : '—'} />
-            </Card>
-          </Col>
-        )}
-        {fields.includes('status') && (
-          <Col xs={12} sm={8}>
-            <Card size="small">
-              <Statistic
-                title="离线"
-                value={
-                  status.data ? rows.filter((server) => server.status !== 'online').length : '—'
-                }
-              />
-            </Card>
-          </Col>
-        )}
-      </GridRow>
       <Table<Row>
         rowKey="id"
         size="small"

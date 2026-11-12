@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   color: var(--px-text);
-  background: var(--px-bg);
+  background: var(--px-surface);
 }
 .storefront a {
   text-decoration: none;
@@ -31,7 +31,8 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--px-surface);
+  background: color-mix(in srgb, var(--px-surface) 92%, transparent);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--px-border-soft);
 }
 .storefront-header-inner,
@@ -39,10 +40,10 @@
 .storefront-footer-inner {
   width: min(100%, 1120px);
   margin-inline: auto;
-  padding-inline: 20px;
+  padding-inline: 24px;
 }
 .storefront-header-inner {
-  min-height: 52px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -83,32 +84,30 @@
 }
 .storefront-hero-grid {
   display: grid;
-  gap: 20px;
-  padding-block: 24px 20px;
-  align-items: start;
+  gap: 32px;
+  padding-block: 36px 32px;
+  align-items: center;
 }
 .storefront-hero-grid.has-routes {
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.28fr);
 }
 .storefront-hero {
   min-width: 0;
-  padding: 20px;
-  background: var(--px-surface);
-  border: 1px solid var(--px-border-soft);
-  border-radius: 6px;
+  padding-block: 6px;
 }
 .storefront-hero h1 {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1.4;
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 .storefront-intro-text {
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   color: var(--px-secondary);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 14.5px;
+  line-height: 1.75;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
@@ -116,18 +115,18 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 20px;
 }
 .storefront-action.ant-btn,
 .storefront-action {
-  min-height: 32px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding-inline: 14px;
+  padding-inline: 16px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 13.5px;
 }
 .storefront-action-secondary {
   color: var(--px-text);
@@ -146,17 +145,20 @@
   margin-top: 12px;
 }
 .storefront-network {
-  padding: 18px 20px;
+  padding: 20px 22px;
   border: 1px solid var(--px-border-soft);
-  border-radius: 6px;
-  background: var(--px-surface);
+  border-radius: 8px;
+  background: var(--px-fill);
   scroll-margin-top: 68px;
 }
 .storefront-network-heading {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   margin-bottom: 4px;
+}
+.storefront-network-heading > .anticon {
+  color: var(--px-primary-text);
 }
 .storefront :is(h2, h3) {
   color: var(--px-text);
@@ -165,25 +167,25 @@
 .storefront-network h2,
 .storefront-features h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
 }
 .storefront-routes-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 16px;
+  column-gap: 20px;
 }
 .storefront-routes-grid.single-route {
   grid-template-columns: 1fr;
 }
 .storefront-route {
   min-width: 0;
-  padding-top: 12px;
-  margin-top: 12px;
+  padding-top: 14px;
+  margin-top: 14px;
   border-top: 1px solid var(--px-border-soft);
 }
 .storefront-route h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.45;
 }
 .storefront-route-region {
@@ -204,28 +206,35 @@
   overflow-wrap: anywhere;
 }
 .storefront-features {
-  padding-block: 0 24px;
+  border-top: 1px solid var(--px-border-soft);
+  padding-block: 26px 34px;
   scroll-margin-top: 68px;
 }
 .storefront-features-grid {
   display: grid;
   grid-template-columns: repeat(var(--feature-cols, 3), minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: 14px;
+  margin-top: 16px;
 }
 .storefront-feature {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 11px;
   min-width: 0;
-  padding: 14px 16px;
-  background: var(--px-surface);
+  padding: 15px 16px;
+  background: var(--px-fill);
   border: 1px solid var(--px-border-soft);
-  border-radius: 6px;
+  border-radius: 8px;
+}
+.storefront-feature-icon {
+  color: var(--px-primary-text);
+  font-size: 17px;
+  line-height: 1.35;
+  flex-shrink: 0;
 }
 .storefront-feature h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .storefront-feature p {

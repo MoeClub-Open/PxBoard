@@ -1,6 +1,18 @@
 import type { useHumanChallenge } from './HumanChallenge'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, App, Button, Card, Empty, Form, Input, Space, Spin, Typography } from 'antd'
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Divider,
+  Empty,
+  Form,
+  Input,
+  Space,
+  Spin,
+  Typography,
+} from 'antd'
 import { GithubOutlined, GoogleOutlined, LinkOutlined } from '@ant-design/icons'
 import { errorText, rpc } from '../api'
 import { useSession } from '../context'
@@ -107,29 +119,36 @@ export function OAuthButtons({
   }, [providers, preferredProviderId, challenge?.loading, challenge?.policy, challenge?.token])
   if (!available.length) return null
   return (
-    <Space orientation="vertical" size={8} style={{ width: '100%', marginTop: 14 }}>
-      {error && <Alert type="error" title={error} showIcon />}
-      {available.map((provider) => (
-        <Button
-          key={provider.id}
-          block
-          icon={
-            provider.kind === 'github' ? (
-              <GithubOutlined />
-            ) : provider.kind === 'google' ? (
-              <GoogleOutlined />
-            ) : (
-              <LinkOutlined />
-            )
-          }
-          loading={busy === provider.id}
-          disabled={!!busy && busy !== provider.id}
-          onClick={() => void authorize(provider)}
-        >
-          {purpose === 'bind' ? `绑定 ${provider.name}` : `使用 ${provider.name} 登录`}
-        </Button>
-      ))}
-    </Space>
+    <>
+      {purpose === 'login' && <Divider style={{ margin: '16px 0 14px' }} />}
+      <Space
+        orientation="vertical"
+        size={8}
+        style={{ width: '100%', marginTop: purpose === 'login' ? 0 : 14 }}
+      >
+        {error && <Alert type="error" title={error} showIcon />}
+        {available.map((provider) => (
+          <Button
+            key={provider.id}
+            block
+            icon={
+              provider.kind === 'github' ? (
+                <GithubOutlined />
+              ) : provider.kind === 'google' ? (
+                <GoogleOutlined />
+              ) : (
+                <LinkOutlined />
+              )
+            }
+            loading={busy === provider.id}
+            disabled={!!busy && busy !== provider.id}
+            onClick={() => void authorize(provider)}
+          >
+            {purpose === 'bind' ? `绑定 ${provider.name}` : `使用 ${provider.name} 登录`}
+          </Button>
+        ))}
+      </Space>
+    </>
   )
 }
 

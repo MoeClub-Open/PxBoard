@@ -6,12 +6,12 @@ import { DesktopOutlined, MoonOutlined, SkinOutlined, SunOutlined } from '@ant-d
 import zhCN from 'antd/locale/zh_CN'
 
 const colors = {
-  blue: { name: '蓝色', seed: '#1677ff' },
-  violet: { name: '紫色', seed: '#722ed1' },
-  green: { name: '绿色', seed: '#389e0d' },
-  cyan: { name: '青色', seed: '#08979c' },
-  amber: { name: '橙色', seed: '#d46b08' },
-  rose: { name: '玫红', seed: '#c41d7f' },
+  blue: { name: '蓝色', seed: '#2563eb', soft: '#eff6ff', border: '#bfdbfe', ink: '#93c5fd' },
+  violet: { name: '紫色', seed: '#7c3aed', soft: '#f5f3ff', border: '#ddd6fe', ink: '#c4b5fd' },
+  green: { name: '绿色', seed: '#047857', soft: '#ecfdf5', border: '#a7f3d0', ink: '#6ee7b7' },
+  cyan: { name: '青色', seed: '#0e7490', soft: '#ecfeff', border: '#a5f3fc', ink: '#67e8f9' },
+  amber: { name: '橙色', seed: '#b45309', soft: '#fffbeb', border: '#fde68a', ink: '#fcd34d' },
+  rose: { name: '玫红', seed: '#be123c', soft: '#fff1f2', border: '#fecdd3', ink: '#fda4af' },
 }
 type Color = keyof typeof colors
 type Mode = 'system' | 'light' | 'dark'
@@ -61,8 +61,34 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
       token: {
         colorPrimary: colors[color].seed,
         colorInfo: colors[color].seed,
+        ...(dark
+          ? {
+              colorPrimaryText: colors[color].ink,
+              colorPrimaryTextHover: colors[color].ink,
+              colorPrimaryTextActive: colors[color].ink,
+              colorInfoText: colors[color].ink,
+              colorLink: colors[color].ink,
+              colorLinkHover: colors[color].ink,
+            }
+          : {
+              colorPrimaryBg: colors[color].soft,
+              colorPrimaryBorder: colors[color].border,
+              colorText: '#182230',
+              colorTextSecondary: '#586577',
+              colorTextTertiary: '#7a8797',
+            }),
+        colorBgLayout: dark ? '#0d1117' : '#f5f7fa',
+        colorBgContainer: dark ? '#151b23' : '#ffffff',
+        colorBgElevated: dark ? '#1c232e' : '#ffffff',
+        colorFillAlter: dark ? '#19202a' : '#f8fafc',
+        colorBorder: dark ? '#2f3947' : '#d5dde7',
+        colorBorderSecondary: dark ? '#232b36' : '#e5eaf1',
         borderRadius: 6,
         fontSize: 14,
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif',
+        fontFamilyCode:
+          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
       },
     }
     const token = theme.getDesignToken(base)
@@ -75,14 +101,16 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
             bodyBg: token.colorBgLayout,
             headerBg: token.colorBgContainer,
             siderBg: token.colorBgContainer,
-            headerHeight: 48,
-            headerPadding: '0 16px',
+            headerHeight: 50,
+            headerPadding: '0 20px',
           },
           Card: {
+            headerFontSizeSM: 13,
             headerHeightSM: 38,
             paddingSM: 14,
           },
           Button: {
+            fontWeight: 500,
             primaryShadow: 'none',
             defaultShadow: 'none',
             dangerShadow: 'none',
@@ -94,25 +122,33 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
           Menu: {
             itemBg: 'transparent',
             subMenuItemBg: 'transparent',
-            activeBarBorderWidth: 0,
-            itemHeight: 34,
-            itemMarginInline: 6,
-            itemMarginBlock: 2,
-            itemBorderRadius: 6,
+            itemSelectedBg: token.colorPrimaryBg,
+            itemSelectedColor: token.colorPrimaryText,
+            horizontalItemSelectedColor: token.colorPrimaryText,
+            horizontalItemHoverColor: token.colorPrimaryText,
+            horizontalLineHeight: '50px',
+            itemPaddingInline: 10,
+            iconMarginInlineEnd: 6,
           },
           Table: {
+            headerBg: token.colorFillAlter,
+            headerSplitColor: 'transparent',
+            rowHoverBg: token.colorFillAlter,
             cellPaddingBlock: 10,
             cellPaddingInline: 12,
-            cellPaddingBlockMD: 8,
-            cellPaddingInlineMD: 12,
-            cellPaddingBlockSM: 6,
-            cellPaddingInlineSM: 10,
+            cellPaddingBlockMD: 9,
+            cellPaddingInlineMD: 10,
+            cellPaddingBlockSM: 7,
+            cellPaddingInlineSM: 8,
           },
           Statistic: {
             titleFontSize: 12,
             contentFontSize: 18,
           },
           Tabs: {
+            inkBarColor: token.colorPrimaryText,
+            itemSelectedColor: token.colorPrimaryText,
+            itemHoverColor: token.colorPrimaryText,
             horizontalMargin: '0 0 12px 0',
           },
           Modal: {
@@ -145,7 +181,9 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
       '--px-success': token.colorSuccessText,
       '--px-error': token.colorErrorText,
       '--px-font': token.fontFamily,
+      '--px-mono': token.fontFamilyCode,
       '--px-shadow': token.boxShadowSecondary,
+      '--px-shadow-sm': dark ? '0 1px 2px rgba(0, 0, 0, 0.28)' : '0 1px 2px rgba(15, 23, 42, 0.03)',
     }
     for (const [name, value] of Object.entries(properties)) root.style.setProperty(name, value)
     document

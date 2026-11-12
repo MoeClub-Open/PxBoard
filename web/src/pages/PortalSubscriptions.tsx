@@ -251,21 +251,23 @@ export function PortalSubscriptions() {
           )
         })
       ) : (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={account?.effective ? '尚未创建订阅链接' : '开通服务后即可获取订阅'}
-        >
-          {!account?.effective && account?.status !== 'suspended' && business && (
-            <Link to="/user/plans">
-              <Button type="primary">选购套餐</Button>
-            </Link>
-          )}
-          {!account?.effective && account?.status !== 'suspended' && !business && redeem && (
-            <Link to="/user/redeem">
-              <Button type="primary">兑换码</Button>
-            </Link>
-          )}
-        </Empty>
+        <div className="surface-empty">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={account?.effective ? '尚未创建订阅链接' : '开通服务后即可获取订阅'}
+          >
+            {!account?.effective && account?.status !== 'suspended' && business && (
+              <Link to="/user/plans">
+                <Button type="primary">选购套餐</Button>
+              </Link>
+            )}
+            {!account?.effective && account?.status !== 'suspended' && !business && redeem && (
+              <Link to="/user/redeem">
+                <Button type="primary">兑换码</Button>
+              </Link>
+            )}
+          </Empty>
+        </div>
       )}
       <Modal
         open={creating}

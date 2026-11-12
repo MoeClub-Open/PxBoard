@@ -5,9 +5,9 @@
   position: sticky;
   top: 0;
   z-index: 15;
-  padding-inline: 16px;
-  height: 48px;
-  line-height: normal;
+  padding-inline: 20px;
+  height: 50px;
+  line-height: 50px;
   border-bottom: 1px solid var(--px-border-soft);
   background: var(--px-surface);
 }
@@ -15,22 +15,25 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 1200px;
+  max-width: 1320px;
   height: 100%;
   margin: auto;
-  gap: 12px;
+  gap: 14px;
 }
 .portal-header-left {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: stretch;
+  gap: 16px;
   flex: 1;
   min-width: 0;
+  height: 100%;
 }
 .portal-brand {
+  align-self: center;
   color: inherit;
   display: inline-flex;
   flex-shrink: 0;
+  line-height: normal;
 }
 .portal-brand .brand > span:last-child {
   overflow: hidden;
@@ -40,7 +43,8 @@
 .portal-top-menu {
   flex: 1;
   min-width: 0;
-  line-height: 46px;
+  height: 50px;
+  line-height: 50px;
   border-bottom: 0 !important;
   background: transparent !important;
 }
@@ -57,12 +61,13 @@
 }
 .portal-content {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1240px;
   margin-inline: auto;
-  padding: 16px 20px 24px;
+  padding: 18px 20px 28px;
 }
 .portal-mobile-toggle {
   display: none;
+  align-self: center;
 }
 .portal-secondary {
   color: var(--px-secondary);
@@ -80,6 +85,11 @@
 }
 .portal-checkout-form {
   margin-top: 12px;
+}
+.portal-payment-methods {
+  border-top: 1px solid var(--px-border-soft);
+  margin-top: 12px;
+  padding-top: 4px;
 }
 .portal-qr {
   display: flex;

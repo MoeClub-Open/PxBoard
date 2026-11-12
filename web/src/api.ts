@@ -123,7 +123,10 @@ function splitTarget(
     throw new Error(`无效的 RPC 目标：${target}`)
   }
   const service = rawTarget.slice(0, slash).trim()
-  const method = rawTarget.slice(slash + 1).trim().replaceAll('/', '.')
+  const method = rawTarget
+    .slice(slash + 1)
+    .trim()
+    .replaceAll('/', '.')
   const payload: Record<string, any> = {}
   if (search) {
     const params = new URLSearchParams(search)

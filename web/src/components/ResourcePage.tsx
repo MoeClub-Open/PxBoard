@@ -6,17 +6,15 @@ import {
   App,
   Button,
   Card,
-  Col,
   Dropdown,
   Empty,
   Form,
+  Grid,
   Input,
   Modal,
   QRCode,
-  Row as GridRow,
   Space,
   Spin,
-  Statistic,
   Table,
   Tabs,
   Tag,
@@ -288,20 +286,29 @@ function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map
   URL.revokeObjectURL(href)
 }
 
+export interface ResourceTabsProps {
+  activeKey: string
+  onChange: (key: string) => void
+  items: { key: string; label: string }[]
+}
+
 function SingletonResource({
   resource,
   pluginId,
   pageTitle,
   metrics,
+  tabs,
   onChange,
 }: {
   resource: Resource
   pluginId: string
   pageTitle?: string
   metrics?: ReactNode
+  tabs?: ResourceTabsProps
   onChange?: () => void
 }) {
   const { message } = App.useApp()
+  const screens = Grid.useBreakpoint()
   const listCall = pluginResourceTarget(pluginId, resource.endpoint, 'list')
   const { data, loading, error, reload } = useRpc<Row[]>(listCall.target, listCall.input)
   const [busy, setBusy] = useState(false)
@@ -312,7 +319,10 @@ function SingletonResource({
     <section className="resource-section">
       {pageTitle && (
         <div className="page-heading">
-          <h1>{pageTitle}</h1>
+          <div className="page-heading-title">
+            <h1>{pageTitle}</h1>
+            {metrics}
+          </div>
           <Button
             icon={<ReloadOutlined />}
             onClick={() => {
@@ -324,7 +334,42 @@ function SingletonResource({
           </Button>
         </div>
       )}
-      {metrics}
+      {tabs && (
+        <>
+          <Tabs
+            activeKey={tabs.activeKey}
+            onChange={tabs.onChange}
+            items={tabs.items}
+            tabBarExtraContent={
+              screens.md ? (
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    reload()
+                    onChange?.()
+                  }}
+                >
+                  刷新
+                </Button>
+              ) : undefined
+            }
+          />
+          {!screens.md && (
+            <div className="table-toolbar">
+              <div />
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  reload()
+                  onChange?.()
+                }}
+              >
+                刷新
+              </Button>
+            </div>
+          )}
+        </>
+      )}
       {error && (
         <Alert
           type="error"
@@ -381,15 +426,18 @@ function ResourceTable({
   pluginId,
   pageTitle,
   metrics,
+  tabs,
   onChange,
 }: {
   resource: Resource
   pluginId: string
   pageTitle?: string
   metrics?: ReactNode
+  tabs?: ResourceTabsProps
   onChange: () => void
 }) {
   const { message, modal } = App.useApp()
+  const screens = Grid.useBreakpoint()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
   const [search, setSearch] = useState('')
@@ -605,23 +653,26 @@ function ResourceTable({
         <div className="page-heading">
           <div className="page-heading-title">
             <h1>{pageTitle}</h1>
-            {resource.columns.length > 0 && (
-              <span className="muted toolbar-count">共 {total} 条</span>
-            )}
+            {metrics}
           </div>
           {toolbarControls}
         </div>
+      ) : tabs ? (
+        <>
+          <Tabs
+            activeKey={tabs.activeKey}
+            onChange={tabs.onChange}
+            items={tabs.items}
+            tabBarExtraContent={screens.md ? toolbarControls : undefined}
+          />
+          {!screens.md && <div className="table-toolbar">{toolbarControls}</div>}
+        </>
       ) : (
         <div className="table-toolbar">
-          <div>
-            {resource.columns.length > 0 && (
-              <span className="muted toolbar-count">共 {total} 条</span>
-            )}
-          </div>
+          <div>{metrics}</div>
           {toolbarControls}
         </div>
       )}
-      {metrics}
       {!!resource.filters?.length && (
         <Form
           form={filterForm}
@@ -703,8 +754,8 @@ function ResourceTable({
                   {
                     key: 'actions',
                     title: '操作',
-                    fixed: 'right' as const,
-                    width: 120,
+                    fixed: screens.md ? ('right' as const) : undefined,
+                    width: 104,
                     render: (_: any, row: Row) => {
                       const actions = (resource.actions || []).filter(
                         (a) =>
@@ -848,13 +899,23 @@ export default function ResourcePage({
   pluginId: pluginOverride,
   pageId: pageOverride,
   hideHeading = false,
-}: { pluginId?: string; pageId?: string; hideHeading?: boolean } = {}) {
+  tabs: externalTabs,
+}: {
+  pluginId?: string
+  pageId?: string
+  hideHeading?: boolean
+  tabs?: ResourceTabsProps
+} = {}) {
   const { currencyName } = useCurrency()
   const params = useParams()
   const pluginId = pluginOverride || params.pluginId
   const pageId = pageOverride || params.pageId
   const location = useLocation()
   const { me, plugins } = useSession()
+  const [tabState, setTabState] = useState({ scope: '', key: '' })
+  const scope = `${pluginId}/${pageId}`
+  const activeTab = tabState.scope === scope ? tabState.key : ''
+  const setActiveTab = (key: string) => setTabState({ scope, key })
   const selected = plugins.find((plugin) => plugin.id === pluginId && plugin.enabled)
   const surface = location.pathname.startsWith('/user/') ? 'portal' : 'admin'
   const page = selected?.pages.find(
@@ -886,21 +947,24 @@ export default function ResourcePage({
       />
     )
   const metricsNode = data.metrics?.length ? (
-    <GridRow gutter={[12, 12]} className="metrics-row">
+    <div className="metric-pills">
       {data.metrics.map((m) => (
-        <Col key={m.label} xs={12} sm={8} md={6}>
-          <Card size="small">
-            <Statistic
-              title={m.label}
-              value={m.value}
-              suffix={m.unit === '元' ? currencyName : m.unit}
-            />
-          </Card>
-        </Col>
+        <span className="metric-pill" key={m.label}>
+          <span>{m.label}</span>
+          <strong>
+            {typeof m.value === 'number' ? m.value.toLocaleString('zh-CN') : m.value}
+            {m.unit ? ` ${m.unit === '元' ? currencyName : m.unit}` : ''}
+          </strong>
+        </span>
       ))}
-    </GridRow>
+    </div>
   ) : null
-  const renderResource = (resource: Resource, pageTitle?: string, metrics?: ReactNode) =>
+  const renderResource = (
+    resource: Resource,
+    pageTitle?: string,
+    metrics?: ReactNode,
+    tabs?: ResourceTabsProps,
+  ) =>
     resource.singleton && resource.editable ? (
       <SingletonResource
         key={resource.key}
@@ -908,6 +972,7 @@ export default function ResourcePage({
         pluginId={pluginId}
         pageTitle={pageTitle}
         metrics={metrics}
+        tabs={tabs}
         onChange={reload}
       />
     ) : (
@@ -917,33 +982,49 @@ export default function ResourcePage({
         pluginId={pluginId}
         pageTitle={pageTitle}
         metrics={metrics}
+        tabs={tabs}
         onChange={reload}
       />
     )
   if (data.resources.length === 1) {
     return (
       <>
+        {externalTabs && !hideHeading && (
+          <div className="page-heading">
+            <h1>{data.title}</h1>
+            {metricsNode}
+          </div>
+        )}
         {data.notice && <Alert type="info" title={data.notice} showIcon className="page-notice" />}
-        {renderResource(data.resources[0], hideHeading ? undefined : data.title, metricsNode)}
+        {renderResource(
+          data.resources[0],
+          hideHeading || externalTabs ? undefined : data.title,
+          externalTabs && !hideHeading ? undefined : metricsNode,
+          externalTabs,
+        )}
       </>
     )
+  }
+  const currentResource =
+    data.resources.find((resource) => resource.key === activeTab) || data.resources[0]
+  const tabs: ResourceTabsProps = {
+    activeKey: currentResource.key,
+    onChange: setActiveTab,
+    items: data.resources.map((resource) => ({
+      key: resource.key,
+      label: resource.title,
+    })),
   }
   return (
     <>
       {!hideHeading && (
         <div className="page-heading">
           <h1>{data.title}</h1>
+          {metricsNode}
         </div>
       )}
       {data.notice && <Alert type="info" title={data.notice} showIcon className="page-notice" />}
-      {metricsNode}
-      <Tabs
-        items={data.resources.map((resource) => ({
-          key: resource.key,
-          label: resource.title,
-          children: renderResource(resource),
-        }))}
-      />
+      {renderResource(currentResource, undefined, hideHeading ? metricsNode : undefined, tabs)}
     </>
   )
 }
