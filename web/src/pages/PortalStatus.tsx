@@ -1,5 +1,17 @@
 import { useState } from 'react'
-import { Alert, Button, Empty, Input, Space, Table, Tag, Typography } from 'antd'
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Input,
+  Row as GridRow,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+} from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useRpc } from '../api'
 import type { Row } from '../api'
@@ -32,7 +44,18 @@ export default function PortalStatus() {
     <>
       <div className="page-heading">
         <h1>服务器状态</h1>
-        <Button icon={<ReloadOutlined />} aria-label="刷新服务器状态" onClick={status.reload} />
+        <Space wrap>
+          <Input.Search
+            placeholder="搜索服务器或地区"
+            allowClear
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            style={{ width: 220 }}
+          />
+          <Button icon={<ReloadOutlined />} onClick={status.reload}>
+            刷新
+          </Button>
+        </Space>
       </div>
       {(status.error || display.error) && (
         <Alert
@@ -52,39 +75,35 @@ export default function PortalStatus() {
           className="portal-notice"
         />
       )}
-      <div className="portal-statistics">
-        <div>
-          <span>可用服务器</span>
-          <strong>{status.data ? rows.length : '—'}</strong>
-        </div>
+      <GridRow gutter={[12, 12]} className="metrics-row">
+        <Col xs={12} sm={8}>
+          <Card size="small">
+            <Statistic title="可用服务器" value={status.data ? rows.length : '—'} />
+          </Card>
+        </Col>
         {fields.includes('status') && (
-          <div>
-            <span>在线</span>
-            <strong>{status.data ? online : '—'}</strong>
-          </div>
+          <Col xs={12} sm={8}>
+            <Card size="small">
+              <Statistic title="在线" value={status.data ? online : '—'} />
+            </Card>
+          </Col>
         )}
         {fields.includes('status') && (
-          <div>
-            <span>离线</span>
-            <strong>{status.data ? rows.filter((server) => server.status !== 'online').length : '—'}</strong>
-          </div>
+          <Col xs={12} sm={8}>
+            <Card size="small">
+              <Statistic
+                title="离线"
+                value={
+                  status.data ? rows.filter((server) => server.status !== 'online').length : '—'
+                }
+              />
+            </Card>
+          </Col>
         )}
-      </div>
-      <div className="table-toolbar">
-        <Typography.Text type="secondary">服务器列表</Typography.Text>
-        <Space>
-          <Input.Search
-            placeholder="搜索服务器或地区"
-            allowClear
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            style={{ width: 240, maxWidth: '65vw' }}
-          />
-        </Space>
-      </div>
+      </GridRow>
       <Table<Row>
         rowKey="id"
-        size="middle"
+        size="small"
         loading={status.loading || display.loading}
         dataSource={visible}
         scroll={{ x: 620 }}

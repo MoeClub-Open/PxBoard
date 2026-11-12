@@ -36,9 +36,7 @@ export default function Checkout({
   )
   const enabledChannels = (channels.data || []).filter((row) => row.enabled !== false)
   const [order, setOrder] = useState<Row | undefined>(intent.order)
-  const [method, setMethod] = useState(
-    intent.order?.kind === 'recharge' || intent.rechargeAmount !== undefined ? '' : 'wallet',
-  )
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null)
   const [coupon, setCoupon] = useState('')
   const periods = intent.plan ? availablePeriods(intent.plan) : []
   const [periodId, setPeriodId] = useState<string>(String(periods[0]?.id || ''))
@@ -59,6 +57,20 @@ export default function Checkout({
   const amount = Number(
     order?.amount ?? intent.rechargeAmount ?? quote?.amount ?? period?.price ?? 0,
   )
+  const defaultMethod = recharge
+    ? enabledChannels[0]
+      ? String(enabledChannels[0].id)
+      : ''
+    : amount === 0
+      ? 'wallet'
+      : !wallet.loading && wallet.balance >= amount
+        ? 'wallet'
+        : enabledChannels[0]
+          ? String(enabledChannels[0].id)
+          : !channels.loading
+            ? 'wallet'
+            : ''
+  const method = selectedMethod ?? defaultMethod
   useEffect(() => {
     if (order || recharge || !intent.plan?.id || !periodId) return
     let current = true
@@ -86,9 +98,6 @@ export default function Checkout({
       window.clearTimeout(timer)
     }
   }, [order, recharge, intent.plan?.id, periodId, coupon])
-  useEffect(() => {
-    if (!method && enabledChannels.length) setMethod(String(enabledChannels[0].id))
-  }, [enabledChannels, method])
   function complete() {
     if (completed.current) return
     completed.current = true
@@ -101,19 +110,21 @@ export default function Checkout({
     setBusy(true)
     setError('')
     try {
-      if (!order) {
+      let activeOrder = order
+      if (!activeOrder) {
         const body = recharge
           ? { kind: 'recharge', amount: intent.rechargeAmount }
           : { planId: intent.plan?.id, periodId, coupon: coupon.trim() }
-        setOrder(
-          await rpc<Row>('commerce/orders.create', {
-            ...body,
-            requestId: requestId.current,
-          }),
-        )
-      } else if (method === 'wallet' || (!recharge && Number(order.amount) === 0)) {
+        activeOrder = await rpc<Row>('commerce/orders.create', {
+          ...body,
+          requestId: requestId.current,
+        })
+        setOrder(activeOrder)
+      }
+      const due = Number(activeOrder.amount ?? 0)
+      if (method === 'wallet' || (!recharge && due === 0)) {
         const result = await rpc<Row>('commerce/orders.pay', {
-          id: order.id,
+          id: activeOrder.id,
         })
         if (result.status === 'fulfilled') {
           complete()
@@ -123,7 +134,7 @@ export default function Checkout({
         }
       } else {
         const result = await rpc<Row>('payments/checkout', {
-          orderId: order.id,
+          orderId: activeOrder.id,
           channelId: method,
         })
         redirectToPayment(result.redirectUrl)
@@ -135,8 +146,9 @@ export default function Checkout({
       setBusy(false)
     }
   }
-  const zeroDue = !!order && !recharge && amount === 0
-  const insufficient = !zeroDue && method === 'wallet' && wallet.balance < amount
+  const zeroDue =
+    !recharge && (order ? Number(order.amount) === 0 : !!quote && !quoting && amount === 0)
+  const insufficient = !zeroDue && method === 'wallet' && !wallet.loading && wallet.balance < amount
   const settled = order && order.status !== 'pending'
   return (
     <Modal
@@ -158,20 +170,11 @@ export default function Checkout({
               loading={busy}
               disabled={
                 (!order && !recharge && (!period || quoting || !quote || !!quoteError)) ||
-                (!!order &&
-                  (insufficient ||
-                    (!method && !zeroDue) ||
-                    (!zeroDue && method === 'wallet' && wallet.loading)))
+                (!zeroDue && (insufficient || !method || (method === 'wallet' && wallet.loading)))
               }
               onClick={() => void proceed()}
             >
-              {!order
-                ? '创建订单'
-                : zeroDue
-                  ? '确认开通'
-                  : method === 'wallet'
-                    ? '余额支付'
-                    : '立即支付'}
+              {zeroDue ? '立即开通' : method === 'wallet' ? '余额支付' : '立即支付'}
             </Button>
           </Space>
         )
@@ -282,7 +285,7 @@ export default function Checkout({
           </Form.Item>
         </Form>
       )}
-      {order && !settled && !zeroDue && (
+      {!settled && !zeroDue && (
         <div className="portal-payment-methods">
           <h3>支付方式</h3>
           {channels.error && (
@@ -290,9 +293,10 @@ export default function Checkout({
               type="warning"
               title={channels.error}
               action={<Button onClick={channels.reload}>重试</Button>}
+              className="portal-notice"
             />
           )}
-          <Radio.Group value={method} onChange={(e) => setMethod(e.target.value)}>
+          <Radio.Group value={method} onChange={(e) => setSelectedMethod(e.target.value)}>
             <Space orientation="vertical">
               {!recharge && (
                 <Radio value="wallet">
@@ -317,7 +321,9 @@ export default function Checkout({
             />
           )}
           {!enabledChannels.length && !channels.loading && (
-            <Typography.Paragraph type="secondary">本站暂未提供在线支付渠道。</Typography.Paragraph>
+            <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
+              本站暂未提供在线支付渠道。
+            </Typography.Paragraph>
           )}
         </div>
       )}

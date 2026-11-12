@@ -1,6 +1,21 @@
 import { useCurrency } from '../currency'
 import { useState } from 'react'
-import { Alert, App, Button, Empty, Input, Space, Table, Tabs, Tag, Typography } from 'antd'
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Input,
+  Row as GridRow,
+  Space,
+  Statistic,
+  Table,
+  Tabs,
+  Tag,
+  Typography,
+} from 'antd'
 import { CopyOutlined, ReloadOutlined } from '@ant-design/icons'
 import { absoluteURL, errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
@@ -8,7 +23,6 @@ import { useSession } from '../context'
 import { date } from './PortalCommerce'
 import AffiliateWithdrawal from './AffiliateWithdrawal'
 import type { Method } from './AffiliateWithdrawal'
-import '../affiliate.css'
 
 type Summary = {
   availableAmount: number
@@ -113,7 +127,9 @@ export default function PortalReferrals() {
           >
             申请提现
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={refresh} aria-label="刷新推广信息" />
+          <Button icon={<ReloadOutlined />} onClick={refresh}>
+            刷新
+          </Button>
         </Space>
       </div>
       {summary.error && (
@@ -124,9 +140,24 @@ export default function PortalReferrals() {
           className="portal-notice"
         />
       )}
-      <section className="affiliate-invitation">
-        <label htmlFor="affiliate-link">推广链接</label>
-        <Space.Compact className="affiliate-link">
+      <Card
+        size="small"
+        title="推广链接"
+        extra={
+          summary.data && (
+            <Space size={8} wrap>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                返佣 {summary.data.commissionPercent}% · 冻结 {summary.data.commissionHoldDays} 天
+              </Typography.Text>
+              <Tag style={{ marginInlineEnd: 0 }}>
+                {summary.data.commissionMode === 'firstPurchase' ? '首单返佣' : '持续返佣'}
+              </Tag>
+            </Space>
+          )
+        }
+        className="section-card"
+      >
+        <Space.Compact style={{ width: '100%' }}>
           <Input id="affiliate-link" value={referralURL} readOnly />
           <Button
             icon={<CopyOutlined />}
@@ -140,38 +171,41 @@ export default function PortalReferrals() {
             复制链接
           </Button>
         </Space.Compact>
-        {summary.data && (
-          <Space wrap className="affiliate-rules">
-            <Typography.Text type="secondary">
-              返佣 {summary.data.commissionPercent}%
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              冻结 {summary.data.commissionHoldDays} 天
-            </Typography.Text>
-            <Tag>{summary.data.commissionMode === 'firstPurchase' ? '首单返佣' : '持续返佣'}</Tag>
-          </Space>
-        )}
-      </section>
-      <div className="portal-statistics affiliate-statistics">
-        <div>
-          <span>可用佣金</span>
-          <strong>{summary.data ? money(summary.data.availableAmount) : '—'}</strong>
-        </div>
-        <div>
-          <span>冻结佣金</span>
-          <strong>{summary.data ? money(summary.data.pendingAmount) : '—'}</strong>
-        </div>
-        <div>
-          <span>累计佣金</span>
-          <strong>{summary.data ? money(summary.data.totalAmount) : '—'}</strong>
-        </div>
-        <div>
-          <span>邀请人数</span>
-          <strong>
-            {summary.data ? Number(summary.data.invitedCount).toLocaleString('zh-CN') : '—'}
-          </strong>
-        </div>
-      </div>
+      </Card>
+      <GridRow gutter={[12, 12]} className="metrics-row">
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="可用佣金"
+              value={summary.data ? money(summary.data.availableAmount) : '—'}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="冻结佣金"
+              value={summary.data ? money(summary.data.pendingAmount) : '—'}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="累计佣金"
+              value={summary.data ? money(summary.data.totalAmount) : '—'}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card size="small">
+            <Statistic
+              title="邀请人数"
+              value={summary.data ? Number(summary.data.invitedCount).toLocaleString('zh-CN') : '—'}
+            />
+          </Card>
+        </Col>
+      </GridRow>
       <Tabs
         items={[
           {
@@ -189,6 +223,7 @@ export default function PortalReferrals() {
                 )}
                 <Table<Row>
                   rowKey="id"
+                  size="small"
                   dataSource={commissionRows}
                   loading={commissions.loading}
                   pagination={{ pageSize: 10 }}
@@ -241,6 +276,7 @@ export default function PortalReferrals() {
                 )}
                 <Table<Row>
                   rowKey="id"
+                  size="small"
                   dataSource={withdrawalRows}
                   loading={withdrawals.loading}
                   pagination={{ pageSize: 10 }}

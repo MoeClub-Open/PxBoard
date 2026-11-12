@@ -1,4 +1,4 @@
-import { Empty, Select, Space } from 'antd'
+import { Empty, Select, Space, Tabs } from 'antd'
 import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { useSession } from '../context'
 import ResourcePage from './ResourcePage'
@@ -22,11 +22,24 @@ export function PluginPageRoute() {
         (item) =>
           item.id === 'settings' && item.roles.includes(me.role) && item.surface !== 'portal',
       )
-    return (
+    return settings ? (
       <>
-        <ResourcePage />
-        {settings && <ResourcePage pluginId="nodes" pageId="settings" hideHeading />}
+        <div className="page-heading">
+          <h1>服务器监控</h1>
+        </div>
+        <Tabs
+          items={[
+            { key: 'status', label: '监控状态', children: <ResourcePage hideHeading /> },
+            {
+              key: 'settings',
+              label: '前台展示',
+              children: <ResourcePage pluginId="nodes" pageId="settings" hideHeading />,
+            },
+          ]}
+        />
       </>
+    ) : (
+      <ResourcePage />
     )
   }
   if (page?.shared) {
@@ -65,7 +78,7 @@ export default function SharedPluginPage() {
   if (!selected) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="此功能暂未开放" />
   return (
     <>
-      <div className="page-heading shared-page-heading">
+      <div className="page-heading">
         <h1>{selected.page.shared?.title}</h1>
         <Space>
           <span>{selected.page.shared?.selectorLabel || '选择类型'}</span>

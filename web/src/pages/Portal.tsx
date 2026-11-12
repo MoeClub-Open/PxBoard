@@ -197,7 +197,7 @@ export default function PortalLayout({
     <Layout className="customer-portal">
       <Layout.Header className="portal-header">
         <div className="portal-header-content">
-          <Space size={12}>
+          <div className="portal-header-left">
             <Button
               className="portal-mobile-toggle"
               type="text"
@@ -208,7 +208,14 @@ export default function PortalLayout({
             <Link className="portal-brand" to="/user">
               <Brand />
             </Link>
-          </Space>
+            <Menu
+              mode="horizontal"
+              className="portal-top-menu"
+              selectedKeys={[selected]}
+              items={navigation}
+              onClick={({ key }) => navigate(key)}
+            />
+          </div>
           <Space size={8}>
             <AppearanceButton />
             <Dropdown
@@ -233,21 +240,13 @@ export default function PortalLayout({
               }}
             >
               <Button type="text" className="portal-account">
-                <Avatar size={28}>{(me.name || me.email).slice(0, 1).toUpperCase()}</Avatar>
+                <Avatar size={24}>{(me.name || me.email).slice(0, 1).toUpperCase()}</Avatar>
                 <span>{me.name || me.email}</span>
               </Button>
             </Dropdown>
           </Space>
         </div>
       </Layout.Header>
-      <div className="portal-desktop-nav">
-        <Menu
-          mode="horizontal"
-          selectedKeys={[selected]}
-          items={navigation}
-          onClick={({ key }) => navigate(key)}
-        />
-      </div>
       <Drawer
         title={<Brand />}
         placement="left"

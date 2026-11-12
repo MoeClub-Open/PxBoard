@@ -1,6 +1,6 @@
 import { useCurrency } from '../currency'
 import { useState } from 'react'
-import { Alert, Button, InputNumber, Table, Typography } from 'antd'
+import { Alert, Button, Card, Flex, InputNumber, Space, Statistic, Table, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useRpc } from '../api'
 import type { Row } from '../api'
@@ -22,38 +22,40 @@ export function PortalWallet() {
     <>
       <div className="page-heading">
         <h1>账户余额</h1>
-        <Button icon={<ReloadOutlined />} onClick={wallet.reload} aria-label="刷新余额" />
+        <Button icon={<ReloadOutlined />} onClick={wallet.reload}>
+          刷新
+        </Button>
       </div>
       {wallet.error && (
         <Alert
           type="error"
           title={wallet.error}
           action={<Button onClick={wallet.reload}>重试</Button>}
+          className="portal-notice"
         />
       )}
-      <div className="portal-wallet">
-        <div>
-          <span className="portal-secondary">可用余额</span>
-          <strong>{wallet.loading ? '—' : money(wallet.balance)}</strong>
-        </div>
-        <div className="portal-recharge">
-          <InputNumber
-            aria-label={`充值金额（${currencyName}）`}
-            prefix={currencySymbol}
-            min={1}
-            precision={2}
-            value={amount}
-            onChange={setAmount}
-          />
-          <Button
-            type="primary"
-            disabled={!canRecharge || !amount}
-            onClick={() => setRecharge(Math.round(Number(amount) * 100))}
-          >
-            充值
-          </Button>
-        </div>
-      </div>
+      <Card size="small" className="section-card">
+        <Flex justify="space-between" align="center" wrap gap={12}>
+          <Statistic title="可用余额" value={wallet.loading ? '—' : money(wallet.balance)} />
+          <Space.Compact>
+            <InputNumber
+              aria-label={`充值金额（${currencyName}）`}
+              prefix={currencySymbol}
+              min={1}
+              precision={2}
+              value={amount}
+              onChange={setAmount}
+            />
+            <Button
+              type="primary"
+              disabled={!canRecharge || !amount}
+              onClick={() => setRecharge(Math.round(Number(amount) * 100))}
+            >
+              充值
+            </Button>
+          </Space.Compact>
+        </Flex>
+      </Card>
       {!canRecharge && !channels.loading && (
         <Alert
           type={channels.error ? 'warning' : 'info'}
@@ -63,6 +65,7 @@ export function PortalWallet() {
       )}
       <Table<Row>
         rowKey="id"
+        size="small"
         dataSource={wallet.rows}
         loading={wallet.loading}
         pagination={{ pageSize: 10 }}

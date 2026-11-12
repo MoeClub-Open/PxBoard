@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   App,
   Avatar,
+  Breadcrumb,
   Button,
   Drawer,
   Dropdown,
@@ -36,6 +37,7 @@ import {
   ShopOutlined,
   ExportOutlined,
   TeamOutlined,
+  UserOutlined,
   WalletOutlined,
 } from '@ant-design/icons'
 import type { ReactNode } from 'react'
@@ -76,6 +78,7 @@ export default function Shell({
   const [mobile, setMobile] = useState(false)
   const [command, setCommand] = useState(false)
   const [search, setSearch] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
   const location = useLocation()
   const navigate = useNavigate()
   const { message } = App.useApp()
@@ -83,6 +86,8 @@ export default function Shell({
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
+        setSearch('')
+        setActiveIndex(0)
         setCommand((v) => !v)
       }
     }
@@ -139,13 +144,14 @@ export default function Shell({
         ]
       : []),
   ]
-  entries.push({
-    key: '/admin/account',
-    label: '我的账户',
-    icon: <SettingOutlined />,
-    group: '账户',
-  })
   const mappedEntries = entries.map((entry) => ({ ...entry, key: adminURL(entry.key, me) }))
+  const accountEntry = {
+    key: adminURL('/admin/account', me),
+    label: '我的账户',
+    icon: <UserOutlined />,
+    group: '账户',
+  }
+  const allEntries = [...mappedEntries, accountEntry]
   const groups = new Map<string, typeof entries>()
   mappedEntries.forEach((e) => groups.set(e.group, [...(groups.get(e.group) || []), e]))
   const items = collapsed
@@ -164,7 +170,7 @@ export default function Shell({
       onClick={({ key }) => navigate(key)}
     />
   )
-  const current = mappedEntries.find((e) => e.key === location.pathname)
+  const current = allEntries.find((e) => e.key === location.pathname)
   useBrandTitle(current?.label || '管理后台')
   const logout = async () => {
     try {
@@ -175,14 +181,14 @@ export default function Shell({
       message.error('退出失败，请重试')
     }
   }
-  const results = mappedEntries.filter((e) => e.label.toLowerCase().includes(search.toLowerCase()))
+  const results = allEntries.filter((e) => e.label.toLowerCase().includes(search.toLowerCase()))
   return (
     <>
       <Layout className="workspace">
         <Layout.Sider
-          width={220}
+          width={200}
           collapsed={collapsed}
-          collapsedWidth={68}
+          collapsedWidth={56}
           className="desktop-sider"
         >
           <Link
@@ -196,7 +202,7 @@ export default function Shell({
         </Layout.Sider>
         <Drawer
           placement="left"
-          size={260}
+          size={220}
           open={mobile}
           onClose={() => setMobile(false)}
           styles={{ body: { padding: 0 } }}
@@ -206,9 +212,10 @@ export default function Shell({
         </Drawer>
         <Layout className="main-layout">
           <Layout.Header className="workspace-header">
-            <Space>
+            <Space size={8}>
               <Button
                 type="text"
+                size="small"
                 className="desktop-collapse"
                 aria-label="切换侧栏"
                 icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -216,27 +223,31 @@ export default function Shell({
               />
               <Button
                 type="text"
+                size="small"
                 className="mobile-menu"
                 aria-label="打开导航"
                 icon={<MenuUnfoldOutlined />}
                 onClick={() => setMobile(true)}
               />
-              <span className="header-path">
-                {brand.name} <span>/</span> <strong>{current?.label || '页面'}</strong>
-              </span>
+              <Breadcrumb
+                className="header-breadcrumb"
+                items={[{ title: brand.name }, { title: current?.label || '总览' }]}
+              />
             </Space>
-            <Space size={12}>
+            <Space size={8}>
               {me.role === 'admin' && (
-                <Button icon={<ExportOutlined />} onClick={() => navigate('/user')}>
+                <Button size="small" icon={<ExportOutlined />} onClick={() => navigate('/user')}>
                   用户前台
                 </Button>
               )}
               <Button
                 type="text"
+                size="small"
                 className="command-button"
                 icon={<SearchOutlined />}
                 onClick={() => {
                   setSearch('')
+                  setActiveIndex(0)
                   setCommand(true)
                 }}
               >
@@ -257,13 +268,19 @@ export default function Shell({
                       ),
                       disabled: true,
                     },
+                    {
+                      key: 'account',
+                      icon: <UserOutlined />,
+                      label: '我的账户',
+                      onClick: () => navigate(accountEntry.key),
+                    },
                     { type: 'divider' },
                     { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: logout },
                   ],
                 }}
               >
                 <Button type="text" className="account-button">
-                  <Avatar size={28} className="workspace-avatar">
+                  <Avatar size={24} className="workspace-avatar">
                     {(me.name || me.email)[0].toUpperCase()}
                   </Avatar>
                   <span>{me.name}</span>
@@ -280,21 +297,44 @@ export default function Shell({
         open={command}
         onCancel={() => setCommand(false)}
         footer={null}
-        title="跳转到"
-        styles={{ body: { paddingTop: 12 } }}
+        title="页面跳转"
+        width={460}
+        styles={{ body: { paddingTop: 8 } }}
       >
         <Input
           autoFocus
           prefix={<SearchOutlined />}
           placeholder="搜索页面"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          size="large"
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setActiveIndex(0)
+          }}
+          onKeyDown={(e) => {
+            if (!results.length) return
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              setActiveIndex((i) => (i + 1) % results.length)
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              setActiveIndex((i) => (i - 1 + results.length) % results.length)
+            } else if (e.key === 'Enter') {
+              e.preventDefault()
+              const item = results[activeIndex] || results[0]
+              if (item) {
+                navigate(item.key)
+                setCommand(false)
+              }
+            }
+          }}
         />
         <div className="command-results">
-          {results.map((e) => (
+          {results.map((e, index) => (
             <button
               key={e.key}
+              type="button"
+              className={index === activeIndex ? 'active' : undefined}
+              onMouseEnter={() => setActiveIndex(index)}
               onClick={() => {
                 navigate(e.key)
                 setCommand(false)

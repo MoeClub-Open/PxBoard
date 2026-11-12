@@ -56,17 +56,21 @@ export function PortalPlans() {
     <>
       <div className="page-heading">
         <h1>选购套餐</h1>
-        <Button icon={<ReloadOutlined />} onClick={plans.reload} aria-label="刷新套餐" />
+        <Button icon={<ReloadOutlined />} onClick={plans.reload}>
+          刷新
+        </Button>
       </div>
       {plans.error && (
         <Alert
           type="error"
           title={plans.error}
           action={<Button onClick={plans.reload}>重试</Button>}
+          className="portal-notice"
         />
       )}
       <Table<Row>
         rowKey="id"
+        size="small"
         dataSource={rows}
         loading={plans.loading}
         pagination={false}
@@ -101,9 +105,9 @@ export function PortalPlans() {
           },
           {
             title: '',
-            width: 100,
+            width: 88,
             render: (_, row) => (
-              <Button type="primary" onClick={() => setSelected(row)}>
+              <Button type="primary" size="small" onClick={() => setSelected(row)}>
                 选购
               </Button>
             ),

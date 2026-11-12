@@ -1,6 +1,19 @@
 import { useCurrency } from '../currency'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, App, Button, Empty, Form, Input, Space, Table, Tag, Typography } from 'antd'
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Empty,
+  Flex,
+  Form,
+  Input,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { errorText, rpc, useRpc } from '../api'
 import { useSession } from '../context'
@@ -96,8 +109,8 @@ export default function PortalRedeem() {
     <>
       <div className="page-heading">
         <h1>兑换码</h1>
-        <Button icon={<ReloadOutlined />} onClick={claims.reload} aria-label="刷新兑换记录">
-          刷新记录
+        <Button icon={<ReloadOutlined />} onClick={claims.reload}>
+          刷新
         </Button>
       </div>
       {error && <Alert type="error" title={error} showIcon className="portal-notice" />}
@@ -109,32 +122,32 @@ export default function PortalRedeem() {
           className="portal-notice"
         />
       )}
-      <Form
-        form={form}
-        layout="inline"
-        disabled={busy}
-        onFinish={redeem}
-        onValuesChange={({ code }) => changeCode(code || '')}
-        className="portal-redeem"
-      >
-        <Form.Item
-          name="code"
-          style={{ flex: 1, maxWidth: 440 }}
-          rules={[{ required: true, whitespace: true, message: '请输入兑换码' }]}
+      <Card size="small" className="section-card">
+        <Form
+          form={form}
+          disabled={busy}
+          onFinish={redeem}
+          onValuesChange={({ code }) => changeCode(code || '')}
         >
-          <Input
-            aria-label="兑换码"
-            placeholder="输入兑换码"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit" loading={busy}>
-            兑换
-          </Button>
-        </Form.Item>
-      </Form>
+          <Flex gap={8} align="flex-start">
+            <Form.Item
+              name="code"
+              style={{ flex: 1, maxWidth: 380, marginBottom: 0 }}
+              rules={[{ required: true, whitespace: true, message: '请输入兑换码' }]}
+            >
+              <Input
+                aria-label="兑换码"
+                placeholder="输入兑换码"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={busy}>
+              兑换
+            </Button>
+          </Flex>
+        </Form>
+      </Card>
       {claims.error && (
         <Alert
           type="error"
@@ -145,6 +158,7 @@ export default function PortalRedeem() {
       )}
       <Table<Claim>
         rowKey="id"
+        size="small"
         dataSource={claims.data || []}
         loading={claims.loading}
         pagination={{ pageSize: 10 }}

@@ -134,7 +134,7 @@ export default function NodeAddresses({
         </div>
         <Table<Row>
           rowKey="id"
-          size="middle"
+          size="small"
           pagination={false}
           scroll={{ x: 'max-content' }}
           dataSource={[parent, ...children]}
@@ -160,15 +160,15 @@ export default function NodeAddresses({
               title: '操作',
               render: (_: unknown, row: Row) =>
                 row.id === parent.id ? (
-                  <Button type="link" onClick={onEditParent}>
+                  <Button type="link" size="small" onClick={onEditParent}>
                     编辑
                   </Button>
                 ) : (
-                  <Space>
-                    <Button type="link" onClick={() => openEditor(row)}>
+                  <Space size={4}>
+                    <Button type="link" size="small" onClick={() => openEditor(row)}>
                       编辑
                     </Button>
-                    <Button type="link" danger onClick={() => remove(row)}>
+                    <Button type="link" size="small" danger onClick={() => remove(row)}>
                       删除
                     </Button>
                   </Space>

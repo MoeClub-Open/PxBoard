@@ -1,18 +1,22 @@
 import { useCurrency } from '../currency'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import {
   Alert,
   App,
   Button,
+  Card,
+  Col,
   Dropdown,
   Empty,
   Form,
   Input,
   Modal,
   QRCode,
+  Row as GridRow,
   Space,
   Spin,
+  Statistic,
   Table,
   Tabs,
   Tag,
@@ -268,9 +272,9 @@ function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map
                     .map((id) => groupNames.get(id.trim()) || id.trim())
                     .join(', ')
                 : c.type === 'select'
-                  ? c.options?.find((item) => String(item.value) === String(row[c.key] ?? ''))
-                      ?.label ?? row[c.key]
-                : row[c.key],
+                  ? (c.options?.find((item) => String(item.value) === String(row[c.key] ?? ''))
+                      ?.label ?? row[c.key])
+                  : row[c.key],
             ),
           )
           .join(','),
@@ -284,7 +288,19 @@ function exportCSV(title: string, columns: Field[], rows: Row[], groupNames: Map
   URL.revokeObjectURL(href)
 }
 
-function SingletonResource({ resource, pluginId }: { resource: Resource; pluginId: string }) {
+function SingletonResource({
+  resource,
+  pluginId,
+  pageTitle,
+  metrics,
+  onChange,
+}: {
+  resource: Resource
+  pluginId: string
+  pageTitle?: string
+  metrics?: ReactNode
+  onChange?: () => void
+}) {
   const { message } = App.useApp()
   const listCall = pluginResourceTarget(pluginId, resource.endpoint, 'list')
   const { data, loading, error, reload } = useRpc<Row[]>(listCall.target, listCall.input)
@@ -294,12 +310,27 @@ function SingletonResource({ resource, pluginId }: { resource: Resource; pluginI
 
   return (
     <section className="resource-section">
-      <h2 className="settings-section-title">{resource.title}</h2>
+      {pageTitle && (
+        <div className="page-heading">
+          <h1>{pageTitle}</h1>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              reload()
+              onChange?.()
+            }}
+          >
+            刷新
+          </Button>
+        </div>
+      )}
+      {metrics}
       {error && (
         <Alert
           type="error"
           title={error}
           showIcon
+          className="page-notice"
           action={<Button onClick={reload}>重试</Button>}
         />
       )}
@@ -307,7 +338,7 @@ function SingletonResource({ resource, pluginId }: { resource: Resource; pluginI
         <Spin />
       ) : (
         row && (
-          <div className="settings-inline-form">
+          <Card size="small" className="settings-card">
             <Form
               layout="vertical"
               requiredMark={false}
@@ -325,6 +356,7 @@ function SingletonResource({ resource, pluginId }: { resource: Resource; pluginI
                   configurationChanged()
                   message.success('已保存')
                   reload()
+                  onChange?.()
                 } catch (e) {
                   message.error(errorText(e))
                 } finally {
@@ -337,7 +369,7 @@ function SingletonResource({ resource, pluginId }: { resource: Resource; pluginI
                 保存
               </Button>
             </Form>
-          </div>
+          </Card>
         )
       )}
     </section>
@@ -347,10 +379,14 @@ function SingletonResource({ resource, pluginId }: { resource: Resource; pluginI
 function ResourceTable({
   resource,
   pluginId,
+  pageTitle,
+  metrics,
   onChange,
 }: {
   resource: Resource
   pluginId: string
+  pageTitle?: string
+  metrics?: ReactNode
   onChange: () => void
 }) {
   const { message, modal } = App.useApp()
@@ -402,13 +438,15 @@ function ResourceTable({
     (row) =>
       resource.paginated ||
       !search ||
-      presentation.searchRows(row).some((candidate) =>
-        resource.columns.some((column) =>
-          searchableText(column, candidate[column.key], groupNames)
-            .toLowerCase()
-            .includes(search.toLowerCase()),
+      presentation
+        .searchRows(row)
+        .some((candidate) =>
+          resource.columns.some((column) =>
+            searchableText(column, candidate[column.key], groupNames)
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+          ),
         ),
-      ),
   )
   const total = Array.isArray(data) ? rows.length : data?.total || 0
   function openEditor(row?: Row, action?: Action) {
@@ -519,46 +557,71 @@ function ResourceTable({
     }
   }
   const hasActions = resource.editable || resource.deletable || resource.actions?.length
+  const toolbarControls = (
+    <Space size={8} wrap>
+      {resource.settings && (
+        <ResourceSettings settings={resource.settings} pluginId={pluginId} onSaved={reload} />
+      )}
+      {resource.columns.length > 0 && (
+        <>
+          <Input.Search
+            placeholder="搜索"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 200 }}
+          />
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              reload()
+              onChange()
+            }}
+          >
+            刷新
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            disabled={!rows.length}
+            onClick={() => {
+              const result = presentation.exportRows(rows)
+              exportCSV(resource.title, result.columns, result.rows, groupNames)
+            }}
+          >
+            导出
+          </Button>
+        </>
+      )}
+      {resource.createLabel && (
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor()}>
+          {resource.createLabel}
+        </Button>
+      )}
+    </Space>
+  )
   return (
     <section className="resource-section">
-      <div className="table-toolbar">
-        <div>
-          <h2>{resource.title}</h2>
-          {resource.columns.length > 0 && <span className="muted">{total} 条记录</span>}
+      {pageTitle ? (
+        <div className="page-heading">
+          <div className="page-heading-title">
+            <h1>{pageTitle}</h1>
+            {resource.columns.length > 0 && (
+              <span className="muted toolbar-count">共 {total} 条</span>
+            )}
+          </div>
+          {toolbarControls}
         </div>
-        <Space wrap>
-          {resource.settings && (
-            <ResourceSettings settings={resource.settings} pluginId={pluginId} onSaved={reload} />
-          )}
-          {resource.columns.length > 0 && (
-            <>
-              <Input.Search
-                placeholder="搜索记录"
-                allowClear
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ width: 220 }}
-              />
-              <Button aria-label="刷新记录" icon={<ReloadOutlined />} onClick={reload} />
-              <Button
-                aria-label={resource.paginated ? '导出当前页' : '导出记录'}
-                title={resource.paginated ? '导出当前页' : '导出记录'}
-                icon={<DownloadOutlined />}
-                disabled={!rows.length}
-                onClick={() => {
-                  const result = presentation.exportRows(rows)
-                  exportCSV(resource.title, result.columns, result.rows, groupNames)
-                }}
-              />
-            </>
-          )}
-          {resource.createLabel && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openEditor()}>
-              {resource.createLabel}
-            </Button>
-          )}
-        </Space>
-      </div>
+      ) : (
+        <div className="table-toolbar">
+          <div>
+            {resource.columns.length > 0 && (
+              <span className="muted toolbar-count">共 {total} 条</span>
+            )}
+          </div>
+          {toolbarControls}
+        </div>
+      )}
+      {metrics}
       {!!resource.filters?.length && (
         <Form
           form={filterForm}
@@ -586,6 +649,7 @@ function ResourceTable({
           type="error"
           title={error}
           showIcon
+          className="page-notice"
           action={<Button onClick={reload}>重试</Button>}
         />
       )}
@@ -594,7 +658,7 @@ function ResourceTable({
           rowKey="id"
           loading={loading}
           dataSource={rows}
-          size="middle"
+          size="small"
           scroll={{ x: 'max-content' }}
           pagination={{
             current: resource.paginated ? page : undefined,
@@ -640,7 +704,7 @@ function ResourceTable({
                     key: 'actions',
                     title: '操作',
                     fixed: 'right' as const,
-                    width: 100,
+                    width: 120,
                     render: (_: any, row: Row) => {
                       const actions = (resource.actions || []).filter(
                         (a) =>
@@ -649,7 +713,12 @@ function ResourceTable({
                             values.includes(String(row[key])),
                           ),
                       )
-                      const items = [
+                      const items: {
+                        key: string
+                        label: string
+                        danger?: boolean
+                        disabled?: boolean
+                      }[] = [
                         ...(resource.editable ? [{ key: 'edit', label: '编辑' }] : []),
                         ...actions.map((a) => ({ key: a.key, label: a.label, danger: a.danger })),
                         ...(resource.deletable
@@ -663,45 +732,83 @@ function ResourceTable({
                             ]
                           : []),
                       ]
-                      return items.length ? (
-                        <Dropdown
-                          menu={{
-                            items,
-                            onClick: ({ key }) => {
-                              if (key === 'edit') openEditor(row)
-                              else if (key === 'delete')
-                                modal.confirm({
-                                  title: `删除${resource.title}记录？`,
-                                  content: '此操作无法撤销。',
-                                  okText: '删除',
-                                  cancelText: '取消',
-                                  okButtonProps: { danger: true },
-                                  onOk: async () => {
-                                    try {
-                                      const delCall = pluginResourceTarget(
-                                        pluginId,
-                                        resource.endpoint,
-                                        'delete',
-                                        resource.singleton ? undefined : { id: row.id },
-                                      )
-                                      await rpc(delCall.target, delCall.input)
-                                      complete(undefined, true)
-                                    } catch (e) {
-                                      message.error(errorText(e))
-                                    }
-                                  },
-                                })
-                              else {
-                                const chosen = actions.find((a) => a.key === key)
-                                if (chosen) action(row, chosen)
+                      const runItem = (key: string) => {
+                        if (key === 'edit') openEditor(row)
+                        else if (key === 'delete')
+                          modal.confirm({
+                            title: `删除${resource.title}记录？`,
+                            content: '此操作无法撤销。',
+                            okText: '删除',
+                            cancelText: '取消',
+                            okButtonProps: { danger: true },
+                            onOk: async () => {
+                              try {
+                                const delCall = pluginResourceTarget(
+                                  pluginId,
+                                  resource.endpoint,
+                                  'delete',
+                                  resource.singleton ? undefined : { id: row.id },
+                                )
+                                await rpc(delCall.target, delCall.input)
+                                complete(undefined, true)
+                              } catch (e) {
+                                message.error(errorText(e))
                               }
                             },
-                          }}
-                          trigger={['click']}
-                        >
-                          <Button type="text" icon={<MoreOutlined />} aria-label="记录操作" />
-                        </Dropdown>
-                      ) : null
+                          })
+                        else {
+                          const chosen = actions.find((a) => a.key === key)
+                          if (chosen) action(row, chosen)
+                        }
+                      }
+                      if (!items.length) return null
+                      if (items.length <= 2) {
+                        return (
+                          <Space size={4}>
+                            {items.map((item) => (
+                              <Button
+                                key={item.key}
+                                type="link"
+                                size="small"
+                                danger={item.danger}
+                                disabled={item.disabled}
+                                onClick={() => runItem(item.key)}
+                              >
+                                {item.label}
+                              </Button>
+                            ))}
+                          </Space>
+                        )
+                      }
+                      return (
+                        <Space size={4}>
+                          <Button
+                            type="link"
+                            size="small"
+                            danger={items[0].danger}
+                            disabled={items[0].disabled}
+                            onClick={() => runItem(items[0].key)}
+                          >
+                            {items[0].label}
+                          </Button>
+                          <Dropdown
+                            menu={{
+                              items: items.slice(1),
+                              onClick: ({ key }) => runItem(key),
+                            }}
+                            trigger={['click']}
+                          >
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<MoreOutlined />}
+                              aria-label="更多操作"
+                            >
+                              更多
+                            </Button>
+                          </Dropdown>
+                        </Space>
+                      )
                     },
                   },
                 ]
@@ -778,60 +885,65 @@ export default function ResourcePage({
         action={<Button onClick={reload}>重试</Button>}
       />
     )
+  const metricsNode = data.metrics?.length ? (
+    <GridRow gutter={[12, 12]} className="metrics-row">
+      {data.metrics.map((m) => (
+        <Col key={m.label} xs={12} sm={8} md={6}>
+          <Card size="small">
+            <Statistic
+              title={m.label}
+              value={m.value}
+              suffix={m.unit === '元' ? currencyName : m.unit}
+            />
+          </Card>
+        </Col>
+      ))}
+    </GridRow>
+  ) : null
+  const renderResource = (resource: Resource, pageTitle?: string, metrics?: ReactNode) =>
+    resource.singleton && resource.editable ? (
+      <SingletonResource
+        key={resource.key}
+        resource={resource}
+        pluginId={pluginId}
+        pageTitle={pageTitle}
+        metrics={metrics}
+        onChange={reload}
+      />
+    ) : (
+      <ResourceTable
+        key={resource.key}
+        resource={resource}
+        pluginId={pluginId}
+        pageTitle={pageTitle}
+        metrics={metrics}
+        onChange={reload}
+      />
+    )
+  if (data.resources.length === 1) {
+    return (
+      <>
+        {data.notice && <Alert type="info" title={data.notice} showIcon className="page-notice" />}
+        {renderResource(data.resources[0], hideHeading ? undefined : data.title, metricsNode)}
+      </>
+    )
+  }
   return (
     <>
       {!hideHeading && (
         <div className="page-heading">
           <h1>{data.title}</h1>
-          <Button icon={<ReloadOutlined />} onClick={reload}>
-            刷新
-          </Button>
         </div>
       )}
       {data.notice && <Alert type="info" title={data.notice} showIcon className="page-notice" />}
-      {!!data.metrics?.length && (
-        <div className="metric-strip">
-          {data.metrics.map((m) => (
-            <div key={m.label}>
-              <span>{m.label}</span>
-              <strong>
-                {m.value}
-                <small>{m.unit === '元' ? currencyName : m.unit}</small>
-              </strong>
-            </div>
-          ))}
-        </div>
-      )}
-      {(() => {
-        const settings = data.resources.filter(
-          (resource) => resource.singleton && resource.editable,
-        )
-        const lists = data.resources.filter((resource) => !settings.includes(resource))
-        const renderResource = (resource: Resource) =>
-          resource.singleton && resource.editable ? (
-            <SingletonResource key={resource.key} resource={resource} pluginId={pluginId} />
-          ) : (
-            <ResourceTable
-              key={resource.key}
-              resource={resource}
-              pluginId={pluginId}
-              onChange={() => {}}
-            />
-          )
-        if (data.resources.length === 1) return renderResource(data.resources[0])
-        const items = lists.map((resource) => ({
+      {metricsNode}
+      <Tabs
+        items={data.resources.map((resource) => ({
           key: resource.key,
           label: resource.title,
           children: renderResource(resource),
-        }))
-        if (settings.length)
-          items.push({
-            key: '__settings',
-            label: settings.length === 1 ? settings[0].title : '设置',
-            children: <>{settings.map(renderResource)}</>,
-          })
-        return <Tabs items={items} />
-      })()}
+        }))}
+      />
     </>
   )
 }

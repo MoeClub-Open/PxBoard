@@ -3,7 +3,9 @@ import {
   Alert,
   App,
   Button,
+  Card,
   Empty,
+  Flex,
   Form,
   Input,
   Modal,
@@ -106,7 +108,9 @@ export function PortalSubscriptions() {
       <div className="page-heading">
         <h1>我的订阅</h1>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={links.reload} aria-label="刷新订阅" />
+          <Button icon={<ReloadOutlined />} onClick={links.reload}>
+            刷新
+          </Button>
           {account?.effective && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>
               创建订阅
@@ -148,22 +152,30 @@ export function PortalSubscriptions() {
           const name = String(link.name || '订阅链接')
           const pending = link.verificationRequired && !link.verified
           return (
-            <section className="portal-subscription" key={link.id}>
-              <div className="portal-subscription-heading">
-                <Space wrap>
-                  <strong>{name}</strong>
-                  <Typography.Text type="secondary">创建于 {date(link.createdAt)}</Typography.Text>
+            <Card
+              size="small"
+              key={link.id}
+              className="section-card"
+              title={
+                <Space wrap size={8}>
+                  <span>{name}</span>
+                  <Typography.Text type="secondary" style={{ fontWeight: 400, fontSize: 12 }}>
+                    {date(link.createdAt)}
+                  </Typography.Text>
                   {link.bindUserAgent && (
-                    <Tag>
+                    <Tag style={{ marginInlineEnd: 0 }}>
                       {link.boundClient
                         ? `已绑定 ${link.boundClient}${link.boundMajor ? ` ${link.boundMajor}` : ''}`
                         : '等待客户端绑定'}
                     </Tag>
                   )}
                 </Space>
-                <Space wrap>
+              }
+              extra={
+                <Space size={4}>
                   <Button
                     size="small"
+                    type="link"
                     onClick={() =>
                       modal.confirm({
                         title: '重置订阅链接？',
@@ -178,6 +190,7 @@ export function PortalSubscriptions() {
                   </Button>
                   <Button
                     size="small"
+                    type="link"
                     danger
                     onClick={() =>
                       modal.confirm({
@@ -192,9 +205,10 @@ export function PortalSubscriptions() {
                     删除
                   </Button>
                 </Space>
-              </div>
+              }
+            >
               {pending ? (
-                <div className="portal-subscription-pending">
+                <Flex justify="space-between" align="center" gap={8} wrap>
                   <span>完成验证后获取链接</span>
                   <Button
                     type="primary"
@@ -206,11 +220,11 @@ export function PortalSubscriptions() {
                   >
                     验证
                   </Button>
-                </div>
+                </Flex>
               ) : url ? (
-                <div className="portal-subscription-format">
-                  <Input readOnly value={url} aria-label={`${name}地址`} />
-                  <Space wrap>
+                <Flex gap={8} wrap align="center">
+                  <Space.Compact style={{ flex: '1 1 280px' }}>
+                    <Input readOnly value={url} aria-label={`${name}地址`} />
                     <Button
                       icon={<CopyOutlined />}
                       onClick={() =>
@@ -222,23 +236,18 @@ export function PortalSubscriptions() {
                     >
                       复制链接
                     </Button>
-                    <Button icon={<QrcodeOutlined />} onClick={() => setQr({ label: name, url })}>
-                      二维码
+                  </Space.Compact>
+                  <Button icon={<QrcodeOutlined />} onClick={() => setQr({ label: name, url })}>
+                    二维码
+                  </Button>
+                  {!link.bindUserAgent && settings.data && !settings.data.hideFromBrowsers && (
+                    <Button icon={<DownloadOutlined />} href={url} target="_blank" rel="noreferrer">
+                      下载配置
                     </Button>
-                    {!link.bindUserAgent && settings.data && !settings.data.hideFromBrowsers && (
-                      <Button
-                        icon={<DownloadOutlined />}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        下载配置
-                      </Button>
-                    )}
-                  </Space>
-                </div>
+                  )}
+                </Flex>
               ) : null}
-            </section>
+            </Card>
           )
         })
       ) : (
@@ -272,12 +281,7 @@ export function PortalSubscriptions() {
           <Form.Item name="name" label="名称">
             <Input placeholder="例如：手机或电脑" />
           </Form.Item>
-          <Form.Item
-            name="bindUserAgent"
-            label="绑定首次使用的客户端"
-            valuePropName="checked"
-            extra="首次成功更新后绑定客户端类型与主版本；客户端标识可以被伪造，请妥善保管链接。"
-          >
+          <Form.Item name="bindUserAgent" label="绑定首次使用的客户端" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>

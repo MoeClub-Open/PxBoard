@@ -28,17 +28,21 @@ export function PortalOrders() {
     <>
       <div className="page-heading">
         <h1>我的订单</h1>
-        <Button icon={<ReloadOutlined />} onClick={orders.reload} aria-label="刷新订单" />
+        <Button icon={<ReloadOutlined />} onClick={orders.reload}>
+          刷新
+        </Button>
       </div>
       {orders.error && (
         <Alert
           type="error"
           title={orders.error}
           action={<Button onClick={orders.reload}>重试</Button>}
+          className="portal-notice"
         />
       )}
       <Table<Row>
         rowKey="id"
+        size="small"
         dataSource={(orders.data || []).filter((row) => row.userId === me.id)}
         loading={orders.loading}
         pagination={{ pageSize: 10 }}

@@ -1,5 +1,19 @@
 import { Link } from 'react-router-dom'
-import { Alert, Button, Empty, Progress, Space, Spin, Tag, Typography } from 'antd'
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Flex,
+  Progress,
+  Row as GridRow,
+  Space,
+  Spin,
+  Statistic,
+  Tag,
+  Typography,
+} from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useCurrency } from '../currency'
 import { useRpc, type Row } from '../api'
@@ -11,9 +25,7 @@ export default function PortalOverview({ business }: { business: boolean }) {
   const { money } = useCurrency()
   const { me, plugins } = useSession()
   const accounts = useRpc<Row[]>(
-    plugins.some((p) => p.id === 'access' && p.enabled)
-      ? 'access/accounts.list'
-      : null,
+    plugins.some((p) => p.id === 'access' && p.enabled) ? 'access/accounts.list' : null,
     { mine: true },
     5,
   )
@@ -49,7 +61,9 @@ export default function PortalOverview({ business }: { business: boolean }) {
         <h1>我的服务</h1>
         <Space>
           {account && <Tag color={account.effective ? 'success' : 'warning'}>{state}</Tag>}
-          <Button icon={<ReloadOutlined />} onClick={accounts.reload} aria-label="刷新服务" />
+          <Button icon={<ReloadOutlined />} onClick={accounts.reload}>
+            刷新
+          </Button>
         </Space>
       </div>
       {accounts.error && (
@@ -66,43 +80,49 @@ export default function PortalOverview({ business }: { business: boolean }) {
         </div>
       ) : accounts.error ? null : account ? (
         <>
-          <div className="portal-statistics">
-            <div>
-              <span>到期时间</span>
-              <strong>{date(account.expiresAt)}</strong>
-            </div>
-            <div>
-              <span>剩余流量</span>
-              <strong>
-                {account.unlimited
-                  ? '不限量'
-                  : `${Math.max(0, quota - used).toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB`}
-              </strong>
-            </div>
+          <GridRow gutter={[12, 12]} className="metrics-row">
+            <Col xs={12} sm={business ? 8 : 12}>
+              <Card size="small">
+                <Statistic title="到期时间" value={date(account.expiresAt)} />
+              </Card>
+            </Col>
+            <Col xs={12} sm={business ? 8 : 12}>
+              <Card size="small">
+                <Statistic
+                  title="剩余流量"
+                  value={
+                    account.unlimited
+                      ? '不限量'
+                      : `${Math.max(0, quota - used).toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB`
+                  }
+                />
+              </Card>
+            </Col>
             {business && (
-              <div>
-                <span>账户余额</span>
-                <strong>
-                  {wallet.loading ? '—' : wallet.error ? '读取失败' : money(wallet.balance)}
-                </strong>
-              </div>
+              <Col xs={24} sm={8}>
+                <Card size="small">
+                  <Statistic
+                    title="账户余额"
+                    value={wallet.loading ? '—' : wallet.error ? '读取失败' : money(wallet.balance)}
+                  />
+                </Card>
+              </Col>
             )}
-          </div>
-          <section className="portal-usage">
-            <div>
-              <h2>本周期流量</h2>
+          </GridRow>
+          <Card size="small" title="本周期流量" className="section-card">
+            <Flex vertical gap={6}>
               <Typography.Text type="secondary">
                 已使用 {used.toLocaleString('zh-CN', { maximumFractionDigits: 2 })} GB
                 {!account.unlimited && ` / ${quota.toLocaleString()} GB`}
               </Typography.Text>
-            </div>
-            {!account.unlimited && (
-              <Progress
-                percent={quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 100}
-                status={exhausted ? 'exception' : 'normal'}
-              />
-            )}
-          </section>
+              {!account.unlimited && (
+                <Progress
+                  percent={quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 100}
+                  status={exhausted ? 'exception' : 'normal'}
+                />
+              )}
+            </Flex>
+          </Card>
           {!account.effective && (
             <Alert
               type="warning"

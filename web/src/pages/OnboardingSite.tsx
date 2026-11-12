@@ -44,9 +44,7 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
           installed.some((plugin) => plugin.id === id && plugin.enabled)
         const [brands, registration] = await Promise.all([
           enabled('branding') ? rpc<Row[]>('branding/settings.list') : Promise.resolve([]),
-          enabled('registration')
-            ? rpc<Row[]>('registration/settings.list')
-            : Promise.resolve([]),
+          enabled('registration') ? rpc<Row[]>('registration/settings.list') : Promise.resolve([]),
         ])
         if (!active) return
         setSettings(core)
@@ -184,7 +182,6 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
           <Result
             status="success"
             title="基础设置已完成"
-            subTitle="服务配置可继续在管理后台完成。"
             extra={
               <Space>
                 <Button type="primary" onClick={() => enter('/user')}>
@@ -218,6 +215,7 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
         </div>
         <Steps
           size="small"
+          progressDot
           current={step}
           items={[{ title: '功能安装' }, { title: '站点信息' }, { title: '服务配置' }]}
           className="setup-steps"
@@ -245,7 +243,7 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
               <>
                 <Form.Item
                   name="adminPath"
-                  label="独立管理入口"
+                  label="后台入口路径"
                   rules={[
                     {
                       required: true,
@@ -261,7 +259,7 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
                     <Form.Item name="heading" label="首页标题">
                       <Input />
                     </Form.Item>
-                    <Form.Item name="introduction" label="服务介绍">
+                    <Form.Item name="introduction" label="品牌介绍">
                       <Input.TextArea rows={3} />
                     </Form.Item>
                     <Collapse
@@ -331,9 +329,6 @@ export default function OnboardingSite({ onReady }: { onReady: () => Promise<voi
                 </div>
               ))}
             </div>
-            <Typography.Paragraph type="secondary">
-              未完成的服务可以稍后配置。节点连接、收款和邮件投递仍需使用实际配置核对。
-            </Typography.Paragraph>
             <Space>
               <Button onClick={() => setStep(1)}>返回修改</Button>
               <Button type="primary" loading={busy} onClick={() => void finish()}>

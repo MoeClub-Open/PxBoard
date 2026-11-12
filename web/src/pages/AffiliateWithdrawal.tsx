@@ -1,6 +1,6 @@
 import { useCurrency } from '../currency'
 import { useRef, useState } from 'react'
-import { Alert, App, Button, Descriptions, Form, Input, InputNumber, Modal, Space } from 'antd'
+import { Alert, App, Button, Descriptions, Flex, Form, Input, InputNumber, Modal } from 'antd'
 import { errorText, rpc } from '../api'
 
 export type Method = 'wallet' | 'cash'
@@ -99,7 +99,7 @@ export default function AffiliateWithdrawal({
           setError('')
         }}
         onFinish={(values) => void submit(values)}
-        className="affiliate-form"
+        style={{ marginTop: 12 }}
       >
         <Form.Item
           name="amount"
@@ -129,14 +129,14 @@ export default function AffiliateWithdrawal({
             />
           </Form.Item>
         )}
-        <Space className="affiliate-form-actions">
+        <Flex justify="flex-end" gap={8}>
           <Button disabled={busy} onClick={onClose}>
             取消
           </Button>
           <Button type="primary" htmlType="submit" loading={busy}>
             {wallet ? '确认转入' : '提交申请'}
           </Button>
-        </Space>
+        </Flex>
       </Form>
     </Modal>
   )

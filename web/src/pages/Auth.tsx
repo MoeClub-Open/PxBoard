@@ -70,18 +70,14 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
             label="邮箱"
             rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}
           >
-            <Input size="large" prefix={<MailOutlined />} autoComplete="email" />
+            <Input prefix={<MailOutlined />} autoComplete="email" />
           </Form.Item>
           <Form.Item
             name="password"
             label="密码"
             rules={[{ required: true, message: '请输入密码' }]}
           >
-            <Input.Password
-              size="large"
-              prefix={<LockOutlined />}
-              autoComplete="current-password"
-            />
+            <Input.Password prefix={<LockOutlined />} autoComplete="current-password" />
           </Form.Item>
           {mfa && (
             <Form.Item
@@ -89,13 +85,7 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
               label="动态验证码"
               rules={[{ required: true, len: 6, message: '请输入 6 位验证码' }]}
             >
-              <Input
-                autoFocus
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                size="large"
-              />
+              <Input autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
             </Form.Item>
           )}
           <ChallengeNotice loading={challenge.loading} error={challenge.error} />
@@ -110,7 +100,6 @@ export default function Auth({ onLogin }: { onLogin: () => Promise<void> }) {
           <Button
             type="primary"
             htmlType="submit"
-            size="large"
             block
             loading={busy}
             disabled={challenge.loading}
@@ -197,7 +186,7 @@ export function Reset({ request = false }: { request?: boolean }) {
                 label="邮箱"
                 rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}
               >
-                <Input size="large" type="email" prefix={<MailOutlined />} autoComplete="email" />
+                <Input type="email" prefix={<MailOutlined />} autoComplete="email" />
               </Form.Item>
             ) : (
               <Form.Item
@@ -205,11 +194,7 @@ export function Reset({ request = false }: { request?: boolean }) {
                 label="新密码"
                 rules={[{ required: true, min: 10, message: '密码至少 10 位' }]}
               >
-                <Input.Password
-                  size="large"
-                  prefix={<LockOutlined />}
-                  autoComplete="new-password"
-                />
+                <Input.Password prefix={<LockOutlined />} autoComplete="new-password" />
               </Form.Item>
             )}
             {request && <ChallengeNotice loading={challenge.loading} error={challenge.error} />}
@@ -224,7 +209,6 @@ export function Reset({ request = false }: { request?: boolean }) {
             <Button
               type="primary"
               block
-              size="large"
               htmlType="submit"
               loading={busy}
               disabled={request && challenge.loading}

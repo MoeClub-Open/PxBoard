@@ -1,8 +1,9 @@
 import type { useHumanChallenge } from './HumanChallenge'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, App, Button, Empty, Form, Input, Space, Spin, Typography } from 'antd'
+import { Alert, App, Button, Card, Empty, Form, Input, Space, Spin, Typography } from 'antd'
 import { GithubOutlined, GoogleOutlined, LinkOutlined } from '@ant-design/icons'
 import { errorText, rpc } from '../api'
+import { useSession } from '../context'
 
 interface Provider {
   id: string
@@ -106,13 +107,12 @@ export function OAuthButtons({
   }, [providers, preferredProviderId, challenge?.loading, challenge?.policy, challenge?.token])
   if (!available.length) return null
   return (
-    <Space orientation="vertical" size="middle" style={{ width: '100%', marginTop: 20 }}>
+    <Space orientation="vertical" size={8} style={{ width: '100%', marginTop: 14 }}>
       {error && <Alert type="error" title={error} showIcon />}
       {available.map((provider) => (
         <Button
           key={provider.id}
           block
-          size={purpose === 'login' ? 'large' : 'middle'}
           icon={
             provider.kind === 'github' ? (
               <GithubOutlined />
@@ -134,6 +134,7 @@ export function OAuthButtons({
 }
 
 export function OAuthBindings() {
+  const { me } = useSession()
   const { message, modal } = App.useApp()
   const [bindings, setBindings] = useState<Binding[]>([])
   const [loading, setLoading] = useState(true)
@@ -154,12 +155,13 @@ export function OAuthBindings() {
     void reload()
   }, [])
   return (
-    <div className="settings-form">
+    <Card size="small" className="settings-card">
       {error && (
         <Alert
           type="error"
           title={error}
           showIcon
+          className="page-notice"
           action={<Button onClick={reload}>重试</Button>}
         />
       )}
@@ -193,9 +195,15 @@ export function OAuthBindings() {
                         >
                           <Input.Password autoComplete="current-password" />
                         </Form.Item>
-                        <Form.Item name="code" label="动态验证码（已启用时填写）">
-                          <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
-                        </Form.Item>
+                        {me.mfaEnabled && (
+                          <Form.Item
+                            name="code"
+                            label="动态验证码"
+                            rules={[{ required: true, len: 6, message: '请输入 6 位动态验证码' }]}
+                          >
+                            <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
+                          </Form.Item>
+                        )}
                       </Form>
                     ) : (
                       '解除后无法再使用此账号登录。'
@@ -238,6 +246,6 @@ export function OAuthBindings() {
         redirectPath="/user/account"
         exclude={bindings.map((binding) => binding.providerId)}
       />
-    </div>
+    </Card>
   )
 }

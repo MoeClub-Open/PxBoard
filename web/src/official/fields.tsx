@@ -19,33 +19,31 @@ function SiteItemsEditor({
     onChange?.(items.map((item, i) => (i === index ? { ...item, [key]: next } : item)))
   }
   return (
-    <Space orientation="vertical" size={10} style={{ width: '100%' }}>
+    <Space orientation="vertical" size={8} style={{ width: '100%' }}>
       {items.map((item, index) => (
         <div
           key={index}
           style={{
-            padding: 12,
-            borderRadius: 8,
+            padding: 10,
+            borderRadius: 6,
             border: '1px solid var(--px-border-soft)',
             background: 'var(--px-fill)',
             display: 'grid',
-            gap: 8,
+            gap: 6,
           }}
         >
           <div
             style={{
               display: 'flex',
               flexWrap: 'wrap',
-              gap: 8,
+              gap: 6,
               alignItems: 'center',
             }}
           >
             <Input
               style={{ flex: '1 1 180px' }}
               aria-label={withRegion ? '线路标题' : '功能标题'}
-              placeholder={
-                withRegion ? '线路标题，如：亚太高速接入' : '功能标题，如：主流客户端通用订阅'
-              }
+              placeholder={withRegion ? '线路名称' : '功能名称'}
               value={String(item.title ?? '')}
               onChange={(e) => update(index, 'title', e.target.value)}
             />
@@ -53,13 +51,14 @@ function SiteItemsEditor({
               <Input
                 style={{ flex: '1 1 180px' }}
                 aria-label="覆盖区域或标签"
-                placeholder="区域或标签，如：香港 · 日本 · 新加坡"
+                placeholder="区域或标签"
                 value={String(item.region ?? '')}
                 onChange={(e) => update(index, 'region', e.target.value)}
               />
             )}
             <Button
               type="text"
+              size="small"
               danger
               icon={<DeleteOutlined />}
               aria-label="删除条目"
@@ -68,7 +67,7 @@ function SiteItemsEditor({
           </div>
           <Input.TextArea
             aria-label={withRegion ? '线路说明' : '功能说明'}
-            placeholder={withRegion ? '线路特点与适用场景说明' : '功能说明'}
+            placeholder="说明"
             autoSize={{ minRows: 2, maxRows: 4 }}
             value={String(item.description ?? '')}
             onChange={(e) => update(index, 'description', e.target.value)}

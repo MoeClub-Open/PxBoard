@@ -26,11 +26,7 @@ import '../tickets.css'
 export function PortalSupport({ admin = false }: { admin?: boolean }) {
   const { me } = useSession()
   const { message, modal } = App.useApp()
-  const tickets = useRpc<Row[]>(
-    'support/tickets.list',
-    admin ? undefined : { mine: true },
-    10,
-  )
+  const tickets = useRpc<Row[]>('support/tickets.list', admin ? undefined : { mine: true }, 10)
   const [creating, setCreating] = useState(false)
   const [selected, setSelected] = useState<string>()
   const [busy, setBusy] = useState(false)
@@ -80,7 +76,9 @@ export function PortalSupport({ admin = false }: { admin?: boolean }) {
       <div className="page-heading">
         <h1>{admin ? '工单管理' : '我的工单'}</h1>
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={tickets.reload} aria-label="刷新工单" />
+          <Button icon={<ReloadOutlined />} onClick={tickets.reload}>
+            刷新
+          </Button>
           {!admin && (
             <Button type="primary" onClick={() => setCreating(true)}>
               提交工单
@@ -93,10 +91,12 @@ export function PortalSupport({ admin = false }: { admin?: boolean }) {
           type="error"
           title={tickets.error}
           action={<Button onClick={tickets.reload}>重试</Button>}
+          className="portal-notice"
         />
       )}
       <Table<Row>
         rowKey="id"
+        size="small"
         loading={tickets.loading}
         dataSource={rows}
         pagination={{ pageSize: 10 }}

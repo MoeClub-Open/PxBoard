@@ -43,8 +43,8 @@ interface ModeState {
 }
 
 const modes = [
-  { value: 'personal', label: '自用', description: '节点管理、访问账户和订阅' },
-  { value: 'business', label: '商业运营', description: '用户前台、套餐订单、支付和工单' },
+  { value: 'personal', label: '自用' },
+  { value: 'business', label: '商业运营' },
 ]
 const pluginNames: Record<string, string> = {
   access: '访问账户',
@@ -212,6 +212,7 @@ export default function ModeSetup({
         {onboarding && (
           <Steps
             size="small"
+            progressDot
             current={0}
             items={[{ title: '功能安装' }, { title: '站点信息' }, { title: '服务配置' }]}
             className="setup-steps"
@@ -260,9 +261,6 @@ export default function ModeSetup({
               ))}
             </Radio.Group>
           </Form.Item>
-          <Typography.Paragraph type="secondary">
-            {modes.find((item) => item.value === mode)?.description}
-          </Typography.Paragraph>
           <Collapse
             ghost
             items={[
@@ -296,9 +294,6 @@ export default function ModeSetup({
               },
             ]}
           />
-          <Typography.Paragraph type="secondary">
-            将安装并启用所选方式需要的插件，已安装的其他插件和数据会保留。
-          </Typography.Paragraph>
           {!ready && (
             <Button
               type="primary"
@@ -311,7 +306,7 @@ export default function ModeSetup({
           )}
         </Form>
         {!!total && (
-          <section className="resource-section" style={{ marginTop: 28 }}>
+          <section className="resource-section" style={{ marginTop: 16 }}>
             <div className="table-toolbar">
               <h2>{installing ? '正在安装' : '安装结果'}</h2>
               <span className="muted">
@@ -347,7 +342,7 @@ export default function ModeSetup({
           </section>
         )}
         {ready && (
-          <Space wrap style={{ marginTop: 24 }}>
+          <Space wrap style={{ marginTop: 16 }}>
             <Button type="primary" loading={busy} onClick={() => void enter('/user')}>
               进入用户前台
             </Button>

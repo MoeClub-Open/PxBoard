@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Alert, App, Button, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Card, Form, Input, Modal, Select, Space, Table, Tabs, Tag } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { configurationChanged, errorText, rpc, useRpc } from '../api'
 import type { Row } from '../api'
@@ -61,26 +61,32 @@ export function Users() {
   return (
     <>
       <div className="page-heading">
-        <h1>用户</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => open()}>
-          添加用户
-        </Button>
+        <div className="page-heading-title">
+          <h1>用户</h1>
+          {data?.total !== undefined && (
+            <span className="muted toolbar-count">共 {data.total} 条</span>
+          )}
+        </div>
+        <Space size={8} wrap>
+          <Input.Search
+            style={{ width: 220 }}
+            placeholder="搜索邮箱或姓名"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            allowClear
+          />
+          <Button icon={<ReloadOutlined />} onClick={reload}>
+            刷新
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => open()}>
+            添加用户
+          </Button>
+        </Space>
       </div>
-      {error && <Alert type="error" title={error} />}
-      <div className="table-toolbar">
-        <Input.Search
-          style={{ width: 280 }}
-          placeholder="搜索邮箱或姓名"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          allowClear
-        />
-        <Button icon={<ReloadOutlined />} onClick={reload}>
-          刷新
-        </Button>
-      </div>
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       <Table
         rowKey="id"
+        size="small"
         loading={loading}
         dataSource={data?.items}
         pagination={{
@@ -88,6 +94,7 @@ export function Users() {
           pageSize,
           total: data?.total,
           showSizeChanger: true,
+          showTotal: (total) => `共 ${total} 条`,
           onChange: (current, size) => {
             setPage(current)
             setPageSize(size)
@@ -131,8 +138,9 @@ export function Users() {
           {
             title: '操作',
             key: 'actions',
+            width: 80,
             render: (_: any, u: Row) => (
-              <Button type="link" onClick={() => open(u)}>
+              <Button type="link" size="small" onClick={() => open(u)}>
                 编辑
               </Button>
             ),
@@ -202,111 +210,146 @@ export function Settings() {
   const { data, loading, error } = useRpc<Row>('core/settings.get')
   const [busy, setBusy] = useState(false)
   if (loading) return null
+  const pluginSettings = plugins
+    .filter((plugin) => plugin.enabled)
+    .flatMap((plugin) =>
+      plugin.pages
+        .filter(
+          (page) =>
+            page.roles.includes('admin') &&
+            page.surface !== 'portal' &&
+            settingsDestinations[`${plugin.id}/${page.id}`] === '/admin/settings',
+        )
+        .map((page) => ({ plugin, page })),
+    )
+  const baseForm = (
+    <Card size="small" className="settings-card">
+      <Form
+        layout="vertical"
+        requiredMark={false}
+        initialValues={data}
+        onFinish={async (body) => {
+          setBusy(true)
+          try {
+            await rpc('core/settings.update', body)
+            configurationChanged()
+            if (body.adminPath && body.adminPath !== data?.adminPath) {
+              window.location.replace(`${body.adminPath}/settings`)
+              return
+            }
+            await refresh()
+            message.success('已保存')
+          } catch (e) {
+            message.error(errorText(e))
+          } finally {
+            setBusy(false)
+          }
+        }}
+      >
+        <Form.Item label="使用方式">
+          <Space>
+            <span>
+              {{ personal: '自用', business: '商业运营' }[String(data?.mode)] || data?.mode}
+            </span>
+            <Link to={adminURL('/admin/mode', me)}>切换使用方式</Link>
+          </Space>
+        </Form.Item>
+        <Form.Item name="publicUrl" label="公开访问地址">
+          <Input type="url" placeholder="https://panel.example.com" />
+        </Form.Item>
+        {me.mode === 'business' && (
+          <Form.Item
+            name="adminPath"
+            label="后台入口路径"
+            rules={[
+              {
+                required: true,
+                pattern: /^\/[a-zA-Z0-9_-]{3,64}$/,
+                message: '请输入单级路径，例如 /manage',
+              },
+            ]}
+          >
+            <Input placeholder="/admin" autoComplete="off" />
+          </Form.Item>
+        )}
+        <Button type="primary" htmlType="submit" loading={busy}>
+          保存设置
+        </Button>
+      </Form>
+    </Card>
+  )
   return (
     <>
       <div className="page-heading">
         <h1>系统设置</h1>
       </div>
-      {error && <Alert type="error" title={error} />}
-      <h2 className="settings-section-title">基础设置</h2>
-      <div className="settings-form">
-        <Form
-          layout="vertical"
-          requiredMark={false}
-          initialValues={data}
-          onFinish={async (body) => {
-            setBusy(true)
-            try {
-              await rpc('core/settings.update', body)
-              configurationChanged()
-              if (body.adminPath && body.adminPath !== data?.adminPath) {
-                window.location.replace(`${body.adminPath}/settings`)
-                return
-              }
-              await refresh()
-              message.success('已保存')
-            } catch (e) {
-              message.error(errorText(e))
-            } finally {
-              setBusy(false)
-            }
-          }}
-        >
-          <Form.Item label="使用方式">
-            <Space>
-              <span>
-                {{ personal: '自用', business: '商业运营' }[String(data?.mode)] || data?.mode}
-              </span>
-              <Link to={adminURL('/admin/mode', me)}>切换使用方式</Link>
-            </Space>
-          </Form.Item>
-          <Form.Item name="publicUrl" label="公开访问地址">
-            <Input type="url" placeholder="https://panel.example.com" />
-          </Form.Item>
-          {me.mode === 'business' && (
-            <Form.Item
-              name="adminPath"
-              label="后台入口路径"
-              rules={[
-                {
-                  required: true,
-                  pattern: /^\/[a-zA-Z0-9_-]{3,64}$/,
-                  message: '请输入单级路径，例如 /manage',
-                },
-              ]}
-            >
-              <Input placeholder="/admin" autoComplete="off" />
-            </Form.Item>
-          )}
-          <Button type="primary" htmlType="submit" loading={busy}>
-            保存设置
-          </Button>
-        </Form>
-      </div>
-      {plugins
-        .filter((plugin) => plugin.enabled)
-        .flatMap((plugin) =>
-          plugin.pages
-            .filter(
-              (page) =>
-                page.roles.includes('admin') &&
-                page.surface !== 'portal' &&
-                settingsDestinations[`${plugin.id}/${page.id}`] === '/admin/settings',
-            )
-            .map((page) => (
-              <ResourcePage
-                key={`${plugin.id}/${page.id}`}
-                pluginId={plugin.id}
-                pageId={page.id}
-                hideHeading
-              />
-            )),
-        )}
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
+      {pluginSettings.length ? (
+        <Tabs
+          items={[
+            { key: 'core', label: '基础设置', children: baseForm },
+            ...pluginSettings.map(({ plugin, page }) => ({
+              key: `${plugin.id}/${page.id}`,
+              label: page.title,
+              children: (
+                <ResourcePage
+                  key={`${plugin.id}/${page.id}`}
+                  pluginId={plugin.id}
+                  pageId={page.id}
+                  hideHeading
+                />
+              ),
+            })),
+          ]}
+        />
+      ) : (
+        baseForm
+      )}
     </>
   )
 }
 
 export function Activity() {
   const { data, loading, error, reload } = useRpc<Row[]>('core/activity.list')
+  const [search, setSearch] = useState('')
+  const rows = (data || []).filter((item) =>
+    `${item.actor || ''} ${activityLabel(String(item.action || ''))} ${item.target || ''}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  )
   return (
     <>
       <div className="page-heading">
-        <h1>操作记录</h1>
-        <Button icon={<ReloadOutlined />} onClick={reload}>
-          刷新
-        </Button>
+        <div className="page-heading-title">
+          <h1>操作记录</h1>
+          {data && <span className="muted toolbar-count">共 {rows.length} 条</span>}
+        </div>
+        <Space size={8} wrap>
+          <Input.Search
+            placeholder="搜索操作或对象"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 200 }}
+          />
+          <Button icon={<ReloadOutlined />} onClick={reload}>
+            刷新
+          </Button>
+        </Space>
       </div>
-      {error && <Alert type="error" title={error} />}
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       <Table
         rowKey="id"
+        size="small"
         loading={loading}
-        dataSource={data}
+        dataSource={rows}
         scroll={{ x: 720 }}
-        pagination={{ pageSize: 15 }}
+        pagination={{ pageSize: 15, showTotal: (total) => `共 ${total} 条` }}
         columns={[
           {
             title: '时间',
             dataIndex: 'createdAt',
+            width: 180,
             render: (v: string) => new Date(v).toLocaleString('zh-CN'),
           },
           { title: '操作人', dataIndex: 'actor' },
@@ -320,39 +363,59 @@ export function Activity() {
 export function Jobs() {
   const { message } = App.useApp()
   const { data, loading, error, reload } = useRpc<Row[]>('core/jobs.list')
+  const [search, setSearch] = useState('')
+  const rows = (data || []).filter((item) =>
+    `${item.type || ''} ${item.plugin || ''} ${item.error || ''}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  )
   return (
     <>
       <div className="page-heading">
-        <h1>后台任务</h1>
-        <Space>
+        <div className="page-heading-title">
+          <h1>后台任务</h1>
+          {data && <span className="muted toolbar-count">共 {rows.length} 条</span>}
+        </div>
+        <Space size={8} wrap>
+          <Input.Search
+            placeholder="搜索事件或插件"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 200 }}
+          />
           <Button icon={<ReloadOutlined />} onClick={reload}>
             刷新
           </Button>
         </Space>
       </div>
-      {error && <Alert type="error" title={error} />}
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       <Table
         rowKey={(row) => `${row.id}/${row.plugin}`}
+        size="small"
         loading={loading}
-        dataSource={data}
-        pagination={{ pageSize: 15 }}
+        dataSource={rows}
+        pagination={{ pageSize: 15, showTotal: (total) => `共 ${total} 条` }}
         scroll={{ x: 800 }}
         columns={[
           { title: '事件', dataIndex: 'type' },
           { title: '插件', dataIndex: 'plugin' },
-          { title: '重试次数', dataIndex: 'attempts' },
+          { title: '重试次数', dataIndex: 'attempts', width: 90 },
           { title: '错误', dataIndex: 'error', ellipsis: true },
           {
             title: '下次处理',
             dataIndex: 'nextAt',
+            width: 180,
             render: (v: string) => new Date(v).toLocaleString('zh-CN'),
           },
           {
             title: '操作',
             key: 'action',
+            width: 80,
             render: (_: any, row: Row) => (
               <Button
                 type="link"
+                size="small"
                 onClick={async () => {
                   try {
                     await rpc('core/jobs.retry', { id: row.id })

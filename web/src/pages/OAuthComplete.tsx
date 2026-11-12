@@ -57,9 +57,7 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
     setError('')
     try {
       if (callback.mode === 'register' && !loginTicket.current) {
-        setRegistration(
-          await rpc('oauth/registration', { ticket, proof: flow.proof }),
-        )
+        setRegistration(await rpc('oauth/registration', { ticket, proof: flow.proof }))
         return
       }
       if (!completed.current) {
@@ -163,16 +161,16 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
                 label="邮箱"
                 rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}
               >
-                <Input size="large" type="email" autoComplete="email" />
+                <Input type="email" autoComplete="email" />
               </Form.Item>
               <Form.Item
                 name="password"
                 label="登录密码"
                 rules={[{ required: true, min: 10, message: '密码至少 10 位' }]}
               >
-                <Input.Password size="large" autoComplete="new-password" />
+                <Input.Password autoComplete="new-password" />
               </Form.Item>
-              <Button type="primary" block size="large" htmlType="submit" loading={busy}>
+              <Button type="primary" block htmlType="submit" loading={busy}>
                 创建账户并登录
               </Button>
             </Form>
@@ -185,15 +183,9 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
               label="动态验证码"
               rules={[{ required: true, len: 6, message: '请输入 6 位验证码' }]}
             >
-              <Input
-                autoFocus
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                size="large"
-              />
+              <Input autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
             </Form.Item>
-            <Button type="primary" block size="large" htmlType="submit" loading={busy}>
+            <Button type="primary" block htmlType="submit" loading={busy}>
               完成登录
             </Button>
           </Form>
@@ -203,10 +195,10 @@ export default function OAuthComplete({ onLogin }: { onLogin: () => Promise<void
           error &&
           !mfa &&
           (completed.current || loginTicket.current || !registration) && (
-          <Button block onClick={() => void complete()}>
-            重试
-          </Button>
-        )}
+            <Button block onClick={() => void complete()}>
+              重试
+            </Button>
+          )}
         {!busy && !callback.nativeClient && (
           <div className="auth-links">
             <Link to={callback.mode === 'bind' ? '/user/account' : '/login'}>

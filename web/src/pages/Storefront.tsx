@@ -60,7 +60,7 @@ export default function Storefront({
   const { data: document, error, reload } = usePublicSite()
   const content = document?.site.data
   const siteName = document?.site.name || 'PxBoard'
-  const heading = content?.heading || `${siteName} 网络接入服务`
+  const heading = content?.heading || siteName
   const introduction = String(content?.introduction || '')
   const routes = resolveRoutes(content)
   const features = resolveFeatures(content)
@@ -141,7 +141,7 @@ export default function Storefront({
             >
               <div className="storefront-network-heading">
                 <GlobalOutlined aria-hidden="true" />
-                <h2 id="storefront-routes-heading">线路与网络</h2>
+                <h2 id="storefront-routes-heading">线路介绍</h2>
               </div>
               <div
                 className={`storefront-routes-grid${routes.length === 1 ? ' single-route' : ''}`}

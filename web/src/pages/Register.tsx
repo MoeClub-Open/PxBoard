@@ -135,7 +135,6 @@ export default function Register() {
               <Button
                 type="primary"
                 htmlType="submit"
-                size="large"
                 block
                 loading={busy}
                 disabled={challenge.loading}

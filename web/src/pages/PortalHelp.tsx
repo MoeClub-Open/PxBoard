@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Button, Collapse, Empty, Input, Modal, Spin } from 'antd'
+import { Alert, Button, Card, Collapse, Empty, Input, Modal, Spin } from 'antd'
 import { useRpc } from '../api'
 import type { Row } from '../api'
 
@@ -56,8 +56,7 @@ export function PortalAnnouncements() {
   const [selected, setSelected] = useState<Row>()
   const rows = (articles.data || []).filter((row) => row.published).slice(0, 5)
   return (
-    <section className="portal-announcements">
-      <h2>公告</h2>
+    <Card size="small" title="公告" className="section-card">
       {articles.error ? (
         <Alert
           type="warning"
@@ -90,6 +89,6 @@ export function PortalAnnouncements() {
       >
         <div className="portal-article">{selected?.content}</div>
       </Modal>
-    </section>
+    </Card>
   )
 }

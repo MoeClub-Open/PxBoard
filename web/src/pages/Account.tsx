@@ -3,9 +3,13 @@ import {
   Alert,
   App,
   Button,
+  Card,
+  Descriptions,
+  Flex,
   Form,
   Input,
   Modal,
+  QRCode,
   Select,
   Space,
   Table,
@@ -59,11 +63,13 @@ function Tokens() {
   }
   return (
     <>
-      {error && <Alert type="error" title={error} />}
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       <div className="table-toolbar">
-        <h2>API 密钥</h2>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={reload} />
+        <div>{data && <span className="muted toolbar-count">共 {data.length} 个密钥</span>}</div>
+        <Space size={8}>
+          <Button icon={<ReloadOutlined />} onClick={reload}>
+            刷新
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
             创建密钥
           </Button>
@@ -71,6 +77,7 @@ function Tokens() {
       </div>
       <Table
         rowKey="id"
+        size="small"
         loading={loading}
         dataSource={data}
         pagination={false}
@@ -88,9 +95,11 @@ function Tokens() {
           },
           {
             title: '操作',
+            width: 72,
             render: (_: any, row: Row) => (
               <Button
                 type="text"
+                size="small"
                 danger
                 aria-label="撤销密钥"
                 icon={<DeleteOutlined />}
@@ -171,14 +180,15 @@ function TwoFactorAuth() {
 
   if (me.mfaEnabled) {
     return (
-      <div className="settings-form">
-        <Space style={{ marginBottom: 16 }}>
+      <Card size="small" className="settings-card">
+        <Space style={{ marginBottom: 12 }}>
           <Tag color="green">已启用</Tag>
           <Typography.Text type="secondary">登录和敏感操作需输入 6 位动态验证码</Typography.Text>
         </Space>
         <Form
           form={form}
           layout="vertical"
+          requiredMark={false}
           onFinish={async (values) => {
             setBusy(true)
             try {
@@ -211,13 +221,13 @@ function TwoFactorAuth() {
             关闭两步验证
           </Button>
         </Form>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <div className="settings-form">
-      <Space style={{ marginBottom: 16 }}>
+    <Card size="small" className="settings-card">
+      <Space style={{ marginBottom: 12 }}>
         <Tag>未启用</Tag>
         <Typography.Text type="secondary">使用身份验证器生成 6 位动态验证码</Typography.Text>
       </Space>
@@ -231,6 +241,7 @@ function TwoFactorAuth() {
         <Form
           form={form}
           layout="vertical"
+          requiredMark={false}
           onFinish={async (values) => {
             setBusy(true)
             try {
@@ -246,15 +257,20 @@ function TwoFactorAuth() {
             }
           }}
         >
-          <Typography.Paragraph>
-            在验证器中添加以下密钥或链接，再输入生成的 6 位验证码完成绑定：
-          </Typography.Paragraph>
-          <Typography.Paragraph copyable code>
-            {setupData.secret}
-          </Typography.Paragraph>
-          <Typography.Paragraph copyable={{ text: setupData.otpauthUrl }} type="secondary">
-            复制验证器导入链接
-          </Typography.Paragraph>
+          <Flex gap={16} align="center" wrap style={{ marginBottom: 14 }}>
+            <QRCode value={setupData.otpauthUrl} size={136} />
+            <div style={{ minWidth: 200, flex: 1 }}>
+              <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+                使用验证器扫码或手动输入密钥
+              </Typography.Text>
+              <Typography.Paragraph copyable code style={{ marginBottom: 4 }}>
+                {setupData.secret}
+              </Typography.Paragraph>
+              <Typography.Text copyable={{ text: setupData.otpauthUrl }} type="secondary">
+                复制导入链接
+              </Typography.Text>
+            </div>
+          </Flex>
           <Form.Item
             name="password"
             label="当前登录密码"
@@ -279,7 +295,7 @@ function TwoFactorAuth() {
           </Space>
         </Form>
       )}
-    </div>
+    </Card>
   )
 }
 export default function Account() {
@@ -291,7 +307,25 @@ export default function Account() {
       <div className="page-heading">
         <h1>我的账户</h1>
       </div>
-      <Typography.Paragraph type="secondary">{me.email}</Typography.Paragraph>
+      <Card size="small" className="section-card">
+        <Descriptions
+          size="small"
+          column={{ xs: 1, sm: 3 }}
+          items={[
+            { key: 'name', label: '姓名', children: me.name || '—' },
+            { key: 'email', label: '邮箱', children: me.email },
+            {
+              key: 'mfa',
+              label: '两步验证',
+              children: (
+                <Tag color={me.mfaEnabled ? 'success' : 'default'}>
+                  {me.mfaEnabled ? '已启用' : '未启用'}
+                </Tag>
+              ),
+            },
+          ]}
+        />
+      </Card>
       <Tabs
         items={[
           { key: 'tokens', label: 'API 密钥', children: <Tokens /> },
@@ -302,9 +336,10 @@ export default function Account() {
             key: 'password',
             label: '登录密码',
             children: (
-              <div className="settings-form">
+              <Card size="small" className="settings-card">
                 <Form
                   layout="vertical"
+                  requiredMark={false}
                   onFinish={async (values) => {
                     setBusy(true)
                     try {
@@ -325,9 +360,15 @@ export default function Account() {
                   >
                     <Input.Password autoComplete="current-password" />
                   </Form.Item>
-                  <Form.Item name="code" label="动态验证码（已启用时填写）">
-                    <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
-                  </Form.Item>
+                  {me.mfaEnabled && (
+                    <Form.Item
+                      name="code"
+                      label="动态验证码"
+                      rules={[{ required: true, len: 6, message: '请输入 6 位动态验证码' }]}
+                    >
+                      <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
+                    </Form.Item>
+                  )}
                   <Form.Item
                     name="password"
                     label="新密码"
@@ -339,7 +380,7 @@ export default function Account() {
                     更新密码
                   </Button>
                 </Form>
-              </div>
+              </Card>
             ),
           },
           { key: 'mfa', label: '两步验证', children: <TwoFactorAuth /> },

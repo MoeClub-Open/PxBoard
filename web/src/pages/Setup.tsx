@@ -9,7 +9,6 @@ import { useBrandTitle } from '../branding'
 export default function Setup({ onCreated }: { onCreated: () => Promise<void> }) {
   useBrandTitle('创建站点')
   const [form] = Form.useForm()
-  const mode = Form.useWatch('mode', form)
   const [busy, setBusy] = useState(false)
   const [created, setCreated] = useState(false)
   const [error, setError] = useState('')
@@ -60,11 +59,6 @@ export default function Setup({ onCreated }: { onCreated: () => Promise<void> })
               optionType="button"
             />
           </Form.Item>
-          <p className="muted">
-            {mode === 'business'
-              ? '提供公开首页、套餐购买、支付与用户服务。'
-              : '管理自己的节点、访问账户与订阅，可按需开放分享功能。'}
-          </p>
           <Form.Item
             name="siteName"
             label="站点名称"

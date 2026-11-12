@@ -1,15 +1,9 @@
 import { useCurrency } from '../currency'
-import { Alert, Button, Empty, Tag } from 'antd'
-import {
-  AppstoreOutlined,
-  ArrowRightOutlined,
-  CheckCircleFilled,
-  ExclamationCircleFilled,
-  LinkOutlined,
-} from '@ant-design/icons'
+import { Alert, Button, Card, Col, Empty, Row, Space, Statistic, Tag } from 'antd'
+import { CheckCircleFilled, ExclamationCircleFilled, ReloadOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import { useRpc } from '../api'
-import type { Plugin, Row } from '../api'
+import type { Plugin, Row as RecordRow } from '../api'
 import { useSession } from '../context'
 import { adminURL } from '../adminPath'
 
@@ -19,13 +13,10 @@ const modeLabels: Record<string, string> = {
 }
 function Summary({ plugin }: { plugin: Plugin }) {
   const { currencyName } = useCurrency()
-  const { data, loading, error, reload } = useRpc<Row[]>(`${plugin.id}/summary.get`)
+  const { data, loading, error, reload } = useRpc<RecordRow[]>(`${plugin.id}/summary.get`)
   return (
-    <div className="summary-row">
-      <h2>{plugin.name}</h2>
-      {loading ? (
-        <span className="muted">正在读取…</span>
-      ) : error ? (
+    <Card size="small" title={plugin.name} loading={loading}>
+      {error ? (
         <span className="danger">
           {error}{' '}
           <Button type="link" size="small" onClick={reload}>
@@ -33,25 +24,27 @@ function Summary({ plugin }: { plugin: Plugin }) {
           </Button>
         </span>
       ) : (
-        <div className="summary-metrics">
+        <Row gutter={[12, 8]}>
           {data?.map((m) => (
-            <div key={m.label}>
-              <span>{m.label}</span>
-              <strong>
-                {m.value}
-                <small>{m.unit === '元' ? currencyName : m.unit}</small>
-              </strong>
-            </div>
+            <Col key={m.label} xs={8}>
+              <Statistic
+                title={m.label}
+                value={m.value}
+                suffix={m.unit === '元' ? currencyName : m.unit}
+              />
+            </Col>
           ))}
-        </div>
+        </Row>
       )}
-    </div>
+    </Card>
   )
 }
 export default function Overview() {
-  const { me, plugins } = useSession()
-  const { data, error } = useRpc<Row>('core/overview.get')
-  const { data: activity } = useRpc<Row[]>(me.role === 'admin' ? 'core/activity.list' : null)
+  const { me, plugins, refresh } = useSession()
+  const { data, error, reload } = useRpc<RecordRow>('core/overview.get')
+  const { data: activity, reload: reloadActivity } = useRpc<RecordRow[]>(
+    me.role === 'admin' ? 'core/activity.list' : null,
+  )
   const status = plugins.filter((p) => p.error)
   const summaries = plugins.filter(
     (p) => p.enabled && p.summary && p.pages.some((page) => page.roles.includes(me.role)),
@@ -59,124 +52,141 @@ export default function Overview() {
   return (
     <>
       <div className="page-heading">
-        <div>
-          <div className="eyebrow">工作空间</div>
-          <h1>总览</h1>
-        </div>
-        <Tag className="mode-tag">{modeLabels[me.mode] || '自用'}</Tag>
+        <h1>总览</h1>
+        <Space size={8}>
+          <Tag className="mode-tag">{modeLabels[me.mode] || '自用'}</Tag>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              reload()
+              reloadActivity()
+              void refresh().catch(() => {})
+            }}
+          >
+            刷新
+          </Button>
+        </Space>
       </div>
-      {error && <Alert type="error" title={error} />}
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       {me.role === 'admin' && (
-        <div className="metric-strip overview-metrics">
+        <Row gutter={[12, 12]} className="metrics-row">
           {[
-            { label: '用户', value: data?.users ?? '—', note: '账户总数' },
+            { label: '用户总数', value: data?.users ?? '—' },
             {
-              label: '运行中的插件',
+              label: '运行插件',
               value: data?.enabled ?? '—',
-              note: `已安装 ${data?.plugins ?? 0} 个`,
+              suffix: `/ ${data?.plugins ?? 0}`,
             },
-            { label: '待处理任务', value: data?.jobs ?? '—', note: '插件事件投递' },
+            { label: '待处理任务', value: data?.jobs ?? '—' },
             {
               label: '服务状态',
               value: status.length ? '需处理' : '运行正常',
-              note: data ? `v${data.version} · ${data.platform}` : '正在连接',
-              tone: status.length ? 'danger' : 'success',
+              suffix: data ? `v${data.version}` : undefined,
+              danger: status.length > 0,
             },
           ].map((m) => (
-            <div key={m.label}>
-              <span>{m.label}</span>
-              <strong className={m.tone}>{m.value}</strong>
-              <small>{m.note}</small>
-            </div>
+            <Col key={m.label} xs={12} lg={6}>
+              <Card size="small">
+                <Statistic
+                  title={m.label}
+                  value={m.value}
+                  suffix={m.suffix}
+                  styles={m.danger ? { content: { color: 'var(--px-error)' } } : undefined}
+                />
+              </Card>
+            </Col>
           ))}
-        </div>
-      )}
-      {!plugins.length && me.role === 'admin' && (
-        <div className="getting-started">
-          <div className="extension-icon">
-            <AppstoreOutlined />
-          </div>
-          <h2>添加需要的功能</h2>
-          <p>连接插件源后，选择适合自己的功能组合。</p>
-          <Link to={adminURL('/admin/plugins?tab=sources', me)}>
-            <Button type="primary" icon={<LinkOutlined />}>
-              连接插件源
-            </Button>
-          </Link>
-        </div>
+        </Row>
       )}
       {!!summaries.length && (
-        <section className="summary-section">
+        <Row gutter={[12, 12]} className="metrics-row">
           {summaries.map((p) => (
-            <Summary key={p.id} plugin={p} />
+            <Col key={p.id} xs={24} md={12}>
+              <Summary plugin={p} />
+            </Col>
           ))}
-        </section>
+        </Row>
       )}
-      <div className="overview-columns">
-        <section className="workspace-section">
-          <div className="section-heading">
-            <h2>插件状态</h2>
-          </div>
-          {plugins.length ? (
-            <div className="data-list">
-              {plugins.map((p) => (
-                <div className="data-row" key={p.id}>
-                  <div className="data-row-main">
-                    {p.error ? (
-                      <ExclamationCircleFilled className="danger data-row-icon" />
-                    ) : (
-                      <CheckCircleFilled
-                        className={`${p.enabled ? 'success' : 'muted'} data-row-icon`}
-                      />
-                    )}
-                    <div className="data-row-copy">
-                      <strong>{p.name}</strong>
-                      <small className={p.error ? 'danger' : undefined}>
-                        {p.error || `v${p.version}`}
-                      </small>
-                    </div>
-                  </div>
-                  <Tag color={p.error ? 'error' : p.enabled ? 'success' : 'default'}>
-                    {p.error ? '异常' : p.enabled ? '运行中' : '已停用'}
-                  </Tag>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未安装插件" />
-          )}
-        </section>
-        {me.role === 'admin' && (
-          <section className="workspace-section">
-            <div className="section-heading">
-              <h2>最近活动</h2>
-              <Link to={adminURL('/admin/activity', me)}>
-                查看全部 <ArrowRightOutlined />
-              </Link>
-            </div>
-            {activity?.length ? (
+      <Row gutter={[12, 12]}>
+        <Col xs={24} lg={me.role === 'admin' ? 12 : 24}>
+          <Card
+            size="small"
+            title="插件状态"
+            extra={
+              me.role === 'admin' ? (
+                <Link to={adminURL('/admin/plugins', me)}>管理</Link>
+              ) : undefined
+            }
+          >
+            {plugins.length ? (
               <div className="data-list">
-                {activity.slice(0, 6).map((item) => (
-                  <div className="data-row" key={item.id}>
-                    <div className="data-row-copy">
-                      <strong>{activityLabel(item.action)}</strong>
-                      <small>{item.actor}</small>
+                {plugins.map((p) => (
+                  <div className="data-row" key={p.id}>
+                    <div className="data-row-main">
+                      {p.error ? (
+                        <ExclamationCircleFilled className="danger data-row-icon" />
+                      ) : (
+                        <CheckCircleFilled
+                          className={`${p.enabled ? 'success' : 'muted'} data-row-icon`}
+                        />
+                      )}
+                      <div className="data-row-copy">
+                        <strong>{p.name}</strong>
+                        <small className={p.error ? 'danger' : undefined}>
+                          {p.error || `v${p.version}`}
+                        </small>
+                      </div>
                     </div>
-                    <span className="muted date-cell">
-                      {new Date(item.createdAt).toLocaleTimeString('zh-CN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
+                    <Tag color={p.error ? 'error' : p.enabled ? 'success' : 'default'}>
+                      {p.error ? '异常' : p.enabled ? '运行中' : '已停用'}
+                    </Tag>
                   </div>
                 ))}
               </div>
             ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无活动" />
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="尚未安装插件">
+                {me.role === 'admin' && (
+                  <Link to={adminURL('/admin/plugins', me)}>
+                    <Button type="primary" size="small">
+                      前往插件中心
+                    </Button>
+                  </Link>
+                )}
+              </Empty>
             )}
-          </section>
+          </Card>
+        </Col>
+        {me.role === 'admin' && (
+          <Col xs={24} lg={12}>
+            <Card
+              size="small"
+              title="最近活动"
+              extra={<Link to={adminURL('/admin/activity', me)}>全部</Link>}
+            >
+              {activity?.length ? (
+                <div className="data-list">
+                  {activity.slice(0, 8).map((item) => (
+                    <div className="data-row" key={item.id}>
+                      <div className="data-row-copy">
+                        <strong>{activityLabel(item.action)}</strong>
+                        <small>{item.actor}</small>
+                      </div>
+                      <span className="muted date-cell">
+                        {new Date(item.createdAt).toLocaleTimeString('zh-CN', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无活动" />
+              )}
+            </Card>
+          </Col>
         )}
-      </div>
+      </Row>
     </>
   )
 }

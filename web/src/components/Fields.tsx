@@ -1,9 +1,33 @@
 import { useCurrency } from '../currency'
-import { DatePicker, Form, Input, InputNumber, Select, Switch } from 'antd'
+import { App, Button, DatePicker, Form, Input, InputNumber, Select, Space, Switch } from 'antd'
+import { CopyOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import { pluginResourceTarget, useRpc, type Field, type Row } from '../api'
+import { absoluteURL, pluginResourceTarget, useRpc, type Field, type Row } from '../api'
 import { officialControl } from '../official/fields'
+
+function CopyField({ value }: { value?: string }) {
+  const { message } = App.useApp()
+  const raw = String(value ?? '')
+  const text = raw.startsWith('/') && !raw.startsWith('//') ? absoluteURL(raw) : raw
+  return (
+    <Space.Compact style={{ width: '100%' }}>
+      <Input readOnly value={text} />
+      <Button
+        icon={<CopyOutlined />}
+        disabled={!text}
+        onClick={() =>
+          void navigator.clipboard
+            .writeText(text)
+            .then(() => message.success('已复制'))
+            .catch(() => message.error('复制失败，请手动复制'))
+        }
+      >
+        复制
+      </Button>
+    </Space.Compact>
+  )
+}
 
 function RemoteSelect({
   field,
@@ -110,7 +134,8 @@ function fieldItem(f: Field, symbol: string, pluginId?: string) {
       </Form.Item>
     )
   let control = <Input disabled={f.readOnly} />
-  if (f.type === 'password') control = <Input.Password autoComplete="new-password" />
+  if (f.type === 'copy') control = <CopyField />
+  else if (f.type === 'password') control = <Input.Password autoComplete="new-password" />
   else if (f.type === 'code')
     control = (
       <Input.TextArea
@@ -248,7 +273,7 @@ export function formValues(fields: Field[], row?: Row) {
 export function serialize(fields: Field[], values: Row) {
   const result: Row = {}
   for (const field of fields) {
-    if (!visible(field, values)) continue
+    if (field.readOnly || !visible(field, values)) continue
     const value = values[field.key]
     const path = field.key.split('.')
     if (path.length > 1 && value === undefined) continue

@@ -3,15 +3,19 @@ import {
   Alert,
   App,
   Button,
+  Card,
   Checkbox,
+  Col,
+  Descriptions,
   Drawer,
   Empty,
+  Flex,
   Form,
   Input,
   Modal,
+  Row,
   Select,
   Space,
-  Spin,
   Switch,
   Table,
   Tabs,
@@ -20,22 +24,20 @@ import {
 } from 'antd'
 import {
   CheckCircleOutlined,
-  CloudDownloadOutlined,
   DeleteOutlined,
-  LinkOutlined,
   PlusOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
-import type { Plugin, Row } from '../api'
+import type { Plugin, Row as RecordRow } from '../api'
 import { configurationChanged, errorText, rpc, useRpc } from '../api'
 import { useSession } from '../context'
 
 interface Catalog {
   plugins: Plugin[]
-  sources: Row[]
+  sources: RecordRow[]
   platform: string
-  bundles?: Row[]
+  bundles?: RecordRow[]
 }
 function installedRelease(installed: Plugin | undefined, candidate: Plugin | undefined) {
   if (
@@ -67,7 +69,7 @@ const permissionLabel = (p: string) =>
 
 export function Sources() {
   const { message, modal } = App.useApp()
-  const { data, error, loading, reload } = useRpc<Row[]>('core/sources.list')
+  const { data, error, loading, reload } = useRpc<RecordRow[]>('core/sources.list')
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
@@ -94,22 +96,26 @@ export function Sources() {
   return (
     <>
       <div className="table-toolbar">
-        <h2>插件源</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-          添加插件源
-        </Button>
+        <div>{data && <span className="muted toolbar-count">共 {data.length} 个来源</span>}</div>
+        <Space size={8}>
+          <Button icon={<ReloadOutlined />} onClick={reload}>
+            刷新
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            添加插件源
+          </Button>
+        </Space>
       </div>
-      {error && <Alert type="error" title={error} />}
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       <Table
         rowKey="id"
+        size="small"
         loading={loading}
         dataSource={data}
         pagination={false}
         scroll={{ x: 680 }}
         locale={{
-          emptyText: (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="添加插件源以浏览和安装插件" />
-          ),
+          emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无插件源" />,
         }}
         columns={[
           { title: '名称', dataIndex: 'name', render: (v: string) => <strong>{v}</strong> },
@@ -122,7 +128,8 @@ export function Sources() {
           {
             title: '启用',
             dataIndex: 'enabled',
-            render: (v: boolean, row: Row) => (
+            width: 80,
+            render: (v: boolean, row: RecordRow) => (
               <Switch
                 aria-label={`${row.name}插件源`}
                 checked={v}
@@ -138,11 +145,13 @@ export function Sources() {
             ),
           },
           {
-            title: '',
+            title: '操作',
             key: 'delete',
-            render: (_: any, row: Row) => (
+            width: 72,
+            render: (_: any, row: RecordRow) => (
               <Button
                 type="text"
+                size="small"
                 danger
                 aria-label="移除插件源"
                 icon={<DeleteOutlined />}
@@ -203,7 +212,10 @@ export function Sources() {
 function Installed() {
   const { plugins, refresh } = useSession()
   const { message, modal } = App.useApp()
+  const { data: catalog, reload: reloadCatalog } = useRpc<Catalog>('core/plugins.catalog')
+  const [search, setSearch] = useState('')
   const [busy, setBusy] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
   async function action(id: string, operation: string) {
     setBusy(id)
     try {
@@ -217,94 +229,165 @@ function Installed() {
       setBusy('')
     }
   }
+  async function updatePlugin(candidate: Plugin) {
+    setBusy(candidate.id)
+    try {
+      await rpc('core/plugins.install', { id: candidate.id, sourceId: candidate.sourceId })
+      await refresh()
+      configurationChanged()
+      message.success(`${candidate.name} 已更新`)
+    } catch (e) {
+      message.error(errorText(e))
+    } finally {
+      setBusy('')
+    }
+  }
+  const rows = plugins.filter((p) =>
+    `${p.name} ${p.description} ${p.id}`.toLowerCase().includes(search.toLowerCase()),
+  )
   return (
-    <Table<Plugin>
-      rowKey="id"
-      dataSource={plugins}
-      pagination={false}
-      scroll={{ x: 720 }}
-      locale={{
-        emptyText: <Empty description="尚未安装插件" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
-      }}
-      columns={[
-        {
-          title: '插件',
-          dataIndex: 'name',
-          render: (name: string, p: Plugin) => (
-            <div className="plugin-name">
-              <strong>{name}</strong>
-              <span>{p.description}</span>
-              {p.error && <Typography.Text type="danger">{p.error}</Typography.Text>}
-            </div>
-          ),
-        },
-        {
-          title: '版本',
-          dataIndex: 'version',
-          width: 100,
-          render: (v: string) => <code>{v}</code>,
-        },
-        {
-          title: '状态',
-          key: 'status',
-          width: 110,
-          render: (_: any, p: Plugin) => (
-            <Tag color={p.error ? 'error' : p.enabled ? 'success' : 'default'}>
-              {p.error ? '异常' : p.enabled ? '运行中' : '已停用'}
-            </Tag>
-          ),
-        },
-        {
-          title: '启用',
-          dataIndex: 'enabled',
-          width: 80,
-          render: (v: boolean, p: Plugin) => (
-            <Switch
-              aria-label={`${p.name}插件`}
-              checked={v}
-              loading={busy === p.id}
-              onChange={(next) => action(p.id, next ? 'enable' : 'disable')}
-            />
-          ),
-        },
-        {
-          title: '操作',
-          key: 'actions',
-          width: 150,
-          render: (_: any, p: Plugin) => (
-            <Space>
-              <Button
-                size="small"
-                disabled={!p.enabled}
+    <>
+      <div className="table-toolbar">
+        <div>
+          <span className="muted toolbar-count">共 {rows.length} 个插件</span>
+        </div>
+        <Space size={8} wrap>
+          <Input.Search
+            placeholder="搜索已安装插件"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 200 }}
+          />
+          <Button
+            icon={<ReloadOutlined />}
+            loading={refreshing}
+            onClick={async () => {
+              setRefreshing(true)
+              try {
+                reloadCatalog()
+                await refresh()
+              } finally {
+                setRefreshing(false)
+              }
+            }}
+          >
+            刷新
+          </Button>
+        </Space>
+      </div>
+      <Table<Plugin>
+        rowKey="id"
+        size="small"
+        dataSource={rows}
+        pagination={false}
+        scroll={{ x: 720 }}
+        locale={{
+          emptyText: <Empty description="尚未安装插件" image={Empty.PRESENTED_IMAGE_SIMPLE} />,
+        }}
+        columns={[
+          {
+            title: '插件',
+            dataIndex: 'name',
+            render: (name: string, p: Plugin) => (
+              <div className="plugin-name">
+                <strong>{name}</strong>
+                <span>{p.description}</span>
+                {p.error && <Typography.Text type="danger">{p.error}</Typography.Text>}
+              </div>
+            ),
+          },
+          {
+            title: '版本',
+            dataIndex: 'version',
+            width: 96,
+            render: (v: string) => <code>v{v}</code>,
+          },
+          {
+            title: '状态',
+            key: 'status',
+            width: 96,
+            render: (_: any, p: Plugin) => (
+              <Tag color={p.error ? 'error' : p.enabled ? 'success' : 'default'}>
+                {p.error ? '异常' : p.enabled ? '运行中' : '已停用'}
+              </Tag>
+            ),
+          },
+          {
+            title: '启用',
+            dataIndex: 'enabled',
+            width: 72,
+            render: (v: boolean, p: Plugin) => (
+              <Switch
+                aria-label={`${p.name}插件`}
+                checked={v}
                 loading={busy === p.id}
-                onClick={() => action(p.id, 'restart')}
-              >
-                重启
-              </Button>
-              <Button
-                size="small"
-                danger
-                onClick={() =>
-                  modal.confirm({
-                    title: `卸载 ${p.name}？`,
-                    content: '插件数据会保留，重新安装后可以继续使用。',
-                    okText: '卸载',
-                    cancelText: '取消',
-                    onOk: () => action(p.id, 'remove'),
-                  })
-                }
-              >
-                卸载
-              </Button>
-            </Space>
-          ),
-        },
-      ]}
-    />
+                onChange={(next) => action(p.id, next ? 'enable' : 'disable')}
+              />
+            ),
+          },
+          {
+            title: '操作',
+            key: 'actions',
+            width: 170,
+            render: (_: any, p: Plugin) => {
+              const candidate =
+                catalog?.plugins.find(
+                  (item) => item.id === p.id && (!p.sourceId || item.sourceId === p.sourceId),
+                ) || catalog?.plugins.find((item) => item.id === p.id)
+              const canUpdate =
+                !!candidate &&
+                !!candidate.artifacts?.[catalog?.platform || ''] &&
+                !installedRelease(p, candidate)
+              return (
+                <Space size={4}>
+                  {canUpdate && (
+                    <Button
+                      type="link"
+                      size="small"
+                      loading={busy === p.id}
+                      onClick={() => void updatePlugin(candidate)}
+                    >
+                      更新
+                    </Button>
+                  )}
+                  <Button
+                    type="link"
+                    size="small"
+                    disabled={!p.enabled}
+                    loading={busy === p.id}
+                    onClick={() => action(p.id, 'restart')}
+                  >
+                    重启
+                  </Button>
+                  <Button
+                    type="link"
+                    size="small"
+                    danger
+                    onClick={() =>
+                      modal.confirm({
+                        title: `卸载 ${p.name}？`,
+                        content: '插件数据会保留，重新安装后可以继续使用。',
+                        okText: '卸载',
+                        cancelText: '取消',
+                        okButtonProps: { danger: true },
+                        onOk: () => action(p.id, 'remove'),
+                      })
+                    }
+                  >
+                    卸载
+                  </Button>
+                </Space>
+              )
+            },
+          },
+        ]}
+      />
+    </>
   )
 }
 
-function Marketplace() {
+function Marketplace({ onOpenSources }: { onOpenSources: () => void }) {
   const { message, modal } = App.useApp()
   const { plugins, refresh } = useSession()
   const { data, error, loading, reload } = useRpc<Catalog>('core/plugins.catalog')
@@ -338,7 +421,7 @@ function Marketplace() {
       setBusy(false)
     }
   }
-  async function installBundle(bundle: Row) {
+  async function installBundle(bundle: RecordRow) {
     setBundleBusy(bundle.id)
     try {
       for (const id of bundle.plugins) {
@@ -357,47 +440,48 @@ function Marketplace() {
   return (
     <>
       {!!data?.bundles?.length && (
-        <div className="bundle-options">
+        <Row gutter={[12, 12]} className="metrics-row">
           {data.bundles.map((bundle) => (
-            <div key={`${bundle.sourceId}/${bundle.id}`}>
-              <h3>{bundle.name}</h3>
-              <p>{bundle.description}</p>
-              <Button
+            <Col key={`${bundle.sourceId}/${bundle.id}`} xs={24} md={8}>
+              <Card
                 size="small"
-                loading={bundleBusy === bundle.id}
-                disabled={!!bundleBusy && bundleBusy !== bundle.id}
-                onClick={() =>
-                  modal.confirm({
-                    title: `安装${bundle.name}功能？`,
-                    content: (
-                      <>
-                        <p>{bundle.plugins.join('、')}</p>
-                        <p>
-                          将从 {bundle.sourceName}{' '}
-                          安装插件及依赖。插件具有面板服务的系统访问权限，请确认你信任此来源。
-                        </p>
-                      </>
-                    ),
-                    okText: '信任并安装',
-                    cancelText: '取消',
-                    onOk: () => installBundle(bundle),
-                  })
+                title={bundle.name}
+                extra={
+                  <Button
+                    size="small"
+                    type="link"
+                    loading={bundleBusy === bundle.id}
+                    disabled={!!bundleBusy && bundleBusy !== bundle.id}
+                    onClick={() =>
+                      modal.confirm({
+                        title: `安装${bundle.name}组合？`,
+                        content: `包含：${bundle.plugins.join('、')}（来源：${bundle.sourceName}）`,
+                        okText: '信任并安装',
+                        cancelText: '取消',
+                        onOk: () => installBundle(bundle),
+                      })
+                    }
+                  >
+                    安装组合
+                  </Button>
                 }
               >
-                安装组合
-              </Button>
-            </div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {bundle.description}
+                </Typography.Text>
+              </Card>
+            </Col>
           ))}
-        </div>
+        </Row>
       )}
       <div className="table-toolbar">
-        <Space>
+        <Space size={8} wrap>
           <Input.Search
             placeholder="搜索插件"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             allowClear
-            style={{ width: 260 }}
+            style={{ width: 220 }}
           />
           <Select
             value={category}
@@ -410,7 +494,7 @@ function Marketplace() {
           刷新
         </Button>
       </div>
-      {error && <Alert type="error" title={error} showIcon />}
+      {error && <Alert type="error" title={error} showIcon className="page-notice" />}
       {data?.sources
         .filter((s) => s.error)
         .map((s) => (
@@ -422,129 +506,164 @@ function Marketplace() {
             className="page-notice"
           />
         ))}
-      {loading ? (
-        <div className="page-loading">
-          <Spin />
-        </div>
-      ) : !results.length ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={data?.sources.length ? '没有找到插件' : '先添加插件源，再浏览可安装的插件'}
-        />
-      ) : (
-        <div className="market-list">
-          {results.map((p) => {
-            const installed = plugins.find((v) => v.id === p.id)
-            const supported = !!p.artifacts?.[data?.platform || '']
-            return (
-              <div className="market-row" key={`${p.sourceId}/${p.id}`}>
-                <div className={`extension-icon category-${p.category}`}>
-                  <CloudDownloadOutlined />
-                </div>
-                <div className="market-copy">
-                  <div className="market-title">
-                    <strong>{p.name}</strong>
-                    <Tag>{p.category}</Tag>
-                    {p.signed && <SafetyCertificateOutlined title="发布签名" className="success" />}
-                  </div>
-                  <p>{p.description}</p>
-                  <span className="muted">
-                    {p.sourceName} <span className="separator">·</span> v{p.version}
-                    {Object.keys(p.dependencies || {}).length > 0 && (
-                      <span>
-                        {' '}
-                        <span className="separator">·</span> {Object.keys(p.dependencies).length}{' '}
-                        个依赖
-                      </span>
-                    )}
-                  </span>
-                </div>
-                {installedRelease(installed, p) ? (
-                  <Button
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => {
-                      setDetail(p)
-                      setTrusted(false)
-                    }}
-                  >
-                    已安装
-                  </Button>
-                ) : (
-                  <Button
-                    disabled={!supported}
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      setDetail(p)
-                      setTrusted(false)
-                    }}
-                  >
-                    {!supported ? '平台不支持' : installed ? '更新' : '安装'}
-                  </Button>
-                )}
+      <Table<Plugin>
+        rowKey={(p) => `${p.sourceId}/${p.id}`}
+        size="small"
+        loading={loading}
+        dataSource={results}
+        pagination={false}
+        scroll={{ x: 680 }}
+        locale={{
+          emptyText: (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={data?.sources.length ? '没有匹配的插件' : '暂无可用插件源'}
+            >
+              {!loading && !data?.sources.length && (
+                <Button size="small" type="primary" onClick={onOpenSources}>
+                  添加插件源
+                </Button>
+              )}
+            </Empty>
+          ),
+        }}
+        columns={[
+          {
+            title: '插件',
+            dataIndex: 'name',
+            render: (name: string, p: Plugin) => (
+              <div className="plugin-name">
+                <strong>{name}</strong>
+                <span>{p.description}</span>
               </div>
-            )
-          })}
-        </div>
-      )}
+            ),
+          },
+          {
+            title: '分类',
+            dataIndex: 'category',
+            width: 96,
+            render: (categoryName: string) => <Tag>{categoryName}</Tag>,
+          },
+          {
+            title: '来源',
+            dataIndex: 'sourceName',
+            width: 150,
+            render: (sourceName: string, p: Plugin) => (
+              <Space size={4}>
+                <span>{sourceName}</span>
+                {p.signed && <SafetyCertificateOutlined title="已签名" className="success" />}
+              </Space>
+            ),
+          },
+          {
+            title: '版本',
+            dataIndex: 'version',
+            width: 96,
+            render: (v: string) => <code>v{v}</code>,
+          },
+          {
+            title: '操作',
+            key: 'action',
+            width: 110,
+            render: (_: any, p: Plugin) => {
+              const installed = plugins.find((v) => v.id === p.id)
+              const supported = !!p.artifacts?.[data?.platform || '']
+              const latest = installedRelease(installed, p)
+              return latest ? (
+                <Button
+                  size="small"
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => {
+                    setDetail(p)
+                    setTrusted(false)
+                  }}
+                >
+                  已安装
+                </Button>
+              ) : (
+                <Button
+                  size="small"
+                  type={installed ? 'primary' : 'default'}
+                  disabled={!supported}
+                  onClick={() => {
+                    setDetail(p)
+                    setTrusted(false)
+                  }}
+                >
+                  {!supported ? '不支持' : installed ? '更新' : '安装'}
+                </Button>
+              )
+            },
+          },
+        ]}
+      />
       <Drawer
         open={!!detail}
         onClose={() => setDetail(null)}
         title={detail?.name}
-        size={460}
+        size={440}
         footer={
-          <Button
-            type="primary"
-            block
-            disabled={
-              !trusted ||
-              plugins.some((p) => p.id === detail?.id && installedRelease(p, detail || undefined))
-            }
-            loading={busy}
-            onClick={install}
-          >
-            安装并启用
-          </Button>
+          detail && (
+            <Flex vertical gap={10}>
+              {!plugins.some((p) => p.id === detail.id && installedRelease(p, detail)) && (
+                <Checkbox checked={trusted} onChange={(e) => setTrusted(e.target.checked)}>
+                  信任此来源并安装插件及依赖
+                </Checkbox>
+              )}
+              <Button
+                type="primary"
+                block
+                disabled={
+                  !trusted || plugins.some((p) => p.id === detail.id && installedRelease(p, detail))
+                }
+                loading={busy}
+                onClick={install}
+              >
+                {plugins.some((p) => p.id === detail.id && !installedRelease(p, detail))
+                  ? '更新并启用'
+                  : '安装并启用'}
+              </Button>
+            </Flex>
+          )
         }
       >
         {detail && (
-          <>
-            <Typography.Paragraph>{detail.description}</Typography.Paragraph>
-            <div className="detail-lines">
-              <span>版本</span>
-              <strong>{detail.version}</strong>
-              <span>发布者</span>
-              <strong>{detail.author}</strong>
-              <span>来源</span>
-              <strong>{detail.sourceName}</strong>
-              <span>发布签名</span>
-              <strong>{detail.signed ? '安装时验证' : '未固定发布公钥'}</strong>
-            </div>
-            <h3>依赖插件</h3>
-            {Object.keys(detail.dependencies || {}).length ? (
-              Object.entries(detail.dependencies).map(([id, version]) => (
-                <p key={id}>
-                  <LinkOutlined /> {id} <code>{version.replace(/^>=\d+!/, '>=')}</code>
-                </p>
-              ))
-            ) : (
-              <p className="muted">无</p>
-            )}
-            <h3>需要的权限</h3>
-            {detail.permissions.map((p) => (
-              <p key={p}>
-                <CheckCircleOutlined className="muted" /> {permissionLabel(p)}
-              </p>
-            ))}
-            <Alert
-              type="info"
-              title="插件以独立进程运行，具有面板服务的系统访问权限。请仅安装可信来源。"
-              showIcon
-              className="page-notice"
+          <Space orientation="vertical" size={14} style={{ width: '100%' }}>
+            <Typography.Paragraph style={{ marginBottom: 0 }}>
+              {detail.description}
+            </Typography.Paragraph>
+            <Descriptions
+              size="small"
+              column={1}
+              bordered
+              items={[
+                { key: 'version', label: '版本', children: `v${detail.version}` },
+                { key: 'author', label: '发布者', children: detail.author },
+                { key: 'source', label: '来源', children: detail.sourceName },
+                {
+                  key: 'signed',
+                  label: '发布签名',
+                  children: detail.signed ? '安装时验证' : '未设置公钥',
+                },
+                {
+                  key: 'deps',
+                  label: '依赖插件',
+                  children: Object.keys(detail.dependencies || {}).length
+                    ? Object.entries(detail.dependencies)
+                        .map(([id, version]) => `${id} (${version.replace(/^>=\d+!/, '>=')})`)
+                        .join('、')
+                    : '无',
+                },
+                {
+                  key: 'permissions',
+                  label: '所需权限',
+                  children: detail.permissions.length
+                    ? detail.permissions.map(permissionLabel).join('；')
+                    : '无',
+                },
+              ]}
             />
-            <Checkbox checked={trusted} onChange={(e) => setTrusted(e.target.checked)}>
-              我信任此来源及其依赖插件
-            </Checkbox>
-          </>
+          </Space>
         )}
       </Drawer>
     </>
@@ -563,7 +682,11 @@ export default function Plugins() {
         onChange={setTab}
         destroyOnHidden
         items={[
-          { key: 'market', label: '发现插件', children: <Marketplace /> },
+          {
+            key: 'market',
+            label: '发现插件',
+            children: <Marketplace onOpenSources={() => setTab('sources')} />,
+          },
           { key: 'installed', label: '已安装', children: <Installed /> },
           { key: 'sources', label: '插件源', children: <Sources /> },
         ]}
