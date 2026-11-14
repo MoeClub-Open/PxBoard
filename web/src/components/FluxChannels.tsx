@@ -117,16 +117,23 @@ export function FluxChannels({
     return []
   })
 
+  const enabledRows = value.filter((row) => row.enabled !== false)
+  const anchorCandidates = [
+    ...enabledRows.filter((row) => {
+      const r = textOf(row, 'role') || 'primary'
+      return r === 'prefer' || r === 'primary'
+    }),
+    ...enabledRows.filter((row) => (textOf(row, 'role') || 'primary') !== 'backup'),
+    ...enabledRows,
+  ]
   const primaryHost =
-    value
-      .filter((row) => row.enabled !== false && (textOf(row, 'role') || 'primary') !== 'backup')
+    anchorCandidates
       .map((row) => textOf(row, 'connectHost', 'connect_host', 'server'))
-      .find(Boolean) ||
-    value
-      .filter((row) => row.enabled !== false)
-      .map((row) => textOf(row, 'connectHost', 'connect_host', 'server'))
-      .find(Boolean) ||
-    ''
+      .find(Boolean) || ''
+  const primaryPorts =
+    anchorCandidates
+      .map((row) => textOf(row, 'connectPorts', 'connect_ports', 'ports'))
+      .find(Boolean) || ''
 
   const patchRow = (index: number, patch: Record<string, unknown>, cleanupKeys: string[] = []) => {
     if (!onChange) return
@@ -170,13 +177,21 @@ export function FluxChannels({
             const enabled = channel.enabled !== false
             const transport = textOf(channel, 'transport') || 'tcp'
             const httpMode = textOf(channel, 'httpMode', 'http_mode') || 'ws'
-            const security = textOf(channel, 'security')
+            const rawSecurity = textOf(channel, 'security')
+            const security = rawSecurity && rawSecurity !== 'inherit' ? rawSecurity : 'obfs'
             const certMode = textOf(channel, 'certMode', 'cert_mode') || 'inherit'
-            const portsSummary =
-              textOf(channel, 'connectPorts', 'connect_ports', 'ports') || '未填端口'
+            const explicitPorts = textOf(channel, 'connectPorts', 'connect_ports', 'ports')
+            const portsSummary = explicitPorts || primaryPorts || '未填端口'
             const hostSummary = textOf(channel, 'connectHost', 'connect_host', 'server')
             const displayHost = hostSummary || primaryHost
-            const role = textOf(channel, 'role') || 'primary'
+            const rawRole = textOf(channel, 'role') || 'primary'
+            const role = transport !== 'udp' && rawRole === 'udp_relay' ? 'primary' : rawRole
+            const fingerprint = textOf(
+              channel,
+              'fingerprint',
+              'clientFingerprint',
+              'client_fingerprint',
+            )
             const headersObj = channel.httpHeaders ?? channel.http_headers
 
             return {
@@ -185,7 +200,9 @@ export function FluxChannels({
                 <Space wrap size={6}>
                   <strong>{id || '未命名通道'}</strong>
                   <Tag>{transport.toUpperCase()}</Tag>
-                  {security && <Tag>{securityLabels[security] || security}</Tag>}
+                  <Tag>{securityLabels[security] || security}</Tag>
+                  {role === 'prefer' && <Tag color="cyan">优先</Tag>}
+                  {role === 'udp_relay' && <Tag color="blue">UDP 转发</Tag>}
                   {role === 'backup' && <Tag color="gold">热备</Tag>}
                   {!enabled && <Tag color="default">已停用</Tag>}
                   <Typography.Text type="secondary">
@@ -230,14 +247,24 @@ export function FluxChannels({
                       />,
                     )}
                     {field(
-                      '调度角色',
+                      '调度优先级',
                       <Select
                         value={role}
                         onChange={(v) => patchRow(index, { role: v })}
-                        options={[
-                          { label: '主用（参与负载均衡）', value: 'primary' },
-                          { label: '热备（仅容灾切换）', value: 'backup' },
-                        ]}
+                        options={
+                          transport === 'udp'
+                            ? [
+                                { label: '与 TCP 同级（主用）', value: 'primary' },
+                                { label: '用于 UDP 转发', value: 'udp_relay' },
+                                { label: '高于 TCP（优先）', value: 'prefer' },
+                                { label: '热备（仅容灾切换）', value: 'backup' },
+                              ]
+                            : [
+                                { label: '主用（均衡调度）', value: 'primary' },
+                                { label: '优先使用', value: 'prefer' },
+                                { label: '热备（仅容灾切换）', value: 'backup' },
+                              ]
+                        }
                       />,
                     )}
                     {field(
@@ -274,8 +301,12 @@ export function FluxChannels({
                     {field(
                       '连接端口 / 端口段',
                       <Input
-                        placeholder="如 25566 或 20000-20020"
-                        value={textOf(channel, 'connectPorts', 'connect_ports', 'ports')}
+                        placeholder={
+                          index === 0 || !primaryPorts
+                            ? '如 25566 或 20000-20020'
+                            : '留空沿用 ' + primaryPorts
+                        }
+                        value={explicitPorts}
                         onChange={(e) =>
                           patchRow(index, { connectPorts: e.target.value }, [
                             'connect_ports',
@@ -335,6 +366,9 @@ export function FluxChannels({
                             nextPatch.certMode = 'inherit'
                             cleanup.push('cert_mode')
                           }
+                          if (v !== 'udp' && rawRole === 'udp_relay') {
+                            nextPatch.role = 'primary'
+                          }
                           patchRow(index, nextPatch, cleanup)
                         }}
                         options={[
@@ -382,15 +416,14 @@ export function FluxChannels({
                     {field(
                       '安全方式',
                       <Select
-                        value={security || 'inherit'}
+                        value={security}
                         onChange={(v) => {
-                          const mode = v === 'inherit' ? undefined : v
-                          const nextPatch: Record<string, unknown> = { security: mode }
-                          if (mode === 'tls' && !textOf(channel, 'certMode', 'cert_mode')) {
+                          const nextPatch: Record<string, unknown> = { security: v }
+                          if (v === 'tls' && !textOf(channel, 'certMode', 'cert_mode')) {
                             nextPatch.certMode = 'inherit'
                           }
                           if (
-                            mode === 'reality' &&
+                            v === 'reality' &&
                             !textOf(channel, 'sni') &&
                             !realityTextOf(channel, 'serverName', 'server_name')
                           ) {
@@ -399,7 +432,6 @@ export function FluxChannels({
                           patchRow(index, nextPatch)
                         }}
                         options={[
-                          { label: '跟随节点默认', value: 'inherit' },
                           { label: '对称加密', value: 'obfs' },
                           { label: 'TLS 证书', value: 'tls' },
                           { label: 'REALITY', value: 'reality' },
@@ -499,15 +531,14 @@ export function FluxChannels({
                         {field(
                           '客户端指纹',
                           <Select
-                            value={textOf(channel, 'fingerprint', 'clientFingerprint') || 'inherit'}
+                            value={fingerprint && fingerprint !== 'inherit' ? fingerprint : 'chrome'}
                             onChange={(v) =>
-                              patchRow(index, { fingerprint: v === 'inherit' ? undefined : v }, [
+                              patchRow(index, { fingerprint: v }, [
                                 'clientFingerprint',
                                 'client_fingerprint',
                               ])
                             }
                             options={[
-                              { label: '跟随节点默认', value: 'inherit' },
                               { label: 'Chrome', value: 'chrome' },
                               { label: 'Firefox', value: 'firefox' },
                               { label: 'Safari', value: 'safari' },
@@ -523,7 +554,7 @@ export function FluxChannels({
                           'REALITY 私钥',
                           <Input.Password
                             autoComplete="new-password"
-                            placeholder="留空继承节点或保存时自动生成"
+                            placeholder="留空保存时自动生成"
                             value={realityTextOf(channel, 'privateKey', 'private_key')}
                             onChange={(e) =>
                               patchRow(index, { privateKey: e.target.value }, ['private_key'])
@@ -613,7 +644,7 @@ export function FluxChannels({
                       '通道加密密钥',
                       <Space.Compact style={{ width: '100%' }}>
                         <Input
-                          placeholder="留空继承节点或保存时自动生成"
+                          placeholder="留空保存时自动生成"
                           value={textOf(channel, 'obfsKey', 'obfs_key')}
                           onChange={(e) =>
                             patchRow(index, { obfsKey: e.target.value }, ['obfs_key'])
@@ -642,6 +673,7 @@ export function FluxChannels({
             enabled: true,
             transport: 'tcp',
             ipVersion: 'auto',
+            security: 'obfs',
             role: 'primary',
             weight: 100,
           }

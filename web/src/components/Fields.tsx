@@ -127,7 +127,19 @@ function visible(
       nextSeen.add(key)
       if (!visible(controller, values, byKey, nextSeen)) return true
     }
-    return allowed.includes(String(values[key] ?? ''))
+    const rawVal = values[key]
+    if (key === 'protocolOptions.channels' && Array.isArray(rawVal)) {
+      const hasInheritedTls = rawVal.some((ch: unknown) => {
+        if (!ch || typeof ch !== 'object') return false
+        const item = ch as Row
+        if (item.enabled === false) return false
+        const sec = String(item.security || 'obfs').toLowerCase()
+        const cm = String(item.certMode ?? item.cert_mode ?? 'inherit').toLowerCase() || 'inherit'
+        return sec === 'tls' && cm === 'inherit'
+      })
+      return allowed.includes(hasInheritedTls ? 'tls_inherit' : 'no_tls_inherit')
+    }
+    return allowed.includes(String(rawVal ?? ''))
   })
 }
 
