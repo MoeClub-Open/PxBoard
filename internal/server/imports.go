@@ -186,6 +186,9 @@ func (s *Server) importRuntime(w http.ResponseWriter, r *http.Request, actor p.A
 		return
 	}
 	rows.Close()
+	if _, e = tx.Exec("DELETE FROM import_rows WHERE run_id=?", id); bad(w, e) {
+		return
+	}
 	_, e = tx.Exec("UPDATE import_runs SET status='committed',committed_at=? WHERE id=?", store.Now(), id)
 	if bad(w, e) {
 		return

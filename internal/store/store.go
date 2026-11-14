@@ -68,6 +68,9 @@ func migrateWorkspaceModes(db *sql.DB) error {
 			return err
 		}
 	}
+	if _, err = tx.Exec(`DELETE FROM import_rows WHERE run_id IN (SELECT id FROM import_runs WHERE status='committed')`); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 func Now() string { return time.Now().UTC().Format(time.RFC3339) }
