@@ -1,6 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
 import {
-  App,
   Button,
   Collapse,
   Input,
@@ -12,7 +11,7 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { DeleteOutlined, KeyOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Row } from '../api'
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -33,31 +32,12 @@ function randomObfsKey(): string {
   return toBase64Url(bytes).slice(0, 32)
 }
 
-async function generateRealityKeypair(): Promise<{ privateKey: string; publicKey: string }> {
-  const pair = (await crypto.subtle.generateKey({ name: 'X25519' }, true, [
-    'deriveBits',
-  ])) as CryptoKeyPair
-  const privateJwk = await crypto.subtle.exportKey('jwk', pair.privateKey)
-  if (!privateJwk.d || !privateJwk.x) throw new Error('浏览器无法导出 X25519 密钥')
-  return { privateKey: privateJwk.d, publicKey: privateJwk.x }
-}
-
 function textOf(row: Row, ...keys: string[]): string {
   for (const key of keys) {
     const val = row[key]
     if (val !== undefined && val !== null && String(val) !== '') {
       return String(val)
     }
-  }
-  return ''
-}
-
-function realityTextOf(row: Row, camel: string, snake: string): string {
-  const direct = textOf(row, camel, snake)
-  if (direct) return direct
-  const nested = row.reality
-  if (nested && typeof nested === 'object') {
-    return textOf(nested as Row, camel, snake)
   }
   return ''
 }
@@ -84,7 +64,6 @@ function parseHeaders(text: string): Record<string, string> {
 const securityLabels: Record<string, string> = {
   obfs: '加密',
   tls: 'TLS',
-  reality: 'REALITY',
 }
 
 export function FluxChannels({
@@ -94,7 +73,6 @@ export function FluxChannels({
   value?: Row[]
   onChange?: (value: Row[]) => void
 }) {
-  const { message } = App.useApp()
   const [headerDrafts, setHeaderDrafts] = useState<Record<string, string>>({})
   const rowKeysRef = useRef<WeakMap<object, string>>(new WeakMap())
 
@@ -178,7 +156,7 @@ export function FluxChannels({
             const transport = textOf(channel, 'transport') || 'tcp'
             const httpMode = textOf(channel, 'httpMode', 'http_mode') || 'ws'
             const rawSecurity = textOf(channel, 'security')
-            const security = rawSecurity && rawSecurity !== 'inherit' ? rawSecurity : 'obfs'
+            const security = rawSecurity === 'tls' ? 'tls' : 'obfs'
             const certMode = textOf(channel, 'certMode', 'cert_mode') || 'inherit'
             const explicitPorts = textOf(channel, 'connectPorts', 'connect_ports', 'ports')
             const portsSummary = explicitPorts || primaryPorts || '未填端口'
@@ -186,12 +164,6 @@ export function FluxChannels({
             const displayHost = hostSummary || primaryHost
             const rawRole = textOf(channel, 'role') || 'primary'
             const role = transport !== 'udp' && rawRole === 'udp_relay' ? 'primary' : rawRole
-            const fingerprint = textOf(
-              channel,
-              'fingerprint',
-              'clientFingerprint',
-              'client_fingerprint',
-            )
             const headersObj = channel.httpHeaders ?? channel.http_headers
 
             return {
@@ -419,22 +391,39 @@ export function FluxChannels({
                         value={security}
                         onChange={(v) => {
                           const nextPatch: Record<string, unknown> = { security: v }
+                          const cleanup = [
+                            'privateKey',
+                            'private_key',
+                            'publicKey',
+                            'public_key',
+                            'shortId',
+                            'short_id',
+                            'dest',
+                            'reality',
+                          ]
                           if (v === 'tls' && !textOf(channel, 'certMode', 'cert_mode')) {
                             nextPatch.certMode = 'inherit'
                           }
-                          if (
-                            v === 'reality' &&
-                            !textOf(channel, 'sni') &&
-                            !realityTextOf(channel, 'serverName', 'server_name')
-                          ) {
-                            nextPatch.sni = 'huggingface.co'
+                          if (v === 'tls') {
+                            cleanup.push('obfsKey', 'obfs_key')
+                          } else {
+                            cleanup.push(
+                              'certMode',
+                              'cert_mode',
+                              'certPath',
+                              'cert_path',
+                              'keyPath',
+                              'key_path',
+                              'sni',
+                              'insecure',
+                              'allow_insecure',
+                            )
                           }
-                          patchRow(index, nextPatch)
+                          patchRow(index, nextPatch, cleanup)
                         }}
                         options={[
                           { label: '对称加密', value: 'obfs' },
                           { label: 'TLS 证书', value: 'tls' },
-                          { label: 'REALITY', value: 'reality' },
                         ]}
                       />,
                     )}
@@ -466,114 +455,6 @@ export function FluxChannels({
                         }
                       />,
                     )}
-
-                  {security === 'reality' && (
-                    <Space orientation="vertical" size="small" style={{ width: '100%' }}>
-                      <div>
-                        <Button
-                          size="small"
-                          icon={<KeyOutlined />}
-                          onClick={async () => {
-                            try {
-                              const pair = await generateRealityKeypair()
-                              const existingShortId = realityTextOf(channel, 'shortId', 'short_id')
-                              patchRow(
-                                index,
-                                {
-                                  privateKey: pair.privateKey,
-                                  publicKey: pair.publicKey,
-                                  shortId: existingShortId || randomHex(4),
-                                },
-                                ['private_key', 'public_key', 'short_id', 'reality'],
-                              )
-                            } catch (error) {
-                              void message.error(
-                                error instanceof Error ? error.message : '生成密钥失败',
-                              )
-                            }
-                          }}
-                        >
-                          生成密钥对
-                        </Button>
-                      </div>
-                      <div style={grid}>
-                        {field(
-                          '借用域名（SNI）',
-                          <Input
-                            placeholder="huggingface.co"
-                            value={
-                              textOf(channel, 'sni') ||
-                              realityTextOf(channel, 'serverName', 'server_name')
-                            }
-                            onChange={(e) =>
-                              patchRow(index, { sni: e.target.value }, ['server_name'])
-                            }
-                          />,
-                        )}
-                        {field(
-                          '回源目标地址',
-                          <Input
-                            placeholder="留空默认使用借用域名:443"
-                            value={realityTextOf(channel, 'dest', 'dest')}
-                            onChange={(e) => patchRow(index, { dest: e.target.value })}
-                          />,
-                        )}
-                        {field(
-                          'Short ID',
-                          <Input
-                            placeholder="偶数位十六进制"
-                            value={realityTextOf(channel, 'shortId', 'short_id')}
-                            onChange={(e) =>
-                              patchRow(index, { shortId: e.target.value }, ['short_id'])
-                            }
-                          />,
-                        )}
-                        {field(
-                          '客户端指纹',
-                          <Select
-                            value={fingerprint && fingerprint !== 'inherit' ? fingerprint : 'chrome'}
-                            onChange={(v) =>
-                              patchRow(index, { fingerprint: v }, [
-                                'clientFingerprint',
-                                'client_fingerprint',
-                              ])
-                            }
-                            options={[
-                              { label: 'Chrome', value: 'chrome' },
-                              { label: 'Firefox', value: 'firefox' },
-                              { label: 'Safari', value: 'safari' },
-                              { label: 'iOS', value: 'ios' },
-                              { label: 'Edge', value: 'edge' },
-                              { label: '随机', value: 'random' },
-                            ]}
-                          />,
-                        )}
-                      </div>
-                      <div style={grid}>
-                        {field(
-                          'REALITY 私钥',
-                          <Input.Password
-                            autoComplete="new-password"
-                            placeholder="留空保存时自动生成"
-                            value={realityTextOf(channel, 'privateKey', 'private_key')}
-                            onChange={(e) =>
-                              patchRow(index, { privateKey: e.target.value }, ['private_key'])
-                            }
-                          />,
-                        )}
-                        {field(
-                          'REALITY 公钥',
-                          <Input
-                            placeholder="留空保存时自动推导"
-                            value={realityTextOf(channel, 'publicKey', 'public_key')}
-                            onChange={(e) =>
-                              patchRow(index, { publicKey: e.target.value }, ['public_key'])
-                            }
-                          />,
-                        )}
-                      </div>
-                    </Space>
-                  )}
 
                   {security === 'tls' && (
                     <div style={grid}>
