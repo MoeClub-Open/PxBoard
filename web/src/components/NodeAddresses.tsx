@@ -9,7 +9,6 @@ const inheritedKeys = [
   'passwordMode',
   'minimumAccessLevel',
   'allowedAccountIds',
-  'engine',
   'protocol',
   'serverPort',
   'tls',
@@ -46,9 +45,11 @@ export default function NodeAddresses({
   const [editor, setEditor] = useState<Row | null>(null)
   const [busy, setBusy] = useState(false)
   const [form] = Form.useForm()
-  const fields: Field[] = (resource.fields || []).filter((field) =>
-    ['name', 'host', 'port', 'groups', 'trafficRate', 'visible'].includes(field.key),
-  )
+  const fields: Field[] = (resource.fields || [])
+    .filter((field) =>
+      ['name', 'host', 'port', 'groups', 'trafficRate', 'visible'].includes(field.key),
+    )
+    .map((field) => ({ ...field, when: undefined }))
   const children = nodes.filter((node) => node.parentId === parent.id && !node.enabled)
   function openEditor(row?: Row) {
     form.resetFields()

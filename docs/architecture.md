@@ -23,7 +23,7 @@ flowchart LR
   Runtime --> Data[(SQLite / 插件文件状态)]
   Runtime --> Events[持久事件与投递]
   Events --> Business
-  Node[NodeRS / px-agent] --> Core
+  Node[NodeRS] --> Core
 ```
 
 后端使用 Go，核心 HTTP 服务基于标准库，持久存储为 SQLite。界面使用 React、TypeScript 和 Ant Design。当前部署模型是单个核心实例管理本地插件进程，数据库使用 WAL。
@@ -97,7 +97,7 @@ NodeRS 机器接口统一位于 `POST /rpc/v1/nodes/server.*`（`server.bootstra
 | 仓库               | 负责内容                                       |
 | ------------------ | ---------------------------------------------- |
 | `PxBoard`          | 核心、公开 SDK、共享界面与声明式页面渲染       |
-| `PxBoard-Plugins`  | 官方业务插件、迁移工具和官方节点代理           |
+| `PxBoard-Plugins`  | 官方业务插件与数据迁移工具                     |
 | `PxBoard-Registry` | 模式组合、插件索引、发布工具与平台产物         |
 | NodeRS             | 独立的节点协议运行与 PxBoard / Xboard 接口适配 |
 

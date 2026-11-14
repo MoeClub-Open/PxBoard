@@ -90,7 +90,7 @@ JSON 字段使用 camelCase，时间使用 UTC RFC 3339，流量上报使用字�
 | --- | --- |
 | `branding` | 公开 `public.get`；管理员 `settings.list`、`settings.update` |
 | `registration` | 公开 `register`；管理员 `settings.list`、`settings.update` |
-| `nodes` | `nodes.*`、`machines.*`、`groups.*`、`status.list`、`status.display`、`settings.*`；NodeRS 机器同步 `server.bootstrap`、`server.pull`、`server.traffic`、`server.telemetry`、`server.ackConfig`；节点代理 `agent.sync` |
+| `nodes` | `nodes.*`、`machines.*`、`groups.*`、`status.list`、`status.display`、`settings.*`；NodeRS 机器同步 `server.bootstrap`、`server.pull`、`server.traffic`、`server.telemetry`、`server.ackConfig` |
 | `access` | `accounts.list`、`accounts.create`、`accounts.update`、`accounts.reset`、`accounts.suspend`、`preferences.get`、`preferences.update` |
 | `subscriptions` | `client.profile`（原生客户端结构化配置与权益快照）、`links.*`、`templates.*`、`settings.public`；外部订阅下载 `GET /s/{token}` |
 | `redeem` | 管理员 `codes.*`；用户 `redeem.create`、`claims.list` |

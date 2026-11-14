@@ -82,9 +82,9 @@ function parseHeaders(text: string): Record<string, string> {
 }
 
 const securityLabels: Record<string, string> = {
-  reality: 'REALITY',
+  obfs: '加密',
   tls: 'TLS',
-  obfs: '混淆',
+  reality: 'REALITY',
 }
 
 export function FluxChannels({
@@ -95,7 +95,6 @@ export function FluxChannels({
   onChange?: (value: Row[]) => void
 }) {
   const { message } = App.useApp()
-  const [open, setOpen] = useState<string[]>([])
   const [headerDrafts, setHeaderDrafts] = useState<Record<string, string>>({})
   const rowKeysRef = useRef<WeakMap<object, string>>(new WeakMap())
 
@@ -107,6 +106,27 @@ export function FluxChannels({
     }
     return key
   }
+
+  const [open, setOpen] = useState<string[]>(() => {
+    if (
+      value.length > 0 &&
+      (value.length === 1 || !textOf(value[0], 'connectHost', 'connect_host', 'server'))
+    ) {
+      return [keyFor(value[0], 0)]
+    }
+    return []
+  })
+
+  const primaryHost =
+    value
+      .filter((row) => row.enabled !== false && (textOf(row, 'role') || 'primary') !== 'backup')
+      .map((row) => textOf(row, 'connectHost', 'connect_host', 'server'))
+      .find(Boolean) ||
+    value
+      .filter((row) => row.enabled !== false)
+      .map((row) => textOf(row, 'connectHost', 'connect_host', 'server'))
+      .find(Boolean) ||
+    ''
 
   const patchRow = (index: number, patch: Record<string, unknown>, cleanupKeys: string[] = []) => {
     if (!onChange) return
@@ -153,8 +173,9 @@ export function FluxChannels({
             const security = textOf(channel, 'security')
             const certMode = textOf(channel, 'certMode', 'cert_mode') || 'inherit'
             const portsSummary =
-              textOf(channel, 'connectPorts', 'connect_ports', 'ports') || '跟随节点端口'
+              textOf(channel, 'connectPorts', 'connect_ports', 'ports') || '未填端口'
             const hostSummary = textOf(channel, 'connectHost', 'connect_host', 'server')
+            const displayHost = hostSummary || primaryHost
             const role = textOf(channel, 'role') || 'primary'
             const headersObj = channel.httpHeaders ?? channel.http_headers
 
@@ -168,7 +189,7 @@ export function FluxChannels({
                   {role === 'backup' && <Tag color="gold">热备</Tag>}
                   {!enabled && <Tag color="default">已停用</Tag>}
                   <Typography.Text type="secondary">
-                    {hostSummary ? hostSummary + ':' + portsSummary : portsSummary}
+                    {displayHost ? displayHost + ':' + portsSummary : portsSummary}
                   </Typography.Text>
                 </Space>
               ),
@@ -236,7 +257,11 @@ export function FluxChannels({
                     {field(
                       '连接地址',
                       <Input
-                        placeholder="留空跟随节点连接地址"
+                        placeholder={
+                          index === 0 || !primaryHost
+                            ? '填写连接域名或 IP'
+                            : '留空沿用 ' + primaryHost
+                        }
                         value={hostSummary}
                         onChange={(e) =>
                           patchRow(index, { connectHost: e.target.value }, [
@@ -249,7 +274,7 @@ export function FluxChannels({
                     {field(
                       '连接端口 / 端口段',
                       <Input
-                        placeholder="留空跟随节点端口，如 443 或 20000-20020"
+                        placeholder="如 25566 或 20000-20020"
                         value={textOf(channel, 'connectPorts', 'connect_ports', 'ports')}
                         onChange={(e) =>
                           patchRow(index, { connectPorts: e.target.value }, [
@@ -284,7 +309,7 @@ export function FluxChannels({
                     {field(
                       '本地监听端口',
                       <Input
-                        placeholder="留空跟随连接端口"
+                        placeholder="留空与连接端口一致"
                         value={textOf(channel, 'listenPorts', 'listen_ports')}
                         onChange={(e) =>
                           patchRow(index, { listenPorts: e.target.value }, ['listen_ports'])
@@ -364,13 +389,20 @@ export function FluxChannels({
                           if (mode === 'tls' && !textOf(channel, 'certMode', 'cert_mode')) {
                             nextPatch.certMode = 'inherit'
                           }
+                          if (
+                            mode === 'reality' &&
+                            !textOf(channel, 'sni') &&
+                            !realityTextOf(channel, 'serverName', 'server_name')
+                          ) {
+                            nextPatch.sni = 'huggingface.co'
+                          }
                           patchRow(index, nextPatch)
                         }}
                         options={[
                           { label: '跟随节点默认', value: 'inherit' },
-                          { label: 'REALITY 证书借用', value: 'reality' },
+                          { label: '对称加密', value: 'obfs' },
                           { label: 'TLS 证书', value: 'tls' },
-                          { label: '数据包混淆', value: 'obfs' },
+                          { label: 'REALITY', value: 'reality' },
                         ]}
                       />,
                     )}
@@ -436,7 +468,7 @@ export function FluxChannels({
                         {field(
                           '借用域名（SNI）',
                           <Input
-                            placeholder="例如 www.microsoft.com"
+                            placeholder="huggingface.co"
                             value={
                               textOf(channel, 'sni') ||
                               realityTextOf(channel, 'serverName', 'server_name')
@@ -578,7 +610,7 @@ export function FluxChannels({
 
                   {security === 'obfs' &&
                     field(
-                      '通道混淆密钥',
+                      '通道加密密钥',
                       <Space.Compact style={{ width: '100%' }}>
                         <Input
                           placeholder="留空继承节点或保存时自动生成"

@@ -173,7 +173,7 @@ function Cell({
       </span>
     )
   if (field.type === 'nodeService') {
-    const label = row.parentId && !value ? '复用主节点' : value ? '独立服务' : '已停用'
+    const label = row.parentId && !value ? '复用主节点' : value ? '已启用' : '已停用'
     return <Tag color={value || row.parentId ? 'success' : 'default'}>{label}</Tag>
   }
   if (field.type === 'boolean')

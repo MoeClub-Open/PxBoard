@@ -37,7 +37,7 @@ export function useResourcePresentation(
         : [row],
     canDelete: (row: Row) => !addresses || !data.some((child) => child.parentId === row.id),
     cell: (field: Field, row: Row, content: ReactNode) =>
-      addresses && field.key === 'name' ? (
+      addresses && field.key === 'name' && row.protocol !== 'flux' ? (
         <div>
           {content}
           <div>

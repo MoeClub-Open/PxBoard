@@ -113,13 +113,37 @@ function GroupSelect({
   )
 }
 
-function visible(field: Field, values: Row) {
-  return (
-    !field.when ||
-    Object.entries(field.when).every(([key, allowed]) =>
-      allowed.includes(String(values[key] ?? '')),
-    )
-  )
+function visible(
+  field: Field,
+  values: Row,
+  byKey?: Map<string, Field>,
+  seen: Set<string> = new Set(),
+): boolean {
+  if (!field.when) return true
+  return Object.entries(field.when).every(([key, allowed]) => {
+    const controller = byKey?.get(key)
+    if (controller && !seen.has(key)) {
+      const nextSeen = new Set(seen)
+      nextSeen.add(key)
+      if (!visible(controller, values, byKey, nextSeen)) return true
+    }
+    return allowed.includes(String(values[key] ?? ''))
+  })
+}
+
+function whenKeys(
+  field: Field,
+  byKey: Map<string, Field>,
+  acc: Set<string> = new Set(),
+): string[] {
+  if (!field.when) return [...acc]
+  for (const key of Object.keys(field.when)) {
+    if (acc.has(key)) continue
+    acc.add(key)
+    const controller = byKey.get(key)
+    if (controller) whenKeys(controller, byKey, acc)
+  }
+  return [...acc]
 }
 
 function fieldValue(row: Row | undefined, key: string) {
@@ -201,6 +225,7 @@ export function Fields({
   pluginId?: string
 }) {
   const { currencySymbol } = useCurrency()
+  const byKey = new Map(fields.map((f) => [f.key, f]))
   return fields.map((original) => {
     const field = original.optionsEndpoint?.includes('{id}')
       ? {
@@ -211,6 +236,7 @@ export function Fields({
           ),
         }
       : original
+    const watchedKeys = field.when ? whenKeys(field, byKey) : []
     return field.type === 'discount' ? (
       <Form.Item
         key={field.key}
@@ -234,11 +260,13 @@ export function Fields({
         key={field.key}
         noStyle
         shouldUpdate={(previous, current) =>
-          Object.keys(field.when!).some((key) => previous[key] !== current[key])
+          watchedKeys.some((key) => previous[key] !== current[key])
         }
       >
         {({ getFieldsValue }) =>
-          visible(field, getFieldsValue(true)) ? fieldItem(field, currencySymbol, pluginId) : null
+          visible(field, getFieldsValue(true), byKey)
+            ? fieldItem(field, currencySymbol, pluginId)
+            : null
         }
       </Form.Item>
     ) : (
@@ -272,8 +300,9 @@ export function formValues(fields: Field[], row?: Row) {
 }
 export function serialize(fields: Field[], values: Row) {
   const result: Row = {}
+  const byKey = new Map(fields.map((f) => [f.key, f]))
   for (const field of fields) {
-    if (field.readOnly || !visible(field, values)) continue
+    if (field.readOnly || !visible(field, values, byKey)) continue
     const value = values[field.key]
     const path = field.key.split('.')
     if (path.length > 1 && value === undefined) continue
@@ -286,7 +315,8 @@ export function serialize(fields: Field[], values: Row) {
           : ''
         : field.type === 'multiselect' ||
             field.type === 'siteRoutes' ||
-            field.type === 'siteFeatures'
+            field.type === 'siteFeatures' ||
+            field.type === 'fluxChannels'
           ? Array.isArray(value)
             ? value
             : []

@@ -267,29 +267,6 @@ NodeRS 通过 `POST /rpc/v1/nodes/server.*` 与 `Authorization: Bearer <machineK
 
 NodeRS 统一使用原仓库的 [v0.1.49 或更新版本](https://github.com/MoeclubM/NodeRS/releases)，同一安装包支持 Xboard、PxBoard 与认证后的配置迁移；配合当前 `0.0.1` 核心与节点插件使用。此前安装组织适配版的节点，按 [发布源切换说明](https://github.com/MoeclubM/NodeRS/blob/main/docs/zh/install.md#从组织适配版升级) 完成一次升级。管理员入口、源 Xboard 桥接与回退操作见 [NodeRS 配置管理](../../PxBoard-Plugins/docs/noders-management.md)。
 
-### 官方 Xray / sing-box 代理
-
-在官方插件仓库构建代理：
-
-```sh
-go build -o bin/px-agent ./cmd/agent
-```
-
-先安装所选内核。在面板添加节点，填写地址、端口、协议、分组和证书路径，再通过“接入令牌”取得节点 ID 和令牌。在节点服务器运行：
-
-```sh
-export PX_NODE_TOKEN='复制的节点令牌'
-./px-agent \
-  --panel https://panel.example.com \
-  --node 节点ID \
-  --engine /usr/local/bin/xray \
-  --stats-cli /usr/local/bin/xray \
-  --data /var/lib/pxboard-agent \
-  --access-log /var/log/xray/access.log
-```
-
-使用 sing-box 时替换 `--engine`；流量查询仍需要指定支持相应 API 的查询工具。`--access-log` 用于 Xray 审计采集，其父目录需要提前存在且可写。统计接口只监听本机 `127.0.0.1:10085`。代理的实际配置能力见 [功能范围](features.md)，与 NodeRS 的能力分开。
-
 ### 状态数据
 
 服务器监控页按服务器最近心跳在 120 秒内显示在线，并汇总该服务器的 CPU、内存、磁盘、交换空间与去重在线账户数；未收到上报或已离线时负载显示为空。在线状态不代表从任意用户网络都能连通，也不是延迟或测速结果。

@@ -104,7 +104,7 @@ export function officialControl(field: Field) {
 
 export function officialCell(field: Field, value: unknown, money: (amount: number) => string) {
   if (field.type === 'fluxChannels' && Array.isArray(value)) {
-    return value.length ? String(value.length) + ' 条通道' : '默认双通道'
+    return value.length ? String(value.length) + ' 条通道' : '未配置通道'
   }
   if (field.type !== 'periods' || !Array.isArray(value)) return undefined
   return (
