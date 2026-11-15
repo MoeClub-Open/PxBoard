@@ -135,7 +135,7 @@ JSON 字段使用 camelCase，时间使用 UTC RFC 3339，流量上报使用字�
 
 `nodes/status.list` 以服务器为单位返回状态：对普通用户只返回包含其有权使用节点的启用服务器；管理员可查看全部服务器与真实上报的 CPU、内存、磁盘、交换空间和去重在线账户数。管理员前台预览传入 `{"scope":"mine"}`。最近 120 秒心跳判为在线，缺少心跳判为未接入或离线；离线或缺少负载上报时相应字段省略，不以零值假定空闲。此接口不探测公网延迟或线路可达性。
 
-管理员以 `nodes/settings.update` 提交 `{"userStatusEnabled":false}`，关闭用户服务器状态入口和用户状态接口；管理员监控、NodeRS 接入、流量上报及订阅继续运行。节点记录的 `enabled` 控制服务启用，`visible` 控制订阅及用户服务器可见性判断，两者独立。共用父节点的记录通过 `parentId` 保留关系，子节点可使用父节点服务而不重复启动监听。
+管理员以 `nodes/settings.update` 提交 `{"userStatusEnabled":false}`，关闭用户服务器状态入口和用户状态接口；管理员监控、NodeRS 接入、流量上报及订阅继续运行。节点记录的 `enabled` 控制服务启用，`visible` 控制订阅及用户服务器可见性判断，两者独立。Flux 节点通过 `protocolOptions.channels` 配置多通道，其余协议节点通过 `endpoints` 配置单个或多个接入地址并在订阅下发时拆分为独立兼容节点。
 
 管理员可同时设置 `userStatusFields` 字符串数组，选择用户状态页的展示项；用户通过 `nodes/status.display` 读取所选字段，未选择的数据不会出现在用户状态接口中。订阅浏览器伪装由管理员通过 `subscriptions/settings.list` 与 `subscriptions/settings.update` 配置 `hideFromBrowsers` 和按行分隔的 `browserAgents`，根据 User-Agent 匹配；该标识可以伪造。
 

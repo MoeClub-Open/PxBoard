@@ -173,8 +173,15 @@ function Cell({
       </span>
     )
   if (field.type === 'nodeService') {
-    const label = row.parentId && !value ? '复用主节点' : value ? '已启用' : '已停用'
-    return <Tag color={value || row.parentId ? 'success' : 'default'}>{label}</Tag>
+    return <Tag color={value ? 'success' : 'default'}>{value ? '已启用' : '已停用'}</Tag>
+  }
+  if (field.key === 'host' && Array.isArray(row.endpoints) && row.endpoints.length > 1) {
+    return (
+      <Space size={6}>
+        <span title={text}>{text}</span>
+        <Tag style={{ marginInlineEnd: 0 }}>+{row.endpoints.length - 1}</Tag>
+      </Space>
+    )
   }
   if (field.type === 'boolean')
     return <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>
@@ -481,7 +488,7 @@ function ResourceTable({
   const [form] = Form.useForm()
   const fields = editor?.action?.fields || resource.fields || []
   const allRows = Array.isArray(data) ? data : data?.items || []
-  const presentation = useResourcePresentation(resource, allRows, pluginId, reload, openEditor)
+  const presentation = useResourcePresentation(resource, allRows, pluginId, reload)
   const rows = presentation.rows.filter(
     (row) =>
       resource.paginated ||
@@ -493,7 +500,13 @@ function ResourceTable({
             searchableText(column, candidate[column.key], groupNames)
               .toLowerCase()
               .includes(search.toLowerCase()),
-          ),
+          ) ||
+          (Array.isArray(candidate.endpoints) &&
+            candidate.endpoints.some((ep: Row) =>
+              `${ep?.host ?? ''} ${ep?.port ?? ''} ${ep?.name ?? ''}`
+                .toLowerCase()
+                .includes(search.toLowerCase()),
+            )),
         ),
   )
   const total = Array.isArray(data) ? rows.length : data?.total || 0

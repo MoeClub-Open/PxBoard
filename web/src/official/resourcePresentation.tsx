@@ -1,7 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Button } from 'antd'
 import type { Field, Resource, Row } from '../api'
-import NodeAddresses from '../components/NodeAddresses'
 import MailTemplateEditor from '../components/MailTemplateEditor'
 import MailCampaignEditor from '../components/MailCampaignEditor'
 
@@ -11,65 +9,21 @@ export function useResourcePresentation(
   data: Row[],
   pluginId: string,
   reload: () => void,
-  edit: (row: Row) => void,
 ) {
   const [parent, setParent] = useState<Row | null>(null)
-  const addresses = resource.renderer === 'node-connections'
   const mailTemplates = resource.renderer === 'mail-templates'
   const campaigns = resource.renderer === 'mail-campaigns'
-  const grouped = addresses
-  const ids = new Set(data.map((row) => row.id))
   return {
     openEditor: (row?: Row) => {
       if (!campaigns && (!mailTemplates || !row)) return false
       setParent(row || {})
       return true
     },
-    rows: data.filter(
-      (row) => !grouped || !row.parentId || !ids.has(row.parentId) || (addresses && row.enabled),
-    ),
-    searchRows: (row: Row) =>
-      grouped
-        ? [
-            row,
-            ...data.filter((child) => child.parentId === row.id && (!addresses || !child.enabled)),
-          ]
-        : [row],
-    canDelete: (row: Row) => !addresses || !data.some((child) => child.parentId === row.id),
-    cell: (field: Field, row: Row, content: ReactNode) =>
-      addresses && field.key === 'name' && row.protocol !== 'flux' ? (
-        <div>
-          {content}
-          <div>
-            <Button
-              type="link"
-              size="small"
-              style={{ padding: 0, height: 'auto' }}
-              onClick={() => setParent(row)}
-            >
-              {1 + data.filter((child) => child.parentId === row.id && !child.enabled).length}{' '}
-              个地址
-            </Button>
-          </div>
-        </div>
-      ) : (
-        content
-      ),
-    exportRows: (rows: Row[]) => {
-      if (!addresses) return { rows, columns: resource.columns }
-      const selected = new Set(rows.map((row) => row.id))
-      return {
-        rows: data
-          .filter((row) => selected.has(row.id) || (!row.enabled && selected.has(row.parentId)))
-          .map((row) => ({
-            ...row,
-            parentName: selected.has(row.parentId)
-              ? data.find((parent) => parent.id === row.parentId)?.name
-              : '',
-          })),
-        columns: [...resource.columns, { key: 'parentName', label: '所属主节点' }],
-      }
-    },
+    rows: data,
+    searchRows: (row: Row) => [row],
+    canDelete: (_row: Row) => true,
+    cell: (_field: Field, _row: Row, content: ReactNode) => content,
+    exportRows: (rows: Row[]) => ({ rows, columns: resource.columns }),
     overlay:
       campaigns && parent ? (
         <MailCampaignEditor
@@ -86,20 +40,6 @@ export function useResourcePresentation(
           endpoint={resource.endpoint}
           onClose={() => setParent(null)}
           onSaved={reload}
-        />
-      ) : addresses && parent ? (
-        <NodeAddresses
-          parent={parent}
-          nodes={data}
-          resource={resource}
-          pluginId={pluginId}
-          endpoint={resource.endpoint}
-          onClose={() => setParent(null)}
-          onChange={reload}
-          onEditParent={() => {
-            setParent(null)
-            edit(parent)
-          }}
         />
       ) : null,
   }

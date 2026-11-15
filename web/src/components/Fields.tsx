@@ -213,6 +213,25 @@ function fieldItem(f: Field, symbol: string, pluginId?: string) {
   else if (f.type === 'email') control = <Input type="email" autoComplete="email" />
   else if (f.type === 'url') control = <Input type="url" placeholder="https://" />
   control = officialControl(f) || control
+  const rules =
+    f.type === 'nodeEndpoints'
+      ? [
+          {
+            validator: async (_: unknown, val: unknown) => {
+              const list = Array.isArray(val) ? (val as Row[]) : []
+              if (!list.length) throw new Error('请至少填写一个接入地址')
+              for (const item of list) {
+                if (!String(item?.host ?? '').trim()) throw new Error('请填写连接地址')
+                const port = Number(item?.port)
+                if (!Number.isInteger(port) || port < 1 || port > 65535)
+                  throw new Error('请填写有效的连接端口（1-65535）')
+              }
+            },
+          },
+        ]
+      : f.required
+        ? [{ required: true, message: `请填写${f.label}` }]
+        : []
   return (
     <Form.Item
       key={f.key}
@@ -220,7 +239,7 @@ function fieldItem(f: Field, symbol: string, pluginId?: string) {
       name={f.key}
       tooltip={f.hint}
       valuePropName={f.type === 'boolean' ? 'checked' : 'value'}
-      rules={f.required ? [{ required: true, message: `请填写${f.label}` }] : []}
+      rules={rules}
     >
       {control}
     </Form.Item>
@@ -328,7 +347,8 @@ export function serialize(fields: Field[], values: Row) {
         : field.type === 'multiselect' ||
             field.type === 'siteRoutes' ||
             field.type === 'siteFeatures' ||
-            field.type === 'fluxChannels'
+            field.type === 'fluxChannels' ||
+            field.type === 'nodeEndpoints'
           ? Array.isArray(value)
             ? value
             : []

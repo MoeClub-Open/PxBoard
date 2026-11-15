@@ -2,6 +2,7 @@ import { Button, Input, Space } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Field, Row } from '../api'
 import { FluxChannels } from '../components/FluxChannels'
+import { NodeEndpoints } from '../components/NodeEndpoints'
 import { PlanPeriods } from '../components/PlanPeriods'
 import { periodLabel } from '../planPeriods'
 
@@ -96,6 +97,7 @@ const controls = {
   siteRoutes: () => <SiteItemsEditor withRegion />,
   siteFeatures: () => <SiteItemsEditor />,
   fluxChannels: () => <FluxChannels />,
+  nodeEndpoints: () => <NodeEndpoints />,
 }
 
 export function officialControl(field: Field) {
