@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -27,7 +28,14 @@ func TestNativeAuthorization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := (&Server{Store: db, Plugins: plugins.New(db, filepath.Join(dir, "plugins"), "http://127.0.0.1"), PublicURL: "https://panel.test"}).Handler()
+	webDir := filepath.Join(dir, "web")
+	if err := os.MkdirAll(webDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(webDir, "index.html"), []byte("<!doctype html><title>PxBoard</title><div id=\"root\"></div>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	handler := (&Server{Store: db, Plugins: plugins.New(db, filepath.Join(dir, "plugins"), "http://127.0.0.1"), Web: webDir, PublicURL: "https://panel.test"}).Handler()
 	call := func(method, token string, body any, status int) any {
 		t.Helper()
 		raw, _ := json.Marshal(body)
@@ -59,6 +67,12 @@ func TestNativeAuthorization(t *testing.T) {
 	call("auth.browserLink", token, map[string]string{"redirectPath": "https://other.test"}, 400)
 	call("auth.browserLink", token, map[string]string{"redirectPath": "/admin"}, 400)
 	link := call("auth.browserLink", token, map[string]string{"redirectPath": "/user/plans"}, 200).(map[string]any)
+	browserPage := httptest.NewRequest(http.MethodGet, "/auth/browser", nil)
+	browserRec := httptest.NewRecorder()
+	handler.ServeHTTP(browserRec, browserPage)
+	if browserRec.Code != http.StatusOK {
+		t.Fatalf("GET /auth/browser: got %d: %s", browserRec.Code, browserRec.Body)
+	}
 	secret := strings.Split(link["url"].(string), "#")[1]
 	if call("auth.browserExchange", "", map[string]string{"token": secret}, 200).(map[string]any)["redirectPath"] != "/user/plans" {
 		t.Fatal("browser destination changed")

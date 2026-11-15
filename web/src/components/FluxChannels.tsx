@@ -14,22 +14,10 @@ import {
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { Row } from '../api'
 
-function toBase64Url(bytes: Uint8Array): string {
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-}
-
 function randomHex(byteLength: number): string {
   const bytes = new Uint8Array(byteLength)
   crypto.getRandomValues(bytes)
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-function randomObfsKey(): string {
-  const bytes = new Uint8Array(24)
-  crypto.getRandomValues(bytes)
-  return toBase64Url(bytes).slice(0, 32)
 }
 
 function textOf(row: Row, ...keys: string[]): string {
@@ -396,6 +384,8 @@ export function FluxChannels({
                             'private_key',
                             'publicKey',
                             'public_key',
+                            'obfsKey',
+                            'obfs_key',
                             'shortId',
                             'short_id',
                             'dest',
@@ -404,9 +394,7 @@ export function FluxChannels({
                           if (v === 'tls' && !textOf(channel, 'certMode', 'cert_mode')) {
                             nextPatch.certMode = 'inherit'
                           }
-                          if (v === 'tls') {
-                            cleanup.push('obfsKey', 'obfs_key')
-                          } else {
+                          if (v !== 'tls') {
                             cleanup.push(
                               'certMode',
                               'cert_mode',
@@ -422,7 +410,7 @@ export function FluxChannels({
                           patchRow(index, nextPatch, cleanup)
                         }}
                         options={[
-                          { label: '对称加密', value: 'obfs' },
+                          { label: 'X25519 混淆', value: 'obfs' },
                           { label: 'TLS 证书', value: 'tls' },
                         ]}
                       />,
@@ -520,26 +508,53 @@ export function FluxChannels({
                     </div>
                   )}
 
-                  {security === 'obfs' &&
-                    field(
-                      '通道加密密钥',
-                      <Space.Compact style={{ width: '100%' }}>
-                        <Input
-                          placeholder="留空保存时自动生成"
-                          value={textOf(channel, 'obfsKey', 'obfs_key')}
-                          onChange={(e) =>
-                            patchRow(index, { obfsKey: e.target.value }, ['obfs_key'])
-                          }
-                        />
-                        <Button
-                          onClick={() =>
-                            patchRow(index, { obfsKey: randomObfsKey() }, ['obfs_key'])
-                          }
-                        >
-                          随机生成
-                        </Button>
-                      </Space.Compact>,
-                    )}
+                  {security === 'obfs' && (
+                    <div style={grid}>
+                      {field(
+                        '通道私钥（X25519）',
+                        <Space.Compact style={{ width: '100%' }}>
+                          <Input
+                            placeholder="留空保存时自动生成 X25519 密钥对"
+                            value={textOf(channel, 'privateKey', 'private_key')}
+                            onChange={(e) =>
+                              patchRow(index, { privateKey: e.target.value }, [
+                                'private_key',
+                                'publicKey',
+                                'public_key',
+                                'obfsKey',
+                                'obfs_key',
+                              ])
+                            }
+                          />
+                          {(textOf(channel, 'privateKey', 'private_key') !== '' ||
+                            textOf(channel, 'publicKey', 'public_key') !== '') && (
+                            <Button
+                              onClick={() =>
+                                patchRow(index, {}, [
+                                  'privateKey',
+                                  'private_key',
+                                  'publicKey',
+                                  'public_key',
+                                  'obfsKey',
+                                  'obfs_key',
+                                ])
+                              }
+                            >
+                              重置密钥对
+                            </Button>
+                          )}
+                        </Space.Compact>,
+                      )}
+                      {textOf(channel, 'publicKey', 'public_key') !== '' &&
+                        field(
+                          '通道公钥（订阅下发）',
+                          <Input
+                            readOnly
+                            value={textOf(channel, 'publicKey', 'public_key')}
+                          />,
+                        )}
+                    </div>
+                  )}
                 </Space>
               ),
             }

@@ -82,7 +82,7 @@ func (s *Server) Handler() http.Handler {
 			http.ServeFile(w, r, path)
 			return
 		}
-		known := r.URL.Path == "/" || r.URL.Path == "/login" || r.URL.Path == "/register" || r.URL.Path == "/forgot" || r.URL.Path == "/reset" || r.URL.Path == "/setup" || r.URL.Path == "/auth/external" || r.URL.Path == "/user" || strings.HasPrefix(r.URL.Path, "/user/") || s.isAdminEntry(r.URL.Path)
+		known := r.URL.Path == "/" || r.URL.Path == "/login" || r.URL.Path == "/register" || r.URL.Path == "/forgot" || r.URL.Path == "/reset" || r.URL.Path == "/setup" || r.URL.Path == "/auth/external" || r.URL.Path == "/auth/browser" || r.URL.Path == "/user" || strings.HasPrefix(r.URL.Path, "/user/") || s.isAdminEntry(r.URL.Path)
 		if !known {
 			http.NotFound(w, r)
 			return
